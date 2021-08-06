@@ -20,6 +20,8 @@
 
 #include "settings.h"
 #include "inputs.h"
+#include "accelerometer.h"
+#include "i2c_bus.h"
 
 /*
  * Thread 1.
@@ -73,8 +75,10 @@ int main(void) {
    */
   halInit();
   chSysInit();
+  i2c_busInit();
   settingsInit();
   inputsInit();
+  accelInit();
 
   /* This is now the idle thread loop, you may perform here a low priority
      task but you must never try to sleep or wait in this loop. Note that

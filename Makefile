@@ -89,11 +89,12 @@ PROJECT = gearbrake
 MCU  = cortex-m0
 
 # Imported source files and paths.
-CHIBIOS  :=  ../../chibios_stable-20.3.x/
+CHIBIOS  :=  ../../chibios_stable-20.3.x
 CONFDIR  := ./cfg
 BUILDDIR := ./build
 DEPDIR   := ./.dep
 BOARDDIR := ./board
+DRVDIR   := ./drv
 
 # Licensing files.
 include $(CHIBIOS)/os/license/license.mk
@@ -111,6 +112,8 @@ include $(CHIBIOS)/os/nil/nil.mk
 include $(CHIBIOS)/os/common/ports/ARMCMx/compilers/GCC/mk/port_v6m.mk
 # Auto-build files in ./source recursively.
 include $(CHIBIOS)/tools/mk/autobuild.mk
+# project drivers
+include $(DRVDIR)/all.mk
 
 # Define linker script file here
 LDSCRIPT= ./STM32F042F4.ld
@@ -121,8 +124,10 @@ LDSCRIPT= ./STM32F042F4.ld
 # setting.
 CSRC = $(ALLCSRC) \
        $(TESTSRmakeC) \
+       i2c_bus.c \
        settings.c \
        inputs.c \
+       accelerometer.c \
        usbcfg.c \
        comms.c \
        pwmout.c \

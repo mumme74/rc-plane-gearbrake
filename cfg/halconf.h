@@ -39,6 +39,7 @@
 #define HAL_USE_USB     TRUE
 #define HAL_USE_SERIAL_USB TRUE
 #define STM32_DMA_REQUIRED TRUE // for inputs driver
+#define KXTJ3_1157_SHARED_I2C TRUE // for accelerometer driver, share bus with EEPROM
 
 /**
  * @brief   Enables the PAL subsystem.
