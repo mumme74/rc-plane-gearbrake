@@ -222,6 +222,16 @@
 #define KXTJ3_1157_SHARED_I2C               FALSE
 #endif
 
+/**
+ * @brief   KXTJ3_1157 advanced configurations switch.
+ * @details If set to @p TRUE more configurations are available.
+ * @note    The default is @p FALSE.
+ */
+#if !defined(KXTJ3_1157_USE_ADVANCED) || defined(__DOXYGEN__)
+#define KXTJ3_1157_USE_ADVANCED             FALSE
+#endif
+/** @} */
+
 /*=============================================================*/
 /* Derived constants and error checks.                         */
 /*=============================================================*/
@@ -343,11 +353,6 @@ typedef struct KXTJ3_1157Driver KXTJ3_1157Driver;
    kxtj3_1157_wakeup_datarate_t      wakeupdatafreq;
 
    /**
-    * @brief KXTJ3_1157 accelerometer subsystem wakeup threshold
-    */
-   uint16_t    wakeupthreshold;
-
-   /**
     * @brief KXTJ3_1157 accelerometer subsystem interrupt on motion
     */
    union {
@@ -358,6 +363,13 @@ typedef struct KXTJ3_1157Driver KXTJ3_1157Driver;
        kxtj3_1157_motion_interrupt_t z;
      };
    } motion_interrupt;
+
+   /**
+    * @brief KXTJ3_1157 accelerometer subsystem wakeup threshold
+    */
+   uint16_t    wakeupthreshold;
+
+
 
    /**
     * @brief KXTJ3_1157 accelerometer subsystem
@@ -528,6 +540,7 @@ typedef struct KXTJ3_1157Driver KXTJ3_1157Driver;
 #define kxtj3_1157AccelerometerResetBias(devp)                              \
         accelerometerResetBias(&((devp)->acc_if))
 
+#if KXTJ3_1157_USE_ADVANCED || defined(__DOXYGEN__)
 /**
  * @brief   Set sensitivity values for the BaseAccelerometer.
  * @note    Sensitivity must be expressed as milli-G/LSB.
@@ -577,6 +590,9 @@ typedef struct KXTJ3_1157Driver KXTJ3_1157Driver;
  */
 #define kxtj3_1157AccelerometerSetFullScale(devp, fs)                       \
         (devp)->vmt->acc_set_full_scale(devp, fs)
+
+#endif
+
  /*===========================================================================*/
  /* External declarations.                                                    */
  /*===========================================================================*/

@@ -286,6 +286,7 @@ static msg_t acc_reset_bias(void *ip) {
   return msg;
 }
 
+#if KXTJ3_1157_USE_ADVANCED || defined(__DOXYGEN__)
 /**
  * @brief   Set sensitivity values for the BaseAccelerometer.
  * @note    Sensitivity must be expressed as milli-G/LSB.
@@ -330,7 +331,6 @@ static msg_t acc_set_sensivity(void *ip, float *sp) {
 static msg_t acc_reset_sensivity(void *ip) {
   KXTJ3_1157Driver* devp;
   uint32_t i;
-  msg_t msg = MSG_OK;
 
   osalDbgCheck(ip != NULL);
 
@@ -340,24 +340,28 @@ static msg_t acc_reset_sensivity(void *ip) {
   osalDbgAssert((devp->state == KXTJ3_1157_READY),
                 "acc_reset_sensivity(), invalid state");
 
-  if(devp->config->accfullscale == KXTJ3_1157_gselection_2G)
-    for(i = 0; i < KXTJ3_1157_ACC_NUMBER_OF_AXES; i++)
-      devp->accsensitivity[i] = KXTJ3_1157_ACC_SENS_2G;
-  else if(devp->config->accfullscale == KXTJ3_1157_gselection_4G)
-    for(i = 0; i < KXTJ3_1157_ACC_NUMBER_OF_AXES; i++)
-      devp->accsensitivity[i] = KXTJ3_1157_ACC_SENS_4G;
-  else if(devp->config->accfullscale == KXTJ3_1157_gselection_8G)
-    for(i = 0; i < KXTJ3_1157_ACC_NUMBER_OF_AXES; i++)
-      devp->accsensitivity[i] = KXTJ3_1157_ACC_SENS_8G;
-  else if(devp->config->accfullscale == KXTJ3_1157_gselection_16G)
-    for(i = 0; i < KXTJ3_1157_ACC_NUMBER_OF_AXES; i++)
-      devp->accsensitivity[i] = KXTJ3_1157_ACC_SENS_16G;
-  else {
+  float sensitivity;
+
+  switch (devp->config->accfullscale) {
+  case KXTJ3_1157_gselection_2G:
+    sensitivity = KXTJ3_1157_ACC_SENS_2G; break;
+  case KXTJ3_1157_gselection_4G:
+    sensitivity = KXTJ3_1157_ACC_SENS_4G; break;
+  case KXTJ3_1157_gselection_8G:
+    sensitivity = KXTJ3_1157_ACC_SENS_8G; break;
+  case KXTJ3_1157_gselection_16G:
+    sensitivity = KXTJ3_1157_ACC_SENS_16G; break;
+  default:
     osalDbgAssert(FALSE, "acc_reset_sensivity(), accelerometer full scale issue");
-    msg = MSG_RESET;
+    return MSG_RESET;
   }
-  return msg;
+
+  for(i = 0; i < KXTJ3_1157_ACC_NUMBER_OF_AXES; i++)
+    devp->accsensitivity[i] = sensitivity;
+
+  return MSG_OK;
 }
+
 
 /**
  * @brief   Changes the KXTJ3_1157Driver accelerometer fullscale value.
@@ -433,17 +437,23 @@ static msg_t acc_set_full_scale(KXTJ3_1157Driver *devp,
   }
   return msg;
 }
+#endif
 
 
 static const struct KXTJ3_1157VMT vmt_device = {
   (size_t)0,
+#if KXTJ3_1157_USE_ADVANCED
   acc_set_full_scale
+#endif
 };
 
 static const struct BaseAccelerometerVMT vmt_accelerometer = {
   sizeof(struct KXTJ3_1157VMT*),
   acc_get_axes_number, acc_read_raw, acc_read_cooked,
-  acc_set_bias, acc_reset_bias, acc_set_sensivity, acc_reset_sensivity
+  acc_set_bias, acc_reset_bias,
+#if KXTJ3_1157_USE_ADVANCED
+  acc_set_sensivity, acc_reset_sensivity
+#endif
 };
 
 /*===========================================================================*/
