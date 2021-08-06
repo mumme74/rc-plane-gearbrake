@@ -31,6 +31,10 @@
 #define _CHIBIOS_NIL_CONF_
 #define _CHIBIOS_NIL_CONF_VER_4_0_
 
+
+#define CH_DBG_ENABLE_ASSERTS           TRUE // should be false in production code
+#define CH_CFG_ST_RESOLUTION            16
+
 #define CH_CFG_USE_HEAP                 FALSE
 #define CH_CFG_USE_FACTORY              FALSE
 #define HAL_USE_COMMUNITY               FALSE

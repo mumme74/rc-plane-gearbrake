@@ -14,10 +14,12 @@
     limitations under the License.
 */
 
+#include <stdint.h>
 #include "hal.h"
 #include "ch.h"
-#include "nil_test_root.h"
-#include "oslib_test_root.h"
+
+#include "settings.h"
+#include "inputs.h"
 
 /*
  * Thread 1.
@@ -52,14 +54,11 @@ THD_FUNCTION(Thread2, arg) {
 }
 
 
-/*
- * Threads creation table, one entry per thread.
- */
 THD_TABLE_BEGIN
-  THD_TABLE_THREAD(0, "blinker1",     waThread1,       Thread1,      NULL)
-  THD_TABLE_THREAD(1, "blinker2",     waThread2,       Thread2,      NULL)
+  THD_TABLE_THREAD(0, "blinker1", waThread1, Thread1, NULL)
+  THD_TABLE_THREAD(1, "blinker2", waThread2, Thread2, NULL)
 THD_TABLE_END
-
+;
 /*
  * Application entry point.
  */
@@ -74,11 +73,13 @@ int main(void) {
    */
   halInit();
   chSysInit();
+  settingsInit();
+  inputsInit();
 
   /* This is now the idle thread loop, you may perform here a low priority
      task but you must never try to sleep or wait in this loop. Note that
      this tasks runs at the lowest priority level so any instruction added
      here will be executed after all other tasks have been started.*/
-  while (true) {
-  }
+  while (1) { }
+  return 0;
 }

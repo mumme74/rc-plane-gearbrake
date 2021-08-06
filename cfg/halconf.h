@@ -33,6 +33,13 @@
 
 #include "mcuconf.h"
 
+#define HAL_USE_PAL     TRUE
+#define HAL_USE_PWM     TRUE
+#define HAL_USE_I2C     TRUE
+#define HAL_USE_USB     TRUE
+#define HAL_USE_SERIAL_USB TRUE
+#define STM32_DMA_REQUIRED TRUE // for inputs driver
+
 /**
  * @brief   Enables the PAL subsystem.
  */
@@ -86,7 +93,7 @@
  * @brief   Enables the I2C subsystem.
  */
 #if !defined(HAL_USE_I2C) || defined(__DOXYGEN__)
-#define HAL_USE_I2C                         TRUE
+#define HAL_USE_I2C                         FALSE
 #endif
 
 /**
@@ -142,14 +149,14 @@
  * @brief   Enables the SERIAL subsystem.
  */
 #if !defined(HAL_USE_SERIAL) || defined(__DOXYGEN__)
-#define HAL_USE_SERIAL                      TRUE
+#define HAL_USE_SERIAL                      FALSE
 #endif
 
 /**
  * @brief   Enables the SERIAL over USB subsystem.
  */
 #if !defined(HAL_USE_SERIAL_USB) || defined(__DOXYGEN__)
-#define HAL_USE_SERIAL_USB                  TRUE
+#define HAL_USE_SERIAL_USB                  FALSE
 #endif
 
 /**
@@ -184,7 +191,7 @@
  * @brief   Enables the USB subsystem.
  */
 #if !defined(HAL_USE_USB) || defined(__DOXYGEN__)
-#define HAL_USE_USB                         TRUE
+#define HAL_USE_USB                         FALSE
 #endif
 
 /**

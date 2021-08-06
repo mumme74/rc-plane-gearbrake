@@ -111,10 +111,6 @@ include $(CHIBIOS)/os/nil/nil.mk
 include $(CHIBIOS)/os/common/ports/ARMCMx/compilers/GCC/mk/port_v6m.mk
 # Auto-build files in ./source recursively.
 include $(CHIBIOS)/tools/mk/autobuild.mk
-# Other files (optional).
-include $(CHIBIOS)/test/lib/test.mk
-include $(CHIBIOS)/test/nil/nil_test.mk
-include $(CHIBIOS)/test/oslib/oslib_test.mk
 
 # Define linker script file here
 LDSCRIPT= ./STM32F042F4.ld
@@ -124,8 +120,12 @@ LDSCRIPT= ./STM32F042F4.ld
 # C sources that can be compiled in ARM or THUMB mode depending on the global
 # setting.
 CSRC = $(ALLCSRC) \
-       $(TESTSRC) \
+       $(TESTSRmakeC) \
+       settings.c \
+       inputs.c \
        usbcfg.c \
+       comms.c \
+       pwmout.c \
        main.c
 
 # C++ sources that can be compiled in ARM or THUMB mode depending on the global

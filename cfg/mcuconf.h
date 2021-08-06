@@ -17,6 +17,8 @@
 #ifndef MCUCONF_H
 #define MCUCONF_H
 
+#include "board.h"
+
 /*
  * STM32F0xx drivers configuration.
  * The following settings override the default settings present in
@@ -132,7 +134,7 @@
  * ICU driver system settings.
  */
 #define STM32_ICU_USE_TIM1                  FALSE
-#define STM32_ICU_USE_TIM2                  FALSE
+#define STM32_ICU_USE_TIM2                  TRUE
 #define STM32_ICU_USE_TIM3                  FALSE
 #define STM32_ICU_TIM1_IRQ_PRIORITY         3
 #define STM32_ICU_TIM2_IRQ_PRIORITY         3
@@ -152,7 +154,7 @@
 /*
  * SERIAL driver system settings.
  */
-#define STM32_SERIAL_USE_USART1             TRUE
+#define STM32_SERIAL_USE_USART1             FALSE
 #define STM32_SERIAL_USE_USART2             FALSE
 
 /*
@@ -174,7 +176,7 @@
  * ST driver system settings.
  */
 #define STM32_ST_IRQ_PRIORITY               2
-#define STM32_ST_USE_TIMER                  2
+#define STM32_ST_USE_TIMER                  14
 
 /*
  * UART driver system settings.
