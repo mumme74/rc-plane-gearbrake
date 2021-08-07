@@ -392,8 +392,9 @@ typedef struct KXTJ3_1157Driver KXTJ3_1157Driver;
   */
  #define _kxtj3_1157_methods_alone                                           \
    /* Change full scale value of kxtj3_1157 accelerometer subsystem.*/       \
-   msg_t (*acc_set_gselection)(KXTJ3_1157Driver *devp,                       \
-                               uint8_t fs);                      \
+   msg_t (*acc_set_set_full_scale)(KXTJ3_1157Driver *devp,                   \
+                                   uint8_t fs);                              \
+   msg_t (*acc_set_selftest)(KXTJ3_1157Driver *devp, bool activate);         \
 
  /**
   * @brief   @p KXTJ3_1157 specific methods with inherited ones.
@@ -590,6 +591,22 @@ typedef struct KXTJ3_1157Driver KXTJ3_1157Driver;
  */
 #define kxtj3_1157AccelerometerSetFullScale(devp, fs)                       \
         (devp)->vmt->acc_set_full_scale(devp, fs)
+
+ /**
+  * @brief   Sets the KXTJ3_1157Driver accelerometer into selftest mode.
+  * @note    This function sets the device into selftest mode
+  *
+  * @param[in] devp      pointer to @p KXTJ3_1157Driver interface.
+  * @param[in] activate  true to activate, false to deactivate.
+  *
+  * @return              The operation status.
+  * @retval MSG_OK       if the function succeeded.
+  * @retval MSG_RESET    otherwise.
+  *
+  * @api
+  */
+#define kxtj3_1157AccelerometerSetSelftest(devp, activate)                       \
+        (devp)->vmt->acc_set_selftest(devp, activate)
 
 #endif
 

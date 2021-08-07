@@ -66,11 +66,11 @@ uint8_t kxtj3_1157GSelbits(bool lowpower, kxtj3_1157_gselection_t gsel)
  * @brief builds the CTRL_REG1 register based on driver and config
  */
 void kxtj3_1157BuildReg1(KXTJ3_1157Driver *devp,
-                         uint8_t *cr)
+                         uint8_t *cr, bool on)
 {
   cr[0] = KXTJ3_1157_CTRL_REG1;
-  cr[1] = KXTJ3_1157_CTRL_REG1_PC1
-         | KXTJ3_1157_CTRL_REG1_GSEL(
+  cr[1] = on ? KXTJ3_1157_CTRL_REG1_PC1 : 0;
+  cr[1] |= KXTJ3_1157_CTRL_REG1_GSEL(
              kxtj3_1157GSelbits(devp->lowpower,
                                 devp->config->accfullscale));
   if (!devp->lowpower)
@@ -416,7 +416,7 @@ static msg_t acc_set_full_scale(KXTJ3_1157Driver *devp,
 #endif /* KXTJ3_1157_SHARED_I2C */
 
     /* Updating register.*/
-    kxtj3_1157BuildReg1(devp, buff);
+    kxtj3_1157BuildReg1(devp, buff, true);
     msg = kxtj3_1157I2CWriteRegister(devp->config->i2cp,
                                    devp->sad,
                                    buff, 1);
@@ -437,13 +437,73 @@ static msg_t acc_set_full_scale(KXTJ3_1157Driver *devp,
   }
   return msg;
 }
+
+/**
+ * @brief   Sets the KXTJ3_1157Driver accelerometer into selftest mode.
+ * @note    This function also rescale sensitivities and biases based on
+ *          previous and next fullscale value.
+ *
+ * @param[in] devp      pointer to @p KXTJ3_1157Driver interface.
+ * @param[in] activate  true to activate, false to deactivate.
+ *
+ * @return              The operation status.
+ * @retval MSG_OK       if the function succeeded.
+ * @retval MSG_RESET    otherwise.
+ */
+static msg_t acc_set_selftest(KXTJ3_1157Driver *devp,
+                                bool activate)
+{
+  uint8_t cr[2];
+  msg_t msg;
+
+  osalDbgCheck(devp != NULL);
+
+  osalDbgAssert((devp->state == KXTJ3_1157_READY),
+                "acc_set_selftest(), invalid state");
+  osalDbgAssert((devp->config->i2cp->state == I2C_READY),
+                "acc_set_selftest(), channel not ready");
+
+  // first stop device;
+  kxtj3_1157BuildReg1(devp, cr, false);
+
+#if KXTJ3_1157_SHARED_I2C
+  i2cAcquireBus(devp->config->i2cp);
+  i2cStart(devp->config->i2cp,
+                   devp->config->i2ccfg);
+#endif /* KXTJ3_1157_SHARED_I2C */
+
+  /* Updating register.*/
+  msg = kxtj3_1157I2CWriteRegister(devp->config->i2cp,
+                                   devp->sad, cr, 1);
+  if (msg != MSG_OK)
+    return msg;
+
+  cr[0] = KXTJ3_1157_SELF_TEST;
+  cr[1] = activate ? 0xCA : 0;
+  msg = kxtj3_1157I2CWriteRegister(devp->config->i2cp,
+                                   devp->sad, cr, 1);
+  if (msg != MSG_OK)
+    return msg;
+
+  // start the device again
+  kxtj3_1157BuildReg1(devp, cr, true);
+  msg = kxtj3_1157I2CWriteRegister(devp->config->i2cp,
+                                   devp->sad, cr, 1);
+
+#if KXTJ3_1157_SHARED_I2C
+  i2cReleaseBus(devp->config->i2cp);
+#endif /* KXTJ3_1157_SHARED_I2C */
+
+return msg;
+}
 #endif
 
 
 static const struct KXTJ3_1157VMT vmt_device = {
   (size_t)0,
 #if KXTJ3_1157_USE_ADVANCED
-  acc_set_full_scale
+  acc_set_full_scale,
+  acc_set_selftest
 #endif
 };
 
@@ -556,7 +616,7 @@ void kxtj3_1157Start(KXTJ3_1157Driver *devp, const KXTJ3_1157Config *config) {
   }
 
   // CTRL_REG1 after other config registers
-  kxtj3_1157BuildReg1(devp, cr);
+  kxtj3_1157BuildReg1(devp, cr, true);
   kxtj3_1157I2CWriteRegister(devp->config->i2cp, devp->sad, cr, 1);
 
 #if KXTJ3_1157_SHARED_I2C

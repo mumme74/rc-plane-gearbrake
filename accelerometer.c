@@ -25,12 +25,12 @@ static KXTJ3_1157Config acccfg = {
    KXTJ3_1157_datarate_25Hz,
    KXTJ3_1157_gselection_16G,
    KXTJ3_1157_wakeup_datarate_OFF,
-   0,
    {{
     KXTJ3_1157_motion_interrupt_off,
     KXTJ3_1157_motion_interrupt_off,
     KXTJ3_1157_motion_interrupt_off
    }},
+   0,
    false,
    false
 };
