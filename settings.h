@@ -19,6 +19,16 @@
 #define SETTINGS_BRAKE_POS_LEFT     1U
 #define SETTINGS_BRAKE_POS_RIGHT    2U
 
+/* How often we should log */
+#define SETTINGS_LOG_20MS           0U
+#define SETTINGS_LOG_40MS           1U
+#define SETTINGS_LOG_80MS           2U
+#define SETTINGS_LOG_160MS          3U
+#define SETTINGS_LOG_320MS          4U
+#define SETTINGS_LOG_640MS          5U
+#define SETTINGS_LOG_1280MS         6U
+#define SETTINGS_LOG_2560MS         7U
+
 typedef struct {
     // which version of memory storage in EEPROM
     // version should be bumped on each ABI breaking change
@@ -70,13 +80,18 @@ typedef struct {
   uint8_t WheelSensor1_pulses_per_rev;
   uint8_t WheelSensor2_pulses_per_rev;
 
-  // accelerometer
-  uint8_t accelerometer_active: 1;
   // which axis should control steering brakes
   // 0 = x, 1=y, 2=z
   uint8_t accelerometer_axis: 2;
+  // accelerometer
+  uint8_t accelerometer_active: 1;
   // invert the input IE brake the other wheel
   uint8_t accelerometer_axis_invert: 1;
+  // stop Log when wheel speed0
+  uint8_t dontLogWhenStill: 1;
+  // how often we should log
+  uint8_t logPeriodicity: 3;
+
 } Settings_t;
 
 extern Settings_t settings;

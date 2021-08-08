@@ -19,11 +19,23 @@ typedef struct {
   /* wanted brake force, might differ from inputs
    * due min/max and invert settings */
   uint8_t brakeForce;
+
+  // how much accelerometer steering
+  int16_t accelSteering;
+  // how much wheel speed sensor steering
+  int16_t wsSteering;
+
+  // how much brake force we get out
+  uint8_t brakeForce_out[3];
+
+  float slip[3];
 } Values_t;
 
 extern const Values_t values;
 
-void initBrakeLogic(void);
+void brakeLogicInit(void);
+
+void brakeLogicSettingsChanged(void);
 
 
 #endif /* BRAKE_LOGIC_H_ */

@@ -23,6 +23,8 @@
 #include "inputs.h"
 #include "accelerometer.h"
 #include "i2c_bus.h"
+#include "brake_logic.h"
+#include "logger.h"
 
 ///*
 // * Thread 1.
@@ -80,6 +82,8 @@ int main(void) {
   settingsInit();
   inputsInit();
   accelInit();
+  brakeLogicInit();
+  loggerInit();
   // done last of the initializations as main(void) now becomes idle thread
   chSysInit();
 

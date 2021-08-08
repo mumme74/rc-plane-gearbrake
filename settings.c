@@ -11,6 +11,8 @@
 #include "eeprom.h"
 #include "accelerometer.h"
 #include "inputs.h"
+#include "brake_logic.h"
+#include "logger.h"
 
 // this version should be bumped on each breaking ABI change to EEPROM storage
 #define STORAGE_VERSION 0x01
@@ -58,6 +60,8 @@ void notify(void) {
   pwmoutSettingsChanged();
   accelSettingsChanged();
   inputsSettingsChanged();
+  brakeLogicSettingsChanged();
+  loggerSettingsChanged();
 }
 
 
@@ -74,10 +78,10 @@ Settings_t settings = {
   100,
   100,
   25,
-  20,
+  50,
   0,
   0,
-  freq10Hz,
+  freq1kHz,
   1,
   1,
   0,
@@ -89,7 +93,9 @@ Settings_t settings = {
   0,
   0,
   0,
-  0
+  0,
+  0,
+  SETTINGS_LOG_20MS,
 };
 
 msg_t settingsInit(void) {
