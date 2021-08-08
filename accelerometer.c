@@ -11,6 +11,7 @@
 #include "settings.h"
 #include "i2c_bus.h"
 #include "drv/kxtj3_1157.h"
+#include "threads.h"
 
 //----------------------------------------------------------------
 // private stuff for this module
@@ -35,40 +36,46 @@ static KXTJ3_1157Config acccfg = {
    false
 };
 
-
 THD_WORKING_AREA(waAccelThd, 128);
 THD_FUNCTION(AccelThd, arg) {
-
   (void)arg;
 
+  kxtj3_1157Start(&accd, &acccfg);
+
   while (true) {
-    chThdSleepMilliseconds(50);
+    chThdSleepMilliseconds(25);
+    accelerometerReadRaw(&accd.acc_if, (int32_t*)accel.axis);
   }
 }
+
+static thread_descriptor_t accelThdDesc = {
+   "accel",
+   THD_WORKING_AREA_BASE(waAccelThd),
+   THD_WORKING_AREA_END(waAccelThd),
+   PRIO_ACCEL_THD,
+   AccelThd,
+   NULL
+};
 
 // ---------------------------------------------------------------
 
 // public stuff
 
-const Axis_t axis;
+const Accel_t accel;
 
 void accelInit(void) {
   if (settings.accelerometer_active) {
     kxtj3_1157ObjectInit(&accd);
-    kxtj3_1157Start(&accd, &acccfg);
-    accelThd = chThdCreate(&AccelThd);
   }
 }
 
 void accelSettingsChanged(void) {
-  if (accd.state == KXTJ3_1157_READY)
-    kxtj3_1157Stop(&accd);
 
-  if (accelThd)
-    chThdExit(accelThd);
-
+  // TODO requires some more understanding about nil threads
   if (settings.accelerometer_active) {
-    kxtj3_1157Start(&accd, &acccfg);
-    accelThd = chThdCreate(AccelThd);
+    accelThd = chThdCreate(&accelThdDesc);
+  } else if (accelThd != NULL) {
+    accelThd = NULL;
+    kxtj3_1157Stop(&accd);
   }
 }

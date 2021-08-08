@@ -13,6 +13,8 @@
 
 extern const I2CConfig i2ccfg;
 
+#define I2C_CLOCK  1000000
+
 void i2c_busInit(void);
 
 #endif /* I2C_BUS_H_ */

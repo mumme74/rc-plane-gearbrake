@@ -90,6 +90,7 @@ MCU  = cortex-m0
 
 # Imported source files and paths.
 CHIBIOS  :=  ../../chibios_stable-20.3.x
+CHIBIOS_CONTRIB := $(CHIBIOS)/community
 CONFDIR  := ./cfg
 BUILDDIR := ./build
 DEPDIR   := ./.dep
@@ -101,7 +102,7 @@ include $(CHIBIOS)/os/license/license.mk
 # Startup files.
 include $(CHIBIOS)/os/common/startup/ARMCMx/compilers/GCC/mk/startup_stm32f0xx.mk
 # HAL-OSAL files (optional).
-include $(CHIBIOS)/os/hal/hal.mk
+#include $(CHIBIOS)/os/hal/hal.mk # use community intead
 include $(CHIBIOS)/os/hal/ports/STM32/STM32F0xx/platform.mk
 #include $(CHIBIOS)/os/hal/boards/ST_STM32F0_DISCOVERY/board.mk
 include ./board/board.mk
@@ -112,6 +113,9 @@ include $(CHIBIOS)/os/nil/nil.mk
 include $(CHIBIOS)/os/common/ports/ARMCMx/compilers/GCC/mk/port_v6m.mk
 # Auto-build files in ./source recursively.
 include $(CHIBIOS)/tools/mk/autobuild.mk
+#EEprom
+include $(CHIBIOS)/community/os/hal/hal.mk
+
 # project drivers
 include $(DRVDIR)/all.mk
 
@@ -125,12 +129,14 @@ LDSCRIPT= ./STM32F042F4.ld
 CSRC = $(ALLCSRC) \
        $(TESTSRmakeC) \
        i2c_bus.c \
+       eeprom.c \
        settings.c \
        inputs.c \
        accelerometer.c \
        usbcfg.c \
        comms.c \
        pwmout.c \
+       threads.c \
        main.c
 
 # C++ sources that can be compiled in ARM or THUMB mode depending on the global

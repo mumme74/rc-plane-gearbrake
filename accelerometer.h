@@ -12,19 +12,19 @@
 
 typedef struct {
   union {
-    int16_t axis[3];
+    int32_t axis[3];
     struct {
-      int16_t pitch;
-      int16_t roll;
-      int16_t yaw;
+      int32_t pitch;
+      int32_t roll;
+      int32_t yaw;
     };
   };
-} Axis_t;
+} Accel_t;
 
 /**
  * @brief global variable for the measured values
  */
-extern const Axis_t axis;
+extern const Accel_t accel;
 
 /**
  * @brief initialize the accelerometer

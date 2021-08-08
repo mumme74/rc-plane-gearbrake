@@ -5,11 +5,17 @@
  *      Author: fredrikjohansson
  */
 
+#include <ch.h>
 #include "settings.h"
 #include "pwmout.h"
+#include "eeprom.h"
+#include "accelerometer.h"
+#include "inputs.h"
 
 // this version should be bumped on each breaking ABI change to EEPROM storage
 #define STORAGE_VERSION 0x01
+
+#define SETTINGS_SIZE   (sizeof(Settings_t) - sizeof(settings.header))
 
 
 // -----------------------------------------------------------------
@@ -50,6 +56,8 @@ static void validateValues(void) {
  */
 void notify(void) {
   pwmoutSettingsChanged();
+  accelSettingsChanged();
+  inputsSettingsChanged();
 }
 
 
@@ -60,7 +68,7 @@ void notify(void) {
 Settings_t settings = {
   {
     STORAGE_VERSION,
-    sizeof(Settings_t) - sizeof(settings.header)
+    SETTINGS_SIZE
   },
   0,
   100,
@@ -84,7 +92,7 @@ Settings_t settings = {
   0
 };
 
-int settingsInit(void) {
+msg_t settingsInit(void) {
   settingsDefault();
   return settingsLoad();
 }
@@ -113,41 +121,44 @@ void settingsDefault(void) {
 }
 
 
-int settingsLoad(void) {
-  // TODO
+msg_t settingsLoad(void) {
+  uint8_t *buf = (uint8_t*)&settings;
+
+  msg_t res = fileStreamSetPosition(settings_fs, 0);
+  if (res != MSG_OK) return res;
 
   // load header
+  res = fileStreamRead(settings_fs, buf, sizeof(Settings_header_t));
+  if (res != MSG_OK) return res;
 
   // ensure header version match with STORAGE_VERSION
   // if not bail out
+  if (settings.header.size != SETTINGS_SIZE ||
+      settings.header.storageVersion != STORAGE_VERSION)
+  {
+    return MSG_RESET;
+  }
 
-  // set settings
+  // set the rest of the settings
+  res = fileStreamRead(settings_fs,
+                       buf + sizeof(Settings_header_t),
+                       sizeof(Settings_header_t) - sizeof(Settings_header_t));
+  if (res != MSG_OK) return res;
+
 
   // notify subscribers that settings has loaded
   notify();
-  return 0;
-
+  return MSG_OK;
 }
 
-void settingsSave(void) {
+msg_t settingsSave(void) {
   validateValues();
+  size_t res = fileStreamSetPosition(settings_fs, 0);
+  if (res != MSG_OK) return res;
 
-  // TODO push to EEPROM
-}
+  res =fileStreamWrite(settings_fs, (uint8_t*)&settings, sizeof(Settings_t));
+  if (res != MSG_OK) return res;
 
-/**
- * @brief user code can call this function to notify
- * all recievers that settings has changed.
- * broadcast to all...
- */
-void settingsHasChanged(void) {
-  validateValues();
   notify();
+  return res;
 }
-
-
-
-
-
-
-

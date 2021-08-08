@@ -286,7 +286,6 @@ static msg_t acc_reset_bias(void *ip) {
   return msg;
 }
 
-#if KXTJ3_1157_USE_ADVANCED || defined(__DOXYGEN__)
 /**
  * @brief   Set sensitivity values for the BaseAccelerometer.
  * @note    Sensitivity must be expressed as milli-G/LSB.
@@ -362,6 +361,7 @@ static msg_t acc_reset_sensivity(void *ip) {
   return MSG_OK;
 }
 
+#if KXTJ3_1157_USE_ADVANCED || defined(__DOXYGEN__)
 
 /**
  * @brief   Changes the KXTJ3_1157Driver accelerometer fullscale value.
@@ -510,10 +510,7 @@ static const struct KXTJ3_1157VMT vmt_device = {
 static const struct BaseAccelerometerVMT vmt_accelerometer = {
   sizeof(struct KXTJ3_1157VMT*),
   acc_get_axes_number, acc_read_raw, acc_read_cooked,
-  acc_set_bias, acc_reset_bias,
-#if KXTJ3_1157_USE_ADVANCED
-  acc_set_sensivity, acc_reset_sensivity
-#endif
+  acc_set_bias, acc_reset_bias, acc_set_sensivity, acc_reset_sensivity
 };
 
 /*===========================================================================*/

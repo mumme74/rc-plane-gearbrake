@@ -6,11 +6,11 @@
  */
 
 
-#include <stm32f042x6.h>
 #include "inputs.h"
 #include "settings.h"
-#include "cfg/halconf.h"
-#include "hal.h"
+#include <hal.h>
+#include <ch.h>
+#include <stm32f042x6.h>
 #include <stm32_dma.h>
 
 #define DMA_SAMPLES_CNT 5

@@ -9,16 +9,19 @@
 #define SETTINGS_H_
 
 #include <stdint.h>
-
+#include <chtypes.h>
 
 typedef struct {
-  struct {
     // which version of memory storage in EEPROM
     // version should be bumped on each ABI breaking change
     uint16_t storageVersion;
     // size of this settings storage in EEPROM (excluding 4bytes control)
     uint16_t size;
-  } header;
+  } Settings_header_t;
+
+typedef struct {
+  // which version of memory storage in EEPROM
+  Settings_header_t header;
 
   // common
   // 0-100 value when brakes begin to activate
@@ -73,7 +76,7 @@ extern Settings_t settings;
 /**
  * @brief initialize settings, set to default and then load from EEPROM
  */
-int settingsInit(void);
+msg_t settingsInit(void);
 
 /**
  * @brief reset to default settings
@@ -83,23 +86,13 @@ void settingsDefault(void);
 /**
  * @brief load settings from EEPROM memory
  */
-int settingsLoad(void);
+msg_t settingsLoad(void);
 
 /**
  * @brief save settings into EEPROM memory
+ *  also notifies recievers that settings has changed
  */
-void settingsSave(void);
-
-
-/**
- * @brief user code can call this function to notify
- * all recievers that settings has changed.
- * broadcast to all...
- */
-void settingsHasChanged(void);
-
-
-
+msg_t settingsSave(void);
 
 
 #endif /* SETTINGS_H_ */

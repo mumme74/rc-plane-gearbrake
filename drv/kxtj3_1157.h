@@ -15,6 +15,34 @@
 #include "ex_accelerometer.h"
 #include <stdint.h>
 
+/*===========================================================================*/
+/* Driver constants.                                                         */
+/*===========================================================================*/
+
+/**
+ * @name    Version identification
+ * @{
+ */
+/**
+ * @brief   LSM303DLHC driver version string.
+ */
+#define EX_KXTJ3_1157_VERSION               "0.1.0"
+
+/**
+ * @brief   LSM303DLHC driver version major number.
+ */
+#define EX_KXTJ3_1157_MAJOR                 0
+
+/**
+ * @brief   LSM303DLHC driver version minor number.
+ */
+#define EX_KXTJ3_1157_MINOR                 1
+
+/**
+ * @brief   LSM303DLHC driver version patch number.
+ */
+#define EX_KXTJ3_1157_PATCH                 0
+/** @} */
 
 /**
  * @brief   KXTJ3_1157 accelerometer subsystem characteristics.
@@ -541,7 +569,6 @@ typedef struct KXTJ3_1157Driver KXTJ3_1157Driver;
 #define kxtj3_1157AccelerometerResetBias(devp)                              \
         accelerometerResetBias(&((devp)->acc_if))
 
-#if KXTJ3_1157_USE_ADVANCED || defined(__DOXYGEN__)
 /**
  * @brief   Set sensitivity values for the BaseAccelerometer.
  * @note    Sensitivity must be expressed as milli-G/LSB.
@@ -574,6 +601,8 @@ typedef struct KXTJ3_1157Driver KXTJ3_1157Driver;
 #define kxtj3_1157AccelerometerResetSensitivity(devp)                       \
         accelerometerResetSensitivity(&((devp)->acc_if))
 
+
+#if KXTJ3_1157_USE_ADVANCED || defined(__DOXYGEN__)
 /**
  * @brief   Changes the KXTJ3_1157Driver accelerometer fullscale value.
  * @note    This function also rescale sensitivities and biases based on
