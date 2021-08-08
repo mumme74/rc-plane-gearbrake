@@ -17,6 +17,8 @@
 // medium priority
 #define DMA_PRIORITY 1U
 
+#define TIM2_SPEED  100000U
+
 // ---------------------------------------------------------------
 // private stuff for this module
 
@@ -73,15 +75,20 @@ static void dma_complete_callback(uint32_t *arr, uint32_t flags) {
       sumOfSamples += arr[i] - last;
     }
 
-    uint8_t vlu = (uint8_t)(sumOfSamples / 4);
+    // we want rev per sec so TIM2 runs at 100000Hz
+    uint32_t vlu = (sumOfSamples / 4);
+    if (vlu > 0)
+      vlu = TIM2_SPEED / vlu;
 
     if (arr == _ch2data)
-      *(uint8_t*)(&inputs.wheelRPS[0]) = vlu;
+      *(uint8_t*)(&inputs.wheelRPS[0]) =
+          (uint8_t)(vlu / settings.WheelSensor0_pulses_per_rev);
     else if (arr == _ch3data)
-      *(uint8_t*)(&inputs.wheelRPS[1]) = vlu;
+      *(uint8_t*)(&inputs.wheelRPS[1]) =
+          (uint8_t)(vlu / settings.WheelSensor1_pulses_per_rev);
     else if (arr == _ch4data)
-      *(uint8_t*)(&inputs.wheelRPS[2]) = vlu;
-
+      *(uint8_t*)(&inputs.wheelRPS[2]) =
+          (uint8_t)(vlu / settings.WheelSensor2_pulses_per_rev);
   }
 }
 

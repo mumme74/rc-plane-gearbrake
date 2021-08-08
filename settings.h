@@ -11,6 +11,14 @@
 #include <stdint.h>
 #include <chtypes.h>
 
+#define SETTINGS_ACCEL_USE_X    0U
+#define SETTINGS_ACCEL_USE_Y    1U
+#define SETTINGS_ACCEL_USE_Z    2U
+
+#define SETTINGS_BRAKE_POS_CENTER   0U
+#define SETTINGS_BRAKE_POS_LEFT     1U
+#define SETTINGS_BRAKE_POS_RIGHT    2U
+
 typedef struct {
     // which version of memory storage in EEPROM
     // version should be bumped on each ABI breaking change

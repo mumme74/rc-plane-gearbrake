@@ -137,6 +137,7 @@ CSRC = $(ALLCSRC) \
        comms.c \
        pwmout.c \
        threads.c \
+       brake_logic.c \
        main.c
 
 # C++ sources that can be compiled in ARM or THUMB mode depending on the global
