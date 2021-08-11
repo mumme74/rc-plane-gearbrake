@@ -149,16 +149,21 @@ static size_t acc_get_axes_number(void *ip) {
  *                      be retrieved using @p i2cGetErrors().
  * @retval MSG_TIMEOUT  if a timeout occurred before operation end.
  */
-static msg_t acc_read_raw(void *ip, int32_t axes[]) {
-  KXTJ3_1157Driver* devp;
-  uint8_t buff [KXTJ3_1157_ACC_NUMBER_OF_AXES * 2], i;
-  int16_t tmp;
-  msg_t msg;
 
+#if defined(EX_ACCELEROMETER_INTERFACE) || defined(__DOXYGEN__)
+ static msg_t acc_read_raw(void *ip, int32_t axes[]) {
+  KXTJ3_1157Driver* devp;
   osalDbgCheck((ip != NULL) && (axes != NULL));
 
   /* Getting parent instance pointer.*/
   devp = objGetInstance(KXTJ3_1157Driver*, (BaseAccelerometer*)ip);
+#else
+ msg_t kxtj3_1157AccelerometerReadRaw(KXTJ3_1157Driver *devp, int32_t axes[]) {
+#endif
+
+  uint8_t buff [KXTJ3_1157_ACC_NUMBER_OF_AXES * 2], i;
+  int16_t tmp;
+  msg_t msg;
 
   osalDbgAssert((devp->state == KXTJ3_1157_READY),
                 "acc_read_raw(), invalid state");
@@ -188,6 +193,8 @@ static msg_t acc_read_raw(void *ip, int32_t axes[]) {
   }
   return msg;
 }
+
+#if defined(EX_ACCELEROMETER_INTERFACE) || defined(__DOXYGEN__)
 
 /**
  * @brief   Retrieves cooked data from the BaseAccelerometer.
@@ -512,6 +519,7 @@ static const struct BaseAccelerometerVMT vmt_accelerometer = {
   acc_get_axes_number, acc_read_raw, acc_read_cooked,
   acc_set_bias, acc_reset_bias, acc_set_sensivity, acc_reset_sensivity
 };
+#endif
 
 /*===========================================================================*/
 /* Driver exported functions.                                                */
@@ -525,8 +533,11 @@ static const struct BaseAccelerometerVMT vmt_accelerometer = {
  * @init
  */
 void kxtj3_1157ObjectInit(KXTJ3_1157Driver *devp) {
+
+#if defined(EX_ACCELEROMETER_INTERFACE) || defined(__DOXYGEN__)
   devp->vmt = &vmt_device;
   devp->acc_if.vmt = &vmt_accelerometer;
+#endif
 
   devp->config = NULL;
 

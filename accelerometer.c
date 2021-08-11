@@ -40,11 +40,10 @@ THD_WORKING_AREA(waAccelThd, 128);
 THD_FUNCTION(AccelThd, arg) {
   (void)arg;
 
-  kxtj3_1157Start(&accd, &acccfg);
 
   while (true) {
     chThdSleepMilliseconds(25);
-    accelerometerReadRaw(&accd.acc_if, (int32_t*)accel.axis);
+    kxtj3_1157AccelerometerReadRaw(&accd, (int32_t*)accel.axis);
   }
 }
 
@@ -74,6 +73,7 @@ void accelSettingsChanged(void) {
   // TODO requires some more understanding about nil threads
   if (settings.accelerometer_active) {
     accelThd = chThdCreate(&accelThdDesc);
+    kxtj3_1157Start(&accd, &acccfg);
   } else if (accelThd != NULL) {
     accelThd = NULL;
     kxtj3_1157Stop(&accd);

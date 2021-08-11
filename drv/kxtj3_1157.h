@@ -8,12 +8,13 @@
 #ifndef KXTJ3_1157_DRV_H_
 #define KXTJ3_1157_DRV_H_
 
+#include <stdint.h>
 
 // this module implements a driver for the accelerometer KXTJ3_1157
 
+#if defined(EX_ACCELEROMETER_INTERFACE) || defined(__DOXYGEN__)
 // based of driver for KXTJ3_1157 in os/ex/ST dir
 #include "ex_accelerometer.h"
-#include <stdint.h>
 
 /*===========================================================================*/
 /* Driver constants.                                                         */
@@ -43,7 +44,7 @@
  */
 #define EX_KXTJ3_1157_PATCH                 0
 /** @} */
-
+#endif
 /**
  * @brief   KXTJ3_1157 accelerometer subsystem characteristics.
  * @note    Sensitivity is expressed as milli-G/LSB whereas
@@ -440,11 +441,18 @@ typedef struct KXTJ3_1157Driver KXTJ3_1157Driver;
    _kxtj3_1157_methods
  };
 
+#if defined(EX_ACCELEROMETER_INTERFACE) || defined(__DOXYGEN__)
+# define _BASE_SENSOR_DATA _base_sensor_data
+#else
+# define _BASE_SENSOR_DATA
+#endif
+
+
  /**
   * @brief @p KXTJ3_1157Driver specific data.
   */
  #define _kxtj3_1157_data                                                    \
-   _base_sensor_data                                                         \
+   _BASE_SENSOR_DATA                                                         \
    /* Driver state.*/                                                        \
    kxtj3_1157_state_t        state;                                          \
    /* Current configuration data.*/                                          \
@@ -467,9 +475,11 @@ typedef struct KXTJ3_1157Driver KXTJ3_1157Driver;
   */
  struct KXTJ3_1157Driver {
    /** @brief Virtual Methods Table.*/
+#if defined(EX_ACCELEROMETER_INTERFACE) || defined(__DOXYGEN__)
    const struct KXTJ3_1157VMT  *vmt;
    /** @brief Base accelerometer interface.*/
    BaseAccelerometer           acc_if;
+#endif
    _kxtj3_1157_data
  };
 
@@ -479,8 +489,7 @@ typedef struct KXTJ3_1157Driver KXTJ3_1157Driver;
  /* Driver macros.                                                            */
  /*===========================================================================*/
 
-
-
+#if defined(EX_ACCELEROMETER_INTERFACE) || defined(__DOXYGEN__)
 
 /**
   * @brief   Return the number of axes of the BaseAccelerometer.
@@ -637,6 +646,10 @@ typedef struct KXTJ3_1157Driver KXTJ3_1157Driver;
 #define kxtj3_1157AccelerometerSetSelftest(devp, activate)                       \
         (devp)->vmt->acc_set_selftest(devp, activate)
 
+#endif
+
+#else
+  msg_t kxtj3_1157AccelerometerReadRaw(KXTJ3_1157Driver *devp, int32_t axes[]);
 #endif
 
  /*===========================================================================*/
