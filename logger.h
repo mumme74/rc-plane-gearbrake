@@ -9,8 +9,13 @@
 #define LOGGER_H_
 
 #include <stdint.h>
+#include "eeprom.h"
+#include <chtypes.h>
 
-enum LogType {
+#define LOG_OFFSET_SIZE     sizeof(uint32_t)
+#define LOG_NEXT_OFFSET     (EEPROM_LOG_SIZE - LOG_OFFSET_SIZE)
+
+typedef enum {
   // speed as in wheel revs / sec
   log_speedOnGround,
   log_wheelRPS_0,
@@ -36,7 +41,8 @@ enum LogType {
 
   // must be last, indicates end of log items
   log_end,
-};
+#define LOGITEMS_CNT 17
+} LogType_e;
 
 typedef struct {
   uint8_t size: 2;  // size of data
@@ -45,12 +51,19 @@ typedef struct {
 } LogItem_t;
 
 typedef struct {
-  uint8_t size; // number of items
+  uint8_t length; // number of items
+  uint8_t size;   // number of bytes
   LogItem_t items[log_end];
 } LogBuf_t;
+
+#if LOGITEMS_CNT * 5 + 1 >= EEPROM_PAGE_SIZE
+# error "Log item size bigger than a page size"
+#endif
 
 void loggerInit(void);
 
 void loggerSettingsChanged(void);
+
+extern thread_t *logthdp;
 
 #endif /* LOGGER_H_ */

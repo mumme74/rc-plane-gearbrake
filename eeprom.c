@@ -7,14 +7,14 @@
 
 #include "cfg/halconf.h"
 #include "eeprom.h"
-#include <hal_ee24xx.h>
-#include <hal_eeprom.h>
+#include "ee24m01r.h"
 #include <hal.h>
 #include <stdint.h>
 
 // -----------------------------------------------------------------
 // private stuff for this module
 
+#if 0
 uint8_t settingsWrBuf[EEPROM_PAGE_SIZE + 2],
         logBank1WrBuf[EEPROM_PAGE_SIZE + 2],
         logBank2WrBuf[EEPROM_PAGE_SIZE + 2];
@@ -80,9 +80,11 @@ static I2CEepromFileConfig log_bank2_eecfg = {
   /* Pointer to write buffer. The safest size is (pagesize + 2) */
   logBank2WrBuf,
 };
+#endif
 
 // -----------------------------------------------------------------
 // Public stuff for this module
+#if 0
 EepromFileStream *settings_fs,
                  *log_bank1_fs,
                  *log_bank2_fs;
@@ -94,3 +96,20 @@ void eepromInit(void) {
   log_bank2_fs = I2CEepromFileOpen(&log_bank2_ee, &log_bank2_eecfg, eedevp);
 ;
 }
+#endif
+
+ee24partition_t settings_ee = {
+  &I2CD1,
+  EE24M01R_I2C_LOW_BANK(0),
+  EEPROM_SETTINGS_START_ADDR,
+  EEPROM_SETTINGS_SIZE
+};
+
+ee24partition_t log_ee = {
+  &I2CD1,
+  EE24M01R_I2C_LOW_BANK(0),
+  EEPROM_LOG_START_ADDR,
+  EEPROM_LOG_SIZE
+};
+
+void eepromInit(void) {}

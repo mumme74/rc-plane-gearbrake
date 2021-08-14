@@ -5,7 +5,7 @@
 
 # Compiler options here.
 ifeq ($(USE_OPT),)
-  USE_OPT = -O2 -ggdb -fomit-frame-pointer -falign-functions=16
+  USE_OPT = -Os -ggdb -mno-unaligned-access -fomit-frame-pointer -falign-functions=16
 endif
 
 # C specific options here (added to USE_OPT).
@@ -102,7 +102,7 @@ include $(CHIBIOS)/os/license/license.mk
 # Startup files.
 include $(CHIBIOS)/os/common/startup/ARMCMx/compilers/GCC/mk/startup_stm32f0xx.mk
 # HAL-OSAL files (optional).
-#include $(CHIBIOS)/os/hal/hal.mk # use community intead
+include $(CHIBIOS)/os/hal/hal.mk # use community intead
 include $(CHIBIOS)/os/hal/ports/STM32/STM32F0xx/platform.mk
 #include $(CHIBIOS)/os/hal/boards/ST_STM32F0_DISCOVERY/board.mk
 include ./board/board.mk
@@ -114,14 +114,14 @@ include $(CHIBIOS)/os/common/ports/ARMCMx/compilers/GCC/mk/port_v6m.mk
 # Auto-build files in ./source recursively.
 include $(CHIBIOS)/tools/mk/autobuild.mk
 #EEprom
-include $(CHIBIOS)/community/os/hal/hal.mk
+#include $(CHIBIOS)/community/os/hal/hal.mk
 
 # project drivers
 include $(DRVDIR)/all.mk
 
 # Define linker script file here
-LDSCRIPT= ./STM32F042F4.ld
-#$(STARTUPLD)/STM32F051x8.ld
+#LDSCRIPT= ./STM32F042F4.ld
+LDSCRIPT= $(STARTUPLD)/STM32F051x8.ld
 # # 
 
 # C sources that can be compiled in ARM or THUMB mode depending on the global

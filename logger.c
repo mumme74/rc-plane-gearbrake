@@ -13,32 +13,55 @@
 #include "brake_logic.h"
 #include <ch.h>
 
-#define LOG_ITEM(thing, typ) {                              \
-  uint32_t idx = 0;                                         \
-  itm.size = sizeof(thing) &0x03;                           \
-  itm.type = typ;                                           \
-  pos[idx++] = (uint8_t)((uint8_t*)(&itm))[0];              \
-  pos[idx++] = (uint8_t)(&thing)[0];                        \
-  if (sizeof(thing) > 1) pos[idx++] = (uint8_t)(&thing)[1]; \
-  if (sizeof(thing) > 2) pos[idx++] = (uint8_t)(&thing)[2]; \
-  if (sizeof(thing) > 3) pos[idx++] = (uint8_t)(&thing)[3]; \
-  ++cnt;                                                    \
-}
+/*
+ * Memory structure for Logger:
+ * log .. many Log_Items
+ * log .. many Log_Items
+ * ....
+ * last 4 bytes: offset to next LogItem
+ */
 
+#define LOG_ITEM(thing, typ) {                          \
+  itm.size = sizeof(thing) &0x03;                       \
+  itm.type = typ;                                       \
+  *pos++ = (uint8_t)((uint8_t*)(&itm))[0];              \
+  *pos++ = (uint8_t)(&thing)[0];                        \
+  if (sizeof(thing) > 1) *pos++ = (uint8_t)(&thing)[1]; \
+  if (sizeof(thing) > 2) *pos++ = (uint8_t)(&thing)[2]; \
+  if (sizeof(thing) > 3) *pos++ = (uint8_t)(&thing)[3]; \
+  ++log.length;                                         \
+}
+/*#define LOG_ITEM(thing, typ) \
+  logItem(&pos, ((uint32_t*)&thing), sizeof(thing), typ, &cnt)
+*/
 
 // ---------------------------------------------------------------
 // private stuff for this file
-static thread_t *logthdp = 0;
 static systime_t logTimeout = 0;
 
 static LogBuf_t log;
 static LogItem_t itm;
-EepromFileStream *fs;
 uint32_t currentAddr;
 
+/*
+void logItem(uint8_t *pos[], uint32_t *thing, size_t sz,
+             LogType_e typ, uint8_t *cnt)
+{
+  uint8_t idx = 0;
+  itm.size = sz & 0x03;
+  itm.type = typ;
+  (*pos)[idx++] = (uint8_t)((uint8_t*)(&itm))[0];
+  (*pos)[idx++] = (uint8_t)((uint8_t*)(&thing))[0];
+  if (sz > 1) (*pos)[idx++] = (uint8_t)((uint8_t*)(&thing))[1];
+  if (sz > 2) (*pos)[idx++] = (uint8_t)((uint8_t*)(&thing))[2];
+  if (sz > 3) (*pos)[idx++] = (uint8_t)((uint8_t*)(&thing))[3];
+  *pos += idx;
+  ++(*cnt);
+
+}*/
+
 static void buildLog(void) {
-  uint8_t *pos = ((uint8_t*)&log)+1;
-  uint8_t cnt = 0;
+  uint8_t *pos = ((uint8_t*)&log)+2;
   LOG_ITEM(inputs.brakeForce, log_wantedBrakeForce);
 
   if (settings.Brake0_active)
@@ -83,7 +106,7 @@ static void buildLog(void) {
   }
 
   // last set the size off this log
-  log.size = cnt;
+  log.size = pos - (uint8_t*)&log;
 }
 
 THD_WORKING_AREA(waLoggerThd, 128);
@@ -91,41 +114,13 @@ THD_FUNCTION(LoggerThd, arg) {
   (void)arg;
 
   // read start pos of low address
-  uint32_t lowAddrStart, highAddrStart,
-           *addrStart;
-
-  msg_t res = fileStreamSetPosition(log_bank1_fs, 0);
+  uint32_t offsetNext;
+  msg_t res = ee24m01r_read(&log_ee, LOG_NEXT_OFFSET,
+                            (uint8_t*)&offsetNext, sizeof(offsetNext));
   if (res != MSG_OK) {
-    chThdExit(MSG_RESET);
+    chThdExit(res);
     return;
   }
-
-  res = fileStreamRead(log_bank1_fs, (uint8_t*)&lowAddrStart,
-                       sizeof(lowAddrStart));
-  if (res != MSG_OK) {
-    chThdExit(MSG_RESET);
-    return;
-  }
-
-  // start log at pos high address
-  res = fileStreamSetPosition(log_bank2_fs, 0);
-  if (res != MSG_OK) {
-    chThdExit(MSG_RESET);
-    return;
-  }
-
-  res = fileStreamRead(log_bank2_fs, (uint8_t*)&highAddrStart,
-                       sizeof(highAddrStart));
-  if (res != MSG_OK) {
-    chThdExit(MSG_RESET);
-    return;
-  }
-
-  if (lowAddrStart > 0)
-    currentAddr = (lowAddrStart > 0) ? lowAddrStart :
-                  EEPROM_LOG_BANK1_START_ADDR + sizeof(lowAddrStart);
-  fs = log_bank1_fs;
-  addrStart = &lowAddrStart;
 
   // start thread loop
   while (true) {
@@ -133,25 +128,23 @@ THD_FUNCTION(LoggerThd, arg) {
 
     buildLog();
 
-    if (lowAddrStart + log.size > EEPROM_BANK1_END_ADDR &&
-        fs == log_bank1_fs)
-    {
-      fs = log_bank2_fs;
-      currentAddr = EEPROM_LOG_BANK1_START_ADDR + sizeof(highAddrStart);
-      addrStart = &highAddrStart;
-    } else if (highAddrStart + log.size > EEPROM_BANK2_END_ADDR &&
-        fs == log_bank2_fs)
-    {
-      fs = log_bank1_fs;
-      currentAddr = EEPROM_LOG_BANK1_START_ADDR + sizeof(lowAddrStart);
-      addrStart = &lowAddrStart;
+    // at end, flip around
+    if (offsetNext >= LOG_NEXT_OFFSET)
+      offsetNext = 0;
+    // store it
+    res = ee24m01r_write(&log_ee, offsetNext, (uint8_t*)&log, log.size);
+    if (res != MSG_OK) {
+      chThdExit(res);
+      return;
     }
 
-    *addrStart += log.size;
-    fileStreamWrite(fs, (uint8_t*)&log, log.size);
-    fileStreamSetPosition(fs, 0);
-    fileStreamWrite(fs, (uint8_t*)addrStart, sizeof(*addrStart));
-    fileStreamSetPosition(fs, *addrStart);
+    // update nextOffset in memory
+    res = ee24m01r_write(&log_ee, LOG_NEXT_OFFSET,
+                         (uint8_t*)&offsetNext, sizeof(offsetNext));
+    if (res != MSG_OK) {
+      chThdExit(res);
+      return;
+    }
   }
 }
 
@@ -166,6 +159,8 @@ static thread_descriptor_t loggerThdDesc = {
 
 // ---------------------------------------------------------------
 // public stuff for this file
+
+thread_t *logthdp = 0;
 
 void loggerInit(void) {
   logthdp = chThdCreate(&loggerThdDesc);

@@ -37,7 +37,7 @@
 
 #define CH_CFG_USE_HEAP                 FALSE
 #define CH_CFG_USE_FACTORY              FALSE
-#define HAL_USE_COMMUNITY               TRUE
+#define HAL_USE_COMMUNITY               FALSE
 #define CH_CFG_USE_MEMCORE              FALSE
 #define CH_CFG_USE_MEMPOOLS             FALSE
 

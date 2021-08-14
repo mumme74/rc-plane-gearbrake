@@ -129,15 +129,12 @@ void settingsDefault(void) {
 
 msg_t settingsLoad(void) {
   uint8_t *buf = (uint8_t*)&settings;
+  const size_t hdrSz = sizeof(Settings_header_t);
 
-  msg_t res = fileStreamSetPosition(settings_fs, 0);
+  msg_t res = ee24m01r_read(&settings_ee, 0, buf, hdrSz);
   if (res != MSG_OK) return res;
 
-  // load header
-  res = fileStreamRead(settings_fs, buf, sizeof(Settings_header_t));
-  if (res != MSG_OK) return res;
-
-  // ensure header version match with STORAGE_VERSION
+   // ensure header version match with STORAGE_VERSION
   // if not bail out
   if (settings.header.size != SETTINGS_SIZE ||
       settings.header.storageVersion != STORAGE_VERSION)
@@ -145,10 +142,8 @@ msg_t settingsLoad(void) {
     return MSG_RESET;
   }
 
-  // set the rest of the settings
-  res = fileStreamRead(settings_fs,
-                       buf + sizeof(Settings_header_t),
-                       sizeof(Settings_header_t) - sizeof(Settings_header_t));
+  res = ee24m01r_read(&settings_ee, hdrSz, buf+hdrSz,
+                      sizeof(settings) - hdrSz );
   if (res != MSG_OK) return res;
 
 
@@ -159,10 +154,8 @@ msg_t settingsLoad(void) {
 
 msg_t settingsSave(void) {
   validateValues();
-  size_t res = fileStreamSetPosition(settings_fs, 0);
-  if (res != MSG_OK) return res;
-
-  res =fileStreamWrite(settings_fs, (uint8_t*)&settings, sizeof(Settings_t));
+  const uint8_t *buf = (uint8_t*)&settings;
+  msg_t res = ee24m01r_write(&settings_ee, 0, buf, sizeof(settings));
   if (res != MSG_OK) return res;
 
   notify();

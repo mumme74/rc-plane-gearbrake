@@ -42,11 +42,11 @@
 
 #define KXTJ3_1157_SHARED_I2C TRUE // for accelerometer driver, share bus with EEPROM
 
-#define HAL_USE_EEPROM  TRUE
-#define EEPROM_USE_EE24XX TRUE
-#define EEPROM_I2C_CLOCK 1000000
+//#define HAL_USE_EEPROM  TRUE
+//#define EEPROM_USE_EE24XX TRUE
+#define I2C_8BIT_TIME_US 8 // how many microseconds to send 8bits (8=1Mhz clock, 20=400kHz etc)
 
-#include "halconf_community.h"
+//#include "halconf_community.h"
 
 /**
  * @brief   Enables the PAL subsystem.
