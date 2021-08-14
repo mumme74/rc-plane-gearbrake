@@ -12,13 +12,13 @@
 
 // driver for EEPROM 1Mbit 24M01R
 
-#define EE24M01R_12C_ADDR_BASE              0x50
-#define EE24M01R_I2C_DEV_SEL(devid)            ((devid & 0x03) << 1)
-#define EE24M01R_I2C_DEV_SEL_ID_PAGE(devid)    ((devid & 0x03) << 1)
+#define EE24M01R_12C_ADDR_BASE              0x50U
+#define EE24M01R_I2C_DEV_SEL(devid)            ((devid & 0x03U) << 1)
+#define EE24M01R_I2C_DEV_SEL_ID_PAGE(devid)    ((devid & 0x03U) << 1)
 
 #define EE24M01R_I2C_LOW_BANK(devid)        EE24M01R_12C_ADDR_BASE \
                                              | EE24M01R_I2C_DEV_SEL(devid)
-#define EE24M01R_I2C_HIGH_BANK(devid)       EE24M01R_I2C_LOW_BANK(devid) | 0x1
+#define EE24M01R_I2C_HIGH_BANK(devid)       EE24M01R_I2C_LOW_BANK(devid) | 0x1U
 
 #define EE24M01R_TOTAL_CAPACITY_BITS   1000000U
 #define EE24M01R_TOTAL_CAPACITY        (EE24M01R_TOTAL_CAPACITY_BITS / 8U)
@@ -32,7 +32,7 @@
 #define EE24M01R_BANK2_START_ADDR      0U
 #define EE24M01R_BANK2_END_ADDR        (EE24M01R_BANK1_CAPACITY - EE24M01R_BANK1_START_ADDR -1)
 
-#define EE24M01R_READ_BIT              0x01
+#define EE24M01R_READ_BIT              0x01U
 
 #define EE24M01R_PAGE_SIZE             256U
 #define EE24M01R_WRITE_TIME            5U /* in milliseconds */

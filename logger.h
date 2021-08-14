@@ -41,7 +41,9 @@ typedef enum {
 
   // must be last, indicates end of log items
   log_end,
-#define LOGITEMS_CNT 17
+#define LOGITEMS_CNT 17U
+
+  log_coldStart = 0x3FU,
 } LogType_e;
 
 typedef struct {

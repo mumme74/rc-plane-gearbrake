@@ -122,6 +122,18 @@ THD_FUNCTION(LoggerThd, arg) {
     return;
   }
 
+  // log a cold start
+  log.size = 3u;
+  log.length = 1u;
+  log.items[0].size = 1;
+  log.items[0].type = log_coldStart;
+  res = ee24m01r_write(&log_ee, offsetNext, (uint8_t*)&log, log.size);
+  if (res != MSG_OK) {
+    chThdExit(res);
+    return;
+  }
+  offsetNext += log.size;
+
   // start thread loop
   while (true) {
     chThdSleepMilliseconds(logTimeout);
