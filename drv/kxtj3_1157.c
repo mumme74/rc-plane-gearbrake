@@ -120,6 +120,9 @@ static msg_t kxtj3_1157I2CWriteRegister(I2CDriver *i2cp, uint8_t sad,
                                   TIME_INFINITE);
 }
 
+
+#if defined(EX_ACCELEROMETER_INTERFACE) || defined(__DOXYGEN__)
+
 /**
  * @brief   Return the number of axes of the BaseAccelerometer.
  *
@@ -132,6 +135,8 @@ static size_t acc_get_axes_number(void *ip) {
 
   return KXTJ3_1157_ACC_NUMBER_OF_AXES;
 }
+
+#endif
 
 /**
  * @brief   Retrieves raw data from the BaseAccelerometer.
