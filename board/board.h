@@ -274,7 +274,7 @@
                                      PIN_OTYPE_PUSHPULL(GPIOA_SWDIO) |      \
                                      PIN_OTYPE_PUSHPULL(GPIOA_SWCLK) |      \
                                      PIN_OTYPE_PUSHPULL(GPIOA_PIN15))
-#define VAL_GPIOA_OSPEEDR           (PIN_OSPEED_LOW(GPIOA_I2C_WC) |         \
+#define VAL_GPIOA_OSPEEDR           (PIN_OSPEED_HIGH(GPIOA_I2C_WC) |         \
                                      PIN_OSPEED_VERYLOW(GPIOA_WH_speed0) |  \
                                      PIN_OSPEED_VERYLOW(GPIOA_WH_speed1) |  \
                                      PIN_OSPEED_VERYLOW(GPIOA_WH_speed2) |  \

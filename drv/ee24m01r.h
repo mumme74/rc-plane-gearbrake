@@ -57,7 +57,7 @@ typedef struct {
 msg_t ee24m01r_read(const ee24partition_t *eep,
                     const size_t offset,
                     uint8_t buf[],
-                    const uint8_t len);
+                    const uint16_t len);
 
 /**
  * @brief read from eeprom in chunks of up to 256 bytes
@@ -71,6 +71,6 @@ msg_t ee24m01r_read(const ee24partition_t *eep,
 msg_t ee24m01r_write(ee24partition_t *eep,
                      size_t offset,
                      const uint8_t wrbuf[],
-                     uint8_t len);
+                     uint16_t len);
 
 #endif /* DRV_EE24M01R_H_ */

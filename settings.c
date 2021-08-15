@@ -13,6 +13,7 @@
 #include "inputs.h"
 #include "brake_logic.h"
 #include "logger.h"
+#include "usbcfg.h"
 
 // this version should be bumped on each breaking ABI change to EEPROM storage
 #define STORAGE_VERSION 0x01
@@ -160,4 +161,20 @@ msg_t settingsSave(void) {
 
   notify();
   return res;
+}
+
+void settingsGetAll(uint8_t obuf[], CommsCmd_t *cmd,
+                    const size_t bufSz, systime_t sendTimeout)
+{
+  obuf[0] = 3 + sizeof(settings);
+  obuf[1] = cmd->type;
+  obuf[2] = cmd->reqId;
+
+  osalDbgAssert(obuf[0] <= bufSz, "buffer bounds overflow");
+
+  for (size_t i = 0; i < sizeof(settings); ++i) {
+    obuf[i + 3] = ((uint8_t *)&settings)[i];
+  }
+
+  obqWriteTimeout(&SDU1.obqueue, obuf, 3 + sizeof(settings), sendTimeout);
 }

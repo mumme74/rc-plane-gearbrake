@@ -9,6 +9,7 @@
 #include "ee24m01r.h"
 #include <hal.h>
 #include <ch.h>
+#include "board.h"
 
 // -----------------------------------------------------------------
 // private stuff to this module
@@ -45,9 +46,9 @@ static systime_t calc_timeout(size_t bytes) {
 msg_t ee24m01r_read(const ee24partition_t *eep,
                     const size_t offset,
                     uint8_t buf[],
-                    const uint8_t len)
+                    const uint16_t len)
 {
-  //osalDbgAssert(len <= EE24M01R_PAGE_SIZE, "Can't read more than pageSize");
+  osalDbgAssert(len <= EE24M01R_PAGE_SIZE, "Can't read more than pageSize");
 
   msg_t status = MSG_RESET;
 
@@ -109,9 +110,9 @@ msg_t ee24m01r_read(const ee24partition_t *eep,
 msg_t ee24m01r_write(ee24partition_t *eep,
                      size_t offset,
                      const uint8_t wrbuf[],
-                     uint8_t len)
+                     uint16_t len)
 {
-  //osalDbgAssert(len <= EE24M01R_PAGE_SIZE, "Can't write more than pageSize");
+  osalDbgAssert(len <= EE24M01R_PAGE_SIZE, "Can't write more than pageSize");
 
   // read from memory
   osalDbgAssert(((len <= eep->size) && ((offset + len) <= eep->size)),
@@ -148,6 +149,8 @@ msg_t ee24m01r_write(ee24partition_t *eep,
   i2cAcquireBus(eep->i2cp);
 #endif
 
+  palClearLine(LINE_I2C_WC);
+
   // set address and init buffer
   uint8_t *bufp = buf + lenPart1;
   const uint8_t *wbuf = wrbuf + lenPart1;
@@ -168,6 +171,9 @@ msg_t ee24m01r_write(ee24partition_t *eep,
                                     bufp, _len, 0, 0,
                                     calc_timeout(_len) +
                                     TIME_MS2I(EE24M01R_WRITE_TIME));
+
+
+  palSetLine(LINE_I2C_WC);
 
 #if I2C_USE_MUTUAL_EXCLUSION
   i2cReleaseBus(eep->i2cp);

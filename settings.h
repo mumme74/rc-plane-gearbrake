@@ -9,7 +9,8 @@
 #define SETTINGS_H_
 
 #include <stdint.h>
-#include <chtypes.h>
+#include <ch.h>
+#include "comms.h"
 
 #define SETTINGS_ACCEL_USE_X    0U
 #define SETTINGS_ACCEL_USE_Y    1U
@@ -117,5 +118,7 @@ msg_t settingsLoad(void);
  */
 msg_t settingsSave(void);
 
+void settingsGetAll(uint8_t obuf[], CommsCmd_t *cmd,
+                    const size_t bufSz, systime_t sendTimeout);
 
 #endif /* SETTINGS_H_ */

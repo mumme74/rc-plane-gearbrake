@@ -11,6 +11,8 @@
 #include "eeprom.h"
 #include "threads.h"
 #include "brake_logic.h"
+#include "usbcfg.h"
+#include "comms.h"
 #include <ch.h>
 
 /*
@@ -41,7 +43,7 @@ static systime_t logTimeout = 0;
 
 static LogBuf_t log;
 static LogItem_t itm;
-uint32_t currentAddr;
+static uint32_t offsetNext = 0;
 
 /*
 void logItem(uint8_t *pos[], uint32_t *thing, size_t sz,
@@ -114,7 +116,6 @@ THD_FUNCTION(LoggerThd, arg) {
   (void)arg;
 
   // read start pos of low address
-  uint32_t offsetNext;
   msg_t res = ee24m01r_read(&log_ee, LOG_NEXT_OFFSET,
                             (uint8_t*)&offsetNext, sizeof(offsetNext));
   if (res != MSG_OK) {
@@ -137,6 +138,8 @@ THD_FUNCTION(LoggerThd, arg) {
   // start thread loop
   while (true) {
     chThdSleepMilliseconds(logTimeout);
+    if (serusbcfg.usbp->state == USB_ACTIVE)
+      continue; // don't log when USB is plugged in
 
     buildLog();
 
@@ -182,4 +185,73 @@ void loggerInit(void) {
 void loggerSettingsChanged(void) {
   logTimeout =  TIME_MS2I(settings.logPeriodicity);
 }
+
+void loggerClearAll(uint8_t obuf[], const size_t bufSz) {
+  chThdSuspendTimeoutS(&logthdp, TIME_INFINITE);
+  size_t offset = 0;
+  for(size_t i = 0; i < bufSz; ++i)
+    obuf[i] = 0xFF;
+
+  do {
+    size_t len =  offset + bufSz < EEPROM_LOG_SIZE ?
+                    bufSz : EEPROM_LOG_SIZE - offset;
+    ee24m01r_write(&log_ee, offset, obuf, len);
+    offset += bufSz;
+  } while(offset < EEPROM_LOG_SIZE);
+
+  chThdResume(&logthdp, MSG_OK);
+
+
+}
+
+void loggerReadAll(uint8_t obuf[], CommsCmd_t *cmd,
+                   const size_t bufSz, systime_t sendTimeout)
+{
+  chThdSuspendTimeoutS(&logthdp, TIME_INFINITE);
+  size_t offset = 0;
+
+  // send header build up size bytes...
+  static const uint32_t logSize = EEPROM_LOG_SIZE + 3u; // +3 to include header
+  uint8_t pos = 0;
+  for (uint32_t i = 5u; i < 0xFFFFFFFFu; --i) {
+    uint8_t vlu = (logSize & (0xFFu << i * 7u)) >> i*7u;
+    if (vlu != 0u || pos > 0) {
+      obuf[pos++] = 0x80u | vlu; // store Big end first
+    }
+  }
+  // set type and reqId and send header to host
+  obuf[pos++] = cmd->type;
+  obuf[pos++] = cmd->reqId;
+  if (obqWriteTimeout(&SDU1.obqueue, obuf, pos, sendTimeout) < pos)
+    return;
+
+  do {
+    // -4 due to last 4 bytes is logNextAddr
+    size_t len = offset + bufSz < EEPROM_LOG_SIZE - 4 ?
+                   bufSz : EEPROM_LOG_SIZE - offset - 4;
+    // read page into buffer
+    ee24m01r_read(&log_ee, offset, obuf, len);
+    // send buffer to host
+    if (obqWriteTimeout(&SDU1.obqueue, obuf, len, sendTimeout) < len)
+      break;
+    offset += bufSz;
+  } while(offset < EEPROM_LOG_SIZE -4);
+
+  chThdResume(&logthdp, MSG_OK);
+}
+
+void loggerNextAddr(uint8_t obuf[], CommsCmd_t *cmd, systime_t sendTimeout)
+{
+  obuf[0] = 3 + sizeof(offsetNext);
+  obuf[1] = cmd->type;
+  obuf[2] = cmd->reqId;
+  // little endian should be default for cortex ?
+  obuf[3] = offsetNext & 0xFF;
+  obuf[4] = (offsetNext & 0xFF00) >> 8;
+  obuf[5] = (offsetNext & 0xFF0000) >> 16;
+  obuf[6] = (offsetNext & 0xFF000000) >> 24;
+
+  obqWriteTimeout(&SDU1.obqueue, obuf, 7, sendTimeout);
+}
+
 
