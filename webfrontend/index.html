@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<!--template originally from w3schools.org-->
+<html lang="en">
+    <head>
+        <title>RC-plane Gearbrake</title>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <link rel="stylesheet" href="w3.css">
+        <style>
+            body,h1,h2,h3,h4,h5,h6 {font-family: sans-serif}
+            .w3-bar,h1,button {font-family: sans-serif}
+            .fa-anchor,.fa-coffee {font-size:200px}
+        </style> 
+        <script>
+          if (localStorage.getItem("lang")) {
+            document.querySelector("html").lang = localStorage.getItem("lang");
+          }
+        </script>
+        <script src="menu.js"></script>
+        <script src="welcomepage.js"></script>
+        <script src="configurepage.js"></script>
+        <script src="viewlogpage.js"></script>
+        <script src="settingspage.js"></script>
+        <script src="router.js"></script>
+    </head>
+    <body>
+
+    <!-- Navbar -->
+    <div class="w3-top">
+      <div class="w3-bar w3-red w3-card w3-left-align w3-large" id="menuBar"></div>
+
+      <!-- Navbar on small screens -->
+      <div id="navPopup" class="w3-bar-block w3-white w3-hide w3-large"></div>
+    </div>
+
+   
+
+    <!-- First Grid -->
+    
+
+    <div id="content"></div>
+
+    <!-- Second Grid
+    <div class="w3-row-padding w3-light-grey w3-padding-64 w3-container">
+      <div class="w3-content">
+        <div class="w3-third w3-center">
+          <i class="fa fa-coffee w3-padding-64 w3-text-red w3-margin-right"></i>
+        </div>
+
+        <div class="w3-twothird">
+          <h1>Lorem Ipsum</h1>
+          <h5 class="w3-padding-32">Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.</h5>
+
+          <p class="w3-text-grey">Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Excepteur sint
+            occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco
+            laboris nisi ut aliquip ex ea commodo consequat.</p>
+        </div>
+      </div>
+    </div> -->
+
+
+    <!-- Footer -->
+    <footer class="w3-container w3-padding-32 w3-center w3-opacity">
+     <p>Project at <a href="https://github.com/mumme74/rc-plane-gearbrake" target="_blank">RC-plane gearbrake</a></p>
+     <p>Powered by
+        <a href="https://www.chibios.org" target="_blank">Chibios/nil</a> and by
+        <a href="https://www.w3schools.com/w3css/default.asp" target="_blank">w3.css</a>
+     </p>
+    </footer>
+
+ 
+
+    </body>
+</html>
