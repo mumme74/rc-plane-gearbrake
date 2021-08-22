@@ -66,24 +66,21 @@ typedef struct {
   uint8_t ABS_active:1;
 
   // outputs
-  uint16_t PwmFreq: 3; // as in PwmFrequency_e
-  uint16_t Brake0_active: 1;
-  uint16_t Brake1_active: 1;
-  uint16_t Brake2_active: 1;
-  uint16_t Brake0_dir: 2; // if it is left, right or center used for steering brakes
-  uint16_t Brake1_dir: 2; // 1 for left, 2 for right, 0 for center wheel (no steering brake)
-  uint16_t Brake2_dir: 2; //
+  uint8_t PwmFreq: 3; // as in PwmFrequency_e
+  uint8_t Brake0_active: 1;
+  uint8_t Brake1_active: 1;
+  uint8_t Brake2_active: 1;
 
-  // wheel speed inputs
-  // how many pulses per revolution each wheel has, ie how many tooths
-  // in your ABS tooth wheel, 0 deactivates
-  uint8_t WheelSensor0_pulses_per_rev;
-  uint8_t WheelSensor1_pulses_per_rev;
-  uint8_t WheelSensor2_pulses_per_rev;
+  // next byte
+  uint8_t Brake0_dir: 2; // if it is left, right or center used for steering brakes
+  uint8_t Brake1_dir: 2; // 1 for left, 2 for right, 0 for center wheel (no steering brake)
+  uint8_t Brake2_dir: 2; //
 
   // which axis should control steering brakes
   // 0 = x, 1=y, 2=z
   uint8_t accelerometer_axis: 2;
+
+  // next byte
   // accelerometer
   uint8_t accelerometer_active: 1;
   // invert the input IE brake the other wheel
@@ -92,6 +89,13 @@ typedef struct {
   uint8_t dontLogWhenStill: 1;
   // how often we should log
   uint8_t logPeriodicity: 3;
+
+  // wheel speed inputs
+  // how many pulses per revolution each wheel has, ie how many tooths
+  // in your ABS tooth wheel, 0 deactivates
+  uint8_t WheelSensor0_pulses_per_rev;
+  uint8_t WheelSensor1_pulses_per_rev;
+  uint8_t WheelSensor2_pulses_per_rev;
 
 } Settings_t;
 

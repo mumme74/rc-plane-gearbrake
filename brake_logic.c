@@ -59,7 +59,7 @@ static THD_FUNCTION(BrakeLogicThd, arg) {
     chThdSleep(sleepTime);
 
     vlup->brakeForce = (settings.reverse_input) ?
-              -inputs.brakeForce : inputs.brakeForce;
+              100 - inputs.brakeForce : inputs.brakeForce;
     if (vlup->brakeForce < settings.lower_threshold) {
       sleepTime = TIME_MS2I(20); // wait for next pulse from reciver
       timeAtLastSpeedDecrement = 0;

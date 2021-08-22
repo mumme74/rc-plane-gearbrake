@@ -200,8 +200,6 @@ void loggerClearAll(uint8_t obuf[], const size_t bufSz) {
   } while(offset < EEPROM_LOG_SIZE);
 
   chThdResume(&logthdp, MSG_OK);
-
-
 }
 
 void loggerReadAll(uint8_t obuf[], CommsCmd_t *cmd,

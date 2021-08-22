@@ -11,12 +11,12 @@
 #include <stdint.h>
 
 typedef enum {
-  off,
-  freq1Hz,
-  freq10Hz,
-  freq100Hz,
-  freq1kHz,
-  freq10kHz,
+  off = 0,
+  freq1Hz = 0x01u,
+  freq10Hz = 0x02u,
+  freq100Hz = 0x03u,
+  freq1kHz = 0x04u,
+  freq10kHz = 0x05u,
   freqHighest = freq10kHz
 } PwmFrequency_e;
 

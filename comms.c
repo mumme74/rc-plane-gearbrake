@@ -15,6 +15,8 @@
 
 // this file handle all serial IO
 
+#define COM_VERSION 0x01u // bumb on every API change i serial communication
+
 // ------------------------------------------------------------------
 // module private stuff
 static thread_t *commsThdp = 0;
@@ -93,7 +95,10 @@ static void readSettings(void) {
     setMem[i] = obuf[i];
 
   // save settings
-  settingsSave();
+  if (settingsSave() == MSG_OK)
+    sendHeader(commsCmd_OK);
+  else
+    sendHeader(commsCmd_Error);
 }
 
 
@@ -105,6 +110,13 @@ static void routeCmd(void) {
   case commsCmd_Reset:
     if (sendHeader(commsCmd_OK) == 3)
       NVIC_SystemReset();
+    break;
+  case commsCmd_SettingsSetDefault:
+    settingsDefault();
+    if (settingsSave() == MSG_OK)
+      sendHeader(commsCmd_OK);
+    else
+      sendHeader(commsCmd_Error);
     break;
   case commsCmd_SettingsSetAll:
     readSettings();
@@ -121,6 +133,13 @@ static void routeCmd(void) {
   case commsCmd_LogClearAll:
     loggerClearAll(obuf, sizeof(obuf) / sizeof(obuf[0]));
     sendHeader(commsCmd_OK);
+    break;
+  case commsCmd_version:
+    obuf[0] = 4;
+    obuf[1] = commsCmd_version;
+    obuf[2] = cmd.reqId;
+    obuf[3] = COM_VERSION;
+    obqWriteTimeout(&SDU1.obqueue, obuf, obuf[0], sendTimeout);
     break;
   default:
     return; // do nothing
