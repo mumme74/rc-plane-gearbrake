@@ -24,16 +24,23 @@ document.addEventListener('DOMContentLoaded', () =>{
         {txt: {en: "Configure", sv: "Konfigurera"}, hash: "conf"},
         {txt: {en: "View log", sv: "Visa log"}, hash: "viewlog"},
         {txt: {en: "View log graphic", sv: "Visa grafisk log"}, hash: "viewloggraphic"},
-        {txt: {en: "Settings", sv: "Inställningar"}, hash: "settings"}
+        {txt: {en: "Settings", sv: "Inställningar"}, hash: "settings"},
+        {action: SerialBase.instance().openPort, txt: "&#x1F517;",
+            tip: {en: "Connect to device", sv: "Anslut till enhet"},
+         cls: classes.bar + " connectBtn"}
     ];
 
     function buildLink(itm, parent) {
         let a = document.createElement("a");
         a.href = typeof itm.hash === 'string' ? `#${itm.hash}` : "javascript:void(0)";
         a.className = itm.cls || classes.bar;
-        a.innerHTML = itm.txt[lang];
+        a.innerHTML = typeof itm.txt === 'string' ? itm.txt : itm.txt[lang];
+        if (itm.tip) 
+            a.title = itm.tip[lang];
         if (itm.action)
             a.addEventListener("click", itm.action);
+        if (itm.id)
+            a.id = tm.id;
         parent.appendChild(a);
     }
 

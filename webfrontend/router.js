@@ -3,28 +3,32 @@
 function routeMainContent() {
     let lang = document.querySelector("html").lang;
     let page = location.hash.replace(/^#/, "");
-    let content;
+    let htmlFunctor;
 
     switch(page) {
     case 'viewloggraphic':
-        content = "viewloggraphic";
+        htmlFunctor = ()=>{return "viewloggraphic"};
         break;
     case 'viewlog':
-        content = viewlogObj.html(lang);
+        htmlFunctor = viewlogHtmlObj.html;
         break;
     case 'conf':
-        content = configureObj.html(lang);
+        htmlFunctor = configureHtmlObj.html;
         break;
     case 'settings':
-        content = settingsObj.html(lang);
+        htmlFunctor = appSettingsHtmlObj.html;
         break;
     case 'start': // fallthrough
     default:
-        content = welcomeObj.html(lang);
+        htmlFunctor = welcomeHtmlObj.html;
     }
 
-    document.getElementById("content").innerHTML = content;
+    document.getElementById("content").innerHTML = htmlFunctor(lang);
 }
 
 document.addEventListener('DOMContentLoaded', routeMainContent);
-window.addEventListener('hashchange', routeMainContent);
+window.addEventListener('hashchange', (evt)=>{
+    evt.stopPropagation();
+    evt.preventDefault();
+    routeMainContent();
+});
