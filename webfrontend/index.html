@@ -31,6 +31,8 @@
         </style> 
         <script>
           {
+            var testing = true; // uncomment to run internal testing in frontend
+
             let lang;
             if (localStorage.getItem("lang")) {
               lang = localStorage.getItem("lang");
@@ -43,6 +45,7 @@
         <script src="notifier.js"></script>
         <script src="serial.js"></script>
         <script src="device.js"></script>
+        <script src="logger.js"></script>
         <script src="menu.js"></script>
         <script src="welcomepage.js"></script>
         <script src="configurepage.js"></script>
