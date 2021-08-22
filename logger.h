@@ -17,33 +17,36 @@
 #define LOG_NEXT_OFFSET     (EEPROM_LOG_SIZE - LOG_OFFSET_SIZE)
 
 typedef enum {
+  // use number here to prevent possible mismatch between
+  // javascript front end and this firmware
+
   // speed as in wheel revs / sec
-  log_speedOnGround,
-  log_wheelRPS_0,
-  log_wheelRPS_1,
-  log_wheelRPS_2,
+  log_speedOnGround = 0,
+  log_wheelRPS_0 = 1,
+  log_wheelRPS_1 = 2,
+  log_wheelRPS_2 = 3,
   // brake force
-  log_wantedBrakeForce,
-  log_brakeForce0_out,
-  log_brakeForce1_out,
-  log_brakeForce2_out,
+  log_wantedBrakeForce = 4,
+  log_brakeForce0_out = 5,
+  log_brakeForce1_out = 6,
+  log_brakeForce2_out = 7,
   // wheel slip
-  log_slip0,
-  log_slip1,
-  log_slip2,
+  log_slip0 = 8,
+  log_slip1 = 9,
+  log_slip2 = 10,
   // steering brakes
-  log_accelSteering,
-  log_wsSteering,
+  log_accelSteering = 11,
+  log_wsSteering = 12,
   // accelerometer
-  log_accel,
-  log_accelX,
-  log_accelY,
-  log_accelZ,
+  log_accel = 13,
+  log_accelX = 14,
+  log_accelY = 15,
+  log_accelZ = 16,
 
   // must be last, indicates end of log items
   log_end,
 #define LOGITEMS_CNT 17U
-
+  // special type, last possible in 6bits
   log_coldStart = 0x3FU,
 } LogType_e;
 

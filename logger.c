@@ -24,7 +24,7 @@
  */
 
 #define LOG_ITEM(thing, typ) {                          \
-  itm.size = sizeof(thing) &0x03;                       \
+  itm.size = (sizeof(thing) -1) & 0x03;                 \
   itm.type = typ;                                       \
   *pos++ = (uint8_t)((uint8_t*)(&itm))[0];              \
   *pos++ = (uint8_t)(&thing)[0];                        \
@@ -124,10 +124,11 @@ THD_FUNCTION(LoggerThd, arg) {
   }
 
   // log a cold start
-  log.size = 3u;
+  log.size = 4u;
   log.length = 1u;
-  log.items[0].size = 1;
+  log.items[0].size = 0;
   log.items[0].type = log_coldStart;
+  log.items[0].data[0] = 0x5A; // bit twiddle to easily find during debug
   res = ee24m01r_write(&log_ee, offsetNext, (uint8_t*)&log, log.size);
   if (res != MSG_OK) {
     chThdExit(res);
