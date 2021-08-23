@@ -121,13 +121,18 @@ class LogEntry {
   }
 
   itemCnt() {
-      return this.parent.byteArray[this.startPos]; // first byte is number of items
+    return this.parent.byteArray[this.startPos]; // first byte is number of items
   }
 
   getChild(type) {
     if (!this.children.length)
-        this._generateChildren();
+      this._generateChildren();
     return this.children.find(itm=>itm.type === type);
+  }
+
+  scanChildren() {
+    if (!this.children.length)
+      this._generateChildren();
   }
 
   _generateChildren() {
@@ -155,6 +160,18 @@ class LogRoot {
     coldStarts = [];
     startPos = -1;
 
+    getSession(coldStartIdx) {
+        let entries = [];
+        const start = this.coldStarts[coldStartIdx];
+        const end = this.coldStarts.length-1 > coldStartIdx ? 
+                        this.coldStarts[coldStartIdx+1] : this.logEntries.length;
+        for (let i = start; i < end; ++i) {
+            entries.push(this.logEntries[i]);
+        }
+
+        return entries;
+    }
+
     parseLog(byteArray, startAddr) {
         this.byteArray = byteArray;
         this.startPos = startAddr;
@@ -167,7 +184,7 @@ class LogRoot {
                 if (entry.itemCnt() === 1 && 
                     entry.getChild(LogItem.Types.log_coldStart))
                 {
-                  this.coldStarts.push(entry);
+                  this.coldStarts.push(this.logEntries.length-1);
                 }
                 pos += entry.size;
             }

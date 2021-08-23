@@ -128,6 +128,8 @@ const LogItemTypesTranslated = {
   },
 }
 
+const viewlogFilter = [];
+
 const viewlogHtmlObj = {
   fetchLog: ()=>{
     console.log("Fetch log from device")
@@ -137,14 +139,66 @@ const viewlogHtmlObj = {
   },
   selectStart: (evt, idx) => {
     console.log("view log " + idx);
+    const logRoot = LogRoot.instance();
+    // change text on dropdown btn
     const lang = document.querySelector("html").lang;
     const latest = viewlogHtmlObj.lang[lang].latestSession;
-    const j = LogRoot.instance().coldStarts.length - 1 - idx;
+    const j = logRoot.coldStarts.length - 1 - idx;
     const txt = j === 0 ? latest : latest + " - " + j;
     evt.target.parentNode.previousElementSibling.innerText = txt;
 
     // create dropdown to select what items to show
+    // iterate over each entry and check if we have a new item
+    let items = [];
+    const typeKeys = Object.keys(LogItem.Types);
+    const entries = logRoot.getSession(idx);
+    entries.forEach(entry=>{
+      entry.scanChildren();
+      entry.children.forEach(itm=>{
+        if (items.findIndex(item=>item.entry.type===itm.type) === -1) {
+          const tr = LogItemTypesTranslated[
+            typeKeys[itm.type < LogItem.Types.log_end ?
+                         itm.type : typeKeys.length-1 ]];
+          items.push({entry:itm, txt:tr.txt[lang], title:tr.title[lang]});
+        } 
+      })
+    });
 
+    // remove old entres in dropdown
+    items = items.sort((a, b) =>a.txt < b.txt);
+    const dropdown = document.getElementById("showLogItemDropdown");
+    while(dropdown.lastElementChild != dropdown.firstElementChild)
+      dropdown.removeChild(dropdown.lastElementChild);
+
+    const checked = dropdown.firstElementChild.firstElementChild.checked
+
+    items.forEach(itm=>{
+      const lbl = document.createElement("label");
+      lbl.className = "w3-bar-item w3-button";
+      lbl.title = itm.title;
+      const chkbox = document.createElement("input");
+      chkbox.type = "checkbox";
+      chkbox.className = "w3-button";
+      chkbox.value = itm.type;
+      chkbox.checked = checked;
+      chkbox.onclick = (evt)=>{
+        const idx = viewlogFilter.indexOf(evt.target.value);
+        if (!idx && evt.target.checked)
+          viewlogFilter.push(evt.target.value);
+        else if (idx && !evt.target.checked)
+          viewlogFilter.splice(idx);
+      }
+      lbl.appendChild(chkbox);
+      lbl.appendChild(document.createTextNode(` ${itm.txt}`));
+      dropdown.appendChild(lbl);
+    })
+  },
+  selectAllClicked: (evt)=>{
+    let lbl = evt.target.parentNode;
+    while(lbl.nextElementSibling) {
+      lbl = lbl.nextElementSibling;
+      lbl.firstElementChild.checked = evt.target.checked;
+    }
   },
   lang: {
     en: {
@@ -208,7 +262,10 @@ const viewlogHtmlObj = {
             <div class="w3-dropdown-hover" id="showLogItm">
               <button class="w3-button">${tr.showLogItem}</button>
               <div class="w3-dropdown-content w3-bar-block w3-card-4" id="showLogItemDropdown">
-                <label class="w3-bar-item w3-button"><input type="checkbox" class="w3-button"/> ${tr.chooseAll}</label>
+                <label class="w3-bar-item w3-button">
+                  <input type="checkbox" class="w3-button" onclick="viewlogHtmlObj.selectAllClicked(event)" checked/> 
+                  ${tr.chooseAll}
+                </label>
               </div>
             </div>
           </div>
