@@ -227,11 +227,11 @@ if (testing) {
         (LogItem.Types.accelY << 2) | 3, 0x0F, 0x21, 0x43, 0x80,
         // logitem 6 float 5 bytes long positive 0.25 (0x3E800000)
         (LogItem.Types.slip0 << 2) | 3, 0x00, 0x00, 0x80, 0x3E,
-        // logitem 6 float 5 bytes long negative -2.0 (0xC0000000)
+        // logitem 7 float 5 bytes long negative -2.0 (0xC0000000)
         (LogItem.Types.slip1 << 2) | 3, 0x00, 0x00, 0x00, 0xC0,
-        // logitem 6 float 5 bytes long positive pi (0x40490FDB)
+        // logitem 8 float 5 bytes long positive pi (0x40490FDB)
         (LogItem.Types.slip2 << 2) | 3, 0xDB, 0x0F, 0x49, 0x40,
-        // logitem 6 float 5 bytes long positive smallest number 2^-126 (0x00800000)
+        // logitem 9 float 5 bytes long positive smallest number 2^-126 (0x00800000)
         (LogItem.Types.slip0 << 2) | 3, 0x00, 0x00, 0x80, 0x00,
         // trailing stuff at end
         0,0,

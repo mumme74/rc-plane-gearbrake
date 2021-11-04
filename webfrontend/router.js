@@ -2,7 +2,8 @@
 
 function routeMainContent() {
     let lang = document.querySelector("html").lang;
-    let page = location.hash.replace(/^#/, "");
+    let parts = location.hash.replace(/^#/, "").split("&");
+    let page = parts[0];
     let htmlFunctor;
 
     switch(page) {

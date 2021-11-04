@@ -31,7 +31,9 @@
         </style> 
         <script>
           {
-            var testing = true; // uncomment to run internal testing in frontend
+            // Lets us do a quick and easy switch on testing frontend
+            // just add #testingGui
+            var testing = location.hash.indexOf("testingGui") > -1; 
 
             let lang;
             if (localStorage.getItem("lang")) {

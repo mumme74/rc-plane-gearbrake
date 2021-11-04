@@ -32,7 +32,9 @@ document.addEventListener('DOMContentLoaded', () =>{
 
     function buildLink(itm, parent) {
         let a = document.createElement("a");
-        a.href = typeof itm.hash === 'string' ? `#${itm.hash}` : "javascript:void(0)";
+        let hashParts = location.hash.replace("/^#/", "").split("&");
+        hashParts[0] = itm.hash;
+        a.href = typeof itm.hash === 'string' ? `#${hashParts.join("&")}` : "javascript:void(0)";
         a.className = itm.cls || classes.bar;
         a.innerHTML = typeof itm.txt === 'string' ? itm.txt : itm.txt[lang];
         if (itm.tip) 

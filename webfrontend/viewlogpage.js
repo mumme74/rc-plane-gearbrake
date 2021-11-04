@@ -122,7 +122,7 @@ const LogItemTypesTranslated = {
   log_coldStart: {
     txt: {en: "Start from reset", sv: "Uppstart från reset"},
     title: {
-      en: "A special log pint to mark a device restart.\nUse to find out when a new flying session started",
+      en: "A special log point to mark a device restart.\nUse to find out when a new flying session started",
       sv: "En speciell log punkt för att markera en omstart.\nAnvänd för att se när en ny flygsession börjar"
     },
   },
@@ -137,28 +137,33 @@ const viewlogHtmlObj = {
   clearLog: ()=>{
     console.log("Clear log in device")
   },
-  selectStart: (evt, idx) => {
-    console.log("view log " + idx);
-    const logRoot = LogRoot.instance();
+  selectStart: (evt, sessionIdx) => {
+    console.log("view log " + sessionIdx);
     // change text on dropdown btn
     const lang = document.querySelector("html").lang;
     const latest = viewlogHtmlObj.lang[lang].latestSession;
-    const j = logRoot.coldStarts.length - 1 - idx;
+    const j = LogRoot.instance().coldStarts.length - 1 - sessionIdx;
     const txt = j === 0 ? latest : latest + " - " + j;
     evt.target.parentNode.previousElementSibling.innerText = txt;
+
+    viewlogHtmlObj.buildItemDropdown(sessionIdx, lang)
+  },
+
+  buildItemDropdown: (sessionIdx, lang) => {
 
     // create dropdown to select what items to show
     // iterate over each entry and check if we have a new item
     let items = [];
-    const typeKeys = Object.keys(LogItem.Types);
-    const entries = logRoot.getSession(idx);
+    const typeKeys = Object.keys(LogItem.Types); // is offset by 1, ie: -1 -> 0
+    const entries = LogRoot.instance().getSession(sessionIdx);
     entries.forEach(entry=>{
       entry.scanChildren();
       entry.children.forEach(itm=>{
         if (items.findIndex(item=>item.entry.type===itm.type) === -1) {
-          const tr = LogItemTypesTranslated[
-            typeKeys[itm.type < LogItem.Types.log_end ?
-                         itm.type : typeKeys.length-1 ]];
+          let idx = itm.type < LogItem.Types.log_end ?
+                      // +1 due to typeKeys is offset by 1
+                      itm.type +1 : typeKeys.length-1
+          const tr = LogItemTypesTranslated[typeKeys[idx]];
           items.push({entry:itm, txt:tr.txt[lang], title:tr.title[lang]});
         } 
       })
