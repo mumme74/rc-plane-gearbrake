@@ -40,7 +40,7 @@
 #define HAL_USE_SERIAL_USB TRUE
 #define STM32_DMA_REQUIRED TRUE // for inputs driver
 
-#define KXTJ3_1157_SHARED_I2C TRUE // for accelerometer driver, share bus with EEPROM
+#define KXTJ3_1057_SHARED_I2C TRUE // for accelerometer driver, share bus with EEPROM
 
 //#define HAL_USE_EEPROM  TRUE
 //#define EEPROM_USE_EE24XX TRUE
