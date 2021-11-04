@@ -109,15 +109,21 @@ const LogItemTypesTranslated = {
     }
   },
   accelZ: {
-    txt: {en: "Accelerometer Y", sv: "Accelerometer Y"},
+    txt: {en: "Accelerometer Z", sv: "Accelerometer Z"},
     title: {
-      en: "Accelerometer value for Y-axis",
-      sv: "Accelerometer värde för Y-axeln"
+      en: "Accelerometer value for Z-axis",
+      sv: "Accelerometer värde för Z-axeln"
     }
   },
   
   // must be last, indicates end of log items
-  log_end: {txt: {en: "Log end", sv: "Log slut"}},  
+  log_end: {txt: {en: "Log end", sv: "Log slut"}},
+
+  invalid: {
+    txt:{en: "Invalid/test", sv: "Ogilltig/test"},
+    title: {en: "Invalid, can be test header", sv: "Ogilltig, kan vara test rubrik"}
+  },
+
   // special         
   log_coldStart: {
     txt: {en: "Start from reset", sv: "Uppstart från reset"},
@@ -157,9 +163,7 @@ const viewlogHtmlObj = {
     viewlogHtmlObj.rebuildLogTable(sessionIdx, lang);
   },
 
-  buildItemDropdown: (sessionIdx, lang) => {
-
-    // create dropdown to select what items to show
+  _sessionItems: (sessionIdx, lang) => {
     // iterate over each entry and check if we have a new item
     let items = [];
     const typeKeys = Object.keys(LogItem.Types); // is offset by 1, ie: -1 -> 0
@@ -168,23 +172,37 @@ const viewlogHtmlObj = {
       entry.scanChildren();
       entry.children.forEach(itm=>{
         if (items.findIndex(item=>item.entry.type===itm.type) === -1) {
-          let idx = itm.type < LogItem.Types.log_end ?
-                      // +1 due to typeKeys is offset by 1
-                      itm.type +1 : typeKeys.length-1
-          const tr = LogItemTypesTranslated[typeKeys[idx]];
+          let tr;
+          if (itm.type < LogItem.Types.log_end) {
+            // +1 due to typeKeys is offset by 1
+            tr = LogItemTypesTranslated[typeKeys[itm.type +1]];
+          } else if (itm.type === LogItem.Types.log_coldStart)
+            return; // no use to have this as a column
+          else
+            tr = LogItemTypesTranslated.invalid;
           items.push({entry:itm, txt:tr.txt[lang], title:tr.title[lang]});
         } 
       })
     });
+    return items;
+  },
+
+  buildItemDropdown: (sessionIdx, lang) => {
+    // create dropdown to select what items to show
+
+    // get items in this session
+    let items = viewlogHtmlObj._sessionItems(sessionIdx, lang)
+                    .sort((a, b) =>a.txt < b.txt);
 
     // remove old entres in dropdown
-    items = items.sort((a, b) =>a.txt < b.txt);
     const dropdown = document.getElementById("showLogItemDropdown");
     while(dropdown.lastElementChild != dropdown.firstElementChild)
       dropdown.removeChild(dropdown.lastElementChild);
 
+    // global checked base on select all chkbox
     const checked = dropdown.firstElementChild.firstElementChild.checked
 
+    // create all checkboxes
     items.forEach(itm=>{
       const lbl = document.createElement("label");
       lbl.className = "w3-bar-item w3-button";
@@ -197,10 +215,13 @@ const viewlogHtmlObj = {
       chkbox.addEventListener("change", (evt)=>{
         let vlu = parseInt(evt.target.value.trim());
         const idx = hideLogItems.indexOf(vlu);
-        if (idx < 0 && !evt.target.checked)
+        if (idx < 0 && !evt.target.checked) {
           hideLogItems.push(vlu);
-        else if (idx > -1 && evt.target.checked)
+          viewlogHtmlObj.rebuildLogTable(sessionIdx, lang);
+        } else if (idx > -1 && evt.target.checked) {
           hideLogItems.splice(idx);
+          viewlogHtmlObj.rebuildLogTable(sessionIdx, lang);
+        }
       });
       lbl.appendChild(chkbox);
       lbl.appendChild(document.createTextNode(` ${itm.txt}`));
@@ -215,7 +236,73 @@ const viewlogHtmlObj = {
     }
   },
   rebuildLogTable: (sessionIdx, lang) => {
-    console.log("rebuildLogTable", lang)
+    // create a new log table
+    console.log("rebuildLogTable", lang);
+
+    // get table and delete old entries
+    let tbl = document.getElementById("logTableEntries");
+    while (tbl.firstChild)
+      tbl.removeChild(tbl.lastChild);
+
+    // fetch all items (headers) for this log session
+    let items = viewlogHtmlObj._sessionItems(sessionIdx, lang);
+
+    // create a header
+    let thead = document.createElement("thead");
+    let tr = document.createElement("tr");
+    thead.appendChild(tr);
+    tbl.appendChild(thead);
+
+    let colTypes = [];
+
+    items.forEach(itm => {
+      if (hideLogItems.indexOf(itm.entry.type) < 0) {
+        let th = document.createElement("th");
+        // split to 2 strings to be able to ellide
+        //<th><span>long text to be clipped</span>not clipped</th>
+        let span = document.createElement("span")
+        span.appendChild(document.createTextNode(
+                    itm.txt.substr(0, itm.txt.length-2)));
+        th.appendChild(span);
+        th.appendChild(document.createTextNode(
+                    itm.txt.substr(itm.txt.length-2)));
+        th.title = itm.txt + "\n" +itm.title;
+        tr.appendChild(th);
+        colTypes.push(itm.entry.type);
+      }
+    });
+
+    // create table body
+    let entries = LogRoot.instance().getSession(sessionIdx);
+    let tbody = document.createElement("tbody");
+    entries.forEach(entry => {
+      let tr = document.createElement("tr");
+      entry.scanChildren();
+
+      // create a row with all shown types
+      let tdNodes = colTypes.map(type=>{
+        let td = document.createElement("td");
+        tr.appendChild(td);
+        return td;
+      });
+
+      let showRow = false;
+      entry.children.forEach(itm=>{
+        if (hideLogItems.indexOf(itm.type) < 0) {
+          let td = tdNodes[colTypes.indexOf(itm.type)];
+          if (td && !td.firstChild) {
+            td.appendChild(
+              document.createTextNode(itm.realVlu() + itm.unit()));
+            showRow = true;
+          }
+        }
+      });
+
+      if (showRow) // only if we have any children
+        tbody.appendChild(tr);
+    })
+    tbl.appendChild(tbody);
+
   },
   lang: {
     en: {
@@ -288,12 +375,8 @@ const viewlogHtmlObj = {
           </div>
           
           <div class="w3-row">
-            <div class="w3-col s4">
-              left
-            </div>
-            <div class="w3-col s8">
-              
-            </div>
+            <table id="logTableEntries" class="w3-table w3-bordered w3-border w3-responsive">
+            </table>
           </div>
           <p class="w3-text-grey">${viewlogHtmlObj.lang[lang].p1}</p>
         </div>

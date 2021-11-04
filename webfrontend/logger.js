@@ -47,6 +47,11 @@ class LogItem {
         log_end: 17,  
         // special         
         log_coldStart: 0x3F,
+
+        // only for testing purposes
+        test_int32_1: 0x30,
+        test_int32_2: 0x31
+
     }
 
     static FloatTypes = [
@@ -56,12 +61,13 @@ class LogItem {
     static Int8Types = [];
 
     static Int16Types = [
-        LogItem.Types.accelSteering, LogItem.Types.wsSteering
+        LogItem.Types.accelSteering, LogItem.Types.wsSteering,
+        LogItem.Types.accelX, LogItem.Types.accel,
+        LogItem.Types.accelY, LogItem.Types.accelZ,
     ];
 
     static Int32Types = [
-        LogItem.Types.accel, LogItem.Types.accelX, 
-        LogItem.Types.accelY, LogItem.Types.accelZ,
+        LogItem.Types.test_int32_1, LogItem.Types.test_int32_2
     ];
 
     startPos = -1;
@@ -94,14 +100,69 @@ class LogItem {
             //console.log(vlu)
 
         } else if (LogItem.Int8Types.indexOf(this.type) > -1) {
-            if (vlu & 0x80) vlu = (vlu & 0x7F) * -1;
+            if (vlu & 0x80) vlu = ((~vlu & 0xFF) +1) * -1;
         } else if (LogItem.Int16Types.indexOf(this.type) > -1) {
-            if (vlu & 0x8000) vlu = (vlu & 0x7FFF) * -1;
+            if (vlu & 0x8000) vlu = ((~vlu & 0xFFFF) + 1) * -1;
         } else if (LogItem.Int32Types.indexOf(this.type) > -1) {
             // 32 bits is so big that the value implicitly goes negative on 32th bit
             //if (vlu & 0x80000000) vlu = (vlu & 0x7FFFFFFF) -1;
         }
         this.value = vlu;
+    }
+
+    unit() {
+        switch (this.type) {
+        case LogItem.Types.speedOnGround:
+        case LogItem.Types.wheelRPS_0:
+        case LogItem.Types.wheelRPS_1:
+        case LogItem.Types.wheelRPS_2:
+            return "rps";
+        case LogItem.Types.wantedBrakeForce:
+        case LogItem.Types.brakeForce0_out:
+        case LogItem.Types.brakeForce1_out:
+        case LogItem.Types.brakeForce2_out:
+        case LogItem.Types.accelSteering:
+        case LogItem.Types.wsSteering:
+        case LogItem.Types.slip0:
+        case LogItem.Types.slip1:
+        case LogItem.Types.slip2:
+            return "%";
+        case LogItem.Types.accelX:
+        case LogItem.Types.accelY:
+        case LogItem.Types.accelZ:
+            return "G";
+        default:
+            return "";
+        }
+    }
+
+    realVlu() {
+        let roundMe = (vlu)=>{
+            return Math.round(vlu*100) / 100;
+        }
+        switch (this.type) {
+            case LogItem.Types.speedOnGround:
+            case LogItem.Types.wheelRPS_0:
+            case LogItem.Types.wheelRPS_1:
+            case LogItem.Types.wheelRPS_2:
+                return this.value;
+            case LogItem.Types.wantedBrakeForce:
+            case LogItem.Types.brakeForce0_out:
+            case LogItem.Types.brakeForce1_out:
+            case LogItem.Types.brakeForce2_out:
+            case LogItem.Types.accelSteering:
+            case LogItem.Types.wsSteering:
+            case LogItem.Types.slip0:
+            case LogItem.Types.slip1:
+            case LogItem.Types.slip2:
+                return roundMe(this.value);
+            case LogItem.Types.accelX:
+            case LogItem.Types.accelY:
+            case LogItem.Types.accelZ:
+                return roundMe(this.value / 512);
+            default:
+                return this.value;
+            }
     }
 }
 
@@ -214,17 +275,19 @@ if (testing) {
         (LogItem.Types.log_coldStart << 2) | 0, 0x5A,
 
         // log entry with 9 items
-        9, 40, 
+        10, 45,
         // first logitem uin8_t, 2 bytes long, positive 64
         (LogItem.Types.speedOnGround << 2) | 0, 0x40,
         // logitem 2 int16_t, 3bytes long, positive 0x0132 (306)
         (LogItem.Types.wsSteering << 2) | 1, 0x32, 0x01,
-        // logitem 3 int16_t 3bytes long, negative 0x8154 (-341)
-        (LogItem.Types.accelSteering << 2) | 1, 0x54, 0x81,
+        // logitem 3 int16_t 3bytes long, negative 0xFEAC (-340)
+        (LogItem.Types.accelSteering << 2) | 1, 0xAC, 0xFE,
         // logitem 4 int32_t 5bytes long positive 0x01815405 (25252869)
-        (LogItem.Types.accelX << 2) | 3, 0x05, 0x54, 0x15, 0x01,
+        (LogItem.Types.test_int32_1 << 2) | 3, 0x05, 0x54, 0x15, 0x01,
         // logitem 5 int32_t 5 bytes long negative 0x8043210F (-4399376)
-        (LogItem.Types.accelY << 2) | 3, 0x0F, 0x21, 0x43, 0x80,
+        (LogItem.Types.test_int32_2 << 2) | 3, 0x0F, 0x21, 0x43, 0x80,
+        // logitem 6 int32_t 3 bytes long negative 0xE000 (-8192) 14bits resolution
+        (LogItem.Types.accelZ << 2) | 1, 0x00, 0xE0,
         // logitem 6 float 5 bytes long positive 0.25 (0x3E800000)
         (LogItem.Types.slip0 << 2) | 3, 0x00, 0x00, 0x80, 0x3E,
         // logitem 7 float 5 bytes long negative -2.0 (0xC0000000)
@@ -241,47 +304,51 @@ if (testing) {
         1, 4,
         (LogItem.Types.log_coldStart << 2) | 0, 0x5A,
 
-        // log entry with 13 items
-        13, 48, 
+        // log entry with 14 items
+        14, 51,
         // first logitem uin8_t, 2 bytes long, positive 64
         (LogItem.Types.speedOnGround << 2) | 0, 0x40,
         // logitem 2 int16_t, 3bytes long, positive 0x0132 (306)
         (LogItem.Types.wsSteering << 2) | 1, 0x32, 0x01,
-        // logitem 3 int16_t 3bytes long, negative 0x8154 (-341)
-        (LogItem.Types.accelSteering << 2) | 1, 0x54, 0x81,
+        // logitem 3 int16_t 3bytes long, negative 0xFEAC (-340)
+        (LogItem.Types.accelSteering << 2) | 1, 0xAC, 0xFE,
         // logitem 4 int32_t 5bytes long positive 0x01815405 (25252869)
-        (LogItem.Types.accelX << 2) | 3, 0x05, 0x54, 0x15, 0x01,
+        (LogItem.Types.test_int32_1 << 2) | 3, 0x05, 0x54, 0x15, 0x01,
         // logitem 5 int32_t 5 bytes long negative 0x8043210F (-4399376)
-        (LogItem.Types.accelY << 2) | 3, 0x0F, 0x34, 0x43, 0x80,
-        // logitem 6 float 5 bytes long positive 0.25 (0x3E800000)
+        (LogItem.Types.test_int32_2 << 2) | 3, 0x0F, 0x34, 0x43, 0x80,
+        // logitem 6 int32_t 3 bytes long negative 0xE000 (-8192) 14bits resolution
+        (LogItem.Types.accelZ << 2) | 1, 0x00, 0xE0,
+        // logitem 7 float 5 bytes long positive 0.25 (0x3E800000)
         (LogItem.Types.slip0 << 2) | 3, 0x00, 0x00, 0x80, 0x3E,
-        // logitem 6 float 5 bytes long negative -2.0 (0xC0000000)
+        // logitem 8 float 5 bytes long negative -2.0 (0xC0000000)
         (LogItem.Types.slip1 << 2) | 3, 0x00, 0x00, 0x00, 0xC0,
-        // logitem 6 float 5 bytes long positive pi (0x40430FDB)
+        // logitem 9 float 5 bytes long positive pi (0x40430FDB)
         (LogItem.Types.slip2 << 2) | 3, 0xDB, 0x0F, 0x43, 0x40,
-        // logitem 6 float 5 bytes long positive smallest number 2^-126 (0x00800000)
+        // logitem 10 float 5 bytes long positive smallest number 2^-126 (0x00800000)
         (LogItem.Types.slip0 << 2) | 3, 0x00, 0x00, 0x80, 0x00,
-        // logitem uint8_t 2 bytes long positive 25
+        // logitem 11 uint8_t 2 bytes long positive 25
         (LogItem.Types.wantedBrakeForce << 2) | 0, 0x19,
-        // logitem uint8_t 2 bytes long positive 25
+        // logitem 12 uint8_t 2 bytes long positive 25
         (LogItem.Types.brakeForce0_out << 2) | 0, 0x19,
-        // logitem uint8_t 2 bytes long positive 16
+        // logitem 13 uint8_t 2 bytes long positive 16
         (LogItem.Types.brakeForce1_out << 2) | 0, 0x10,
-        // logitem uint8_t 2 bytes long positive 20
+        // logitem 14 uint8_t 2 bytes long positive 20
         (LogItem.Types.brakeForce2_out << 2) | 0, 0x14,
 
-        // log entry with 13 items
-        13, 48, 
+        // log entry with 14 items
+        14, 51,
         // first logitem uin8_t, 2 bytes long, positive 64
         (LogItem.Types.speedOnGround << 2) | 0, 0x40,
         // logitem 2 int16_t, 3bytes long, positive 0x0132 (306)
         (LogItem.Types.wsSteering << 2) | 1, 0x32, 0x01,
-        // logitem 3 int16_t 3bytes long, negative 0x8154 (-341)
-        (LogItem.Types.accelSteering << 2) | 1, 0x54, 0x81,
+        // logitem 3 int16_t 3bytes long, negative 0xFEAC (-340)
+        (LogItem.Types.accelSteering << 2) | 1, 0xAC, 0xFE,
         // logitem 4 int32_t 5bytes long positive 0x01815405 (25252869)
-        (LogItem.Types.accelX << 2) | 3, 0x05, 0x54, 0x15, 0x01,
+        (LogItem.Types.test_int32_1 << 2) | 3, 0x05, 0x54, 0x15, 0x01,
         // logitem 5 int32_t 5 bytes long negative 0x8043210F (-4399376)
-        (LogItem.Types.accelY << 2) | 3, 0x0F, 0x34, 0x43, 0x80,
+        (LogItem.Types.test_int32_2 << 2) | 3, 0x0F, 0x34, 0x43, 0x80,
+        // logitem 6 int32_t 3 bytes long positive 0x6000 (8191) 14bits resolution
+        (LogItem.Types.accelZ << 2) | 1, 0xFF, 0x1F,
         // logitem 6 float 5 bytes long positive 0.25 (0x3E800000)
         (LogItem.Types.slip0 << 2) | 3, 0x00, 0x00, 0x80, 0x3E,
         // logitem 6 float 5 bytes long negative -2.0 (0xC0000000)
@@ -304,17 +371,17 @@ if (testing) {
         (LogItem.Types.log_coldStart << 2) | 0, 0x5A,
 
         // log entry with 13 items
-        13, 48, 
+        13, 48,
         // first logitem uin8_t, 2 bytes long, positive 64
         (LogItem.Types.speedOnGround << 2) | 0, 0x40,
         // logitem 2 int16_t, 3bytes long, positive 0x0132 (306)
         (LogItem.Types.wsSteering << 2) | 1, 0x32, 0x01,
-        // logitem 3 int16_t 3bytes long, negative 0x8154 (-341)
-        (LogItem.Types.accelSteering << 2) | 1, 0x54, 0x81,
+        // logitem 3 int16_t 3bytes long, negative 0xFEAD (-341)
+        (LogItem.Types.accelSteering << 2) | 1, 0xAD, 0xFE,
         // logitem 4 int32_t 5bytes long positive 0x01815405 (25252869)
-        (LogItem.Types.accelX << 2) | 3, 0x05, 0x54, 0x15, 0x01,
+        (LogItem.Types.test_int32_1 << 2) | 3, 0x05, 0x54, 0x15, 0x01,
         // logitem 5 int32_t 5 bytes long negative 0x8043210F (-4399376)
-        (LogItem.Types.accelY << 2) | 3, 0x0F, 0x34, 0x43, 0x80,
+        (LogItem.Types.test_int32_2 << 2) | 3, 0x0F, 0x34, 0x43, 0x80,
         // logitem 6 float 5 bytes long positive 0.25 (0x3E800000)
         (LogItem.Types.slip0 << 2) | 3, 0x00, 0x00, 0x80, 0x3E,
         // logitem 6 float 5 bytes long negative -2.0 (0xC0000000)
@@ -338,9 +405,9 @@ if (testing) {
     test(itm.size, 1);
     test(itm.type, LogItem.Types.log_coldStart);
 
-    test(logRoot.logEntries[1].itemCnt(), 9);
+    test(logRoot.logEntries[1].itemCnt(), 10);
 
-    test(logRoot.logEntries.length, 2)
+    //test(logRoot.logEntries.length, 2)
 
     itm = logRoot.logEntries[1].getChild(LogItem.Types.speedOnGround);
     test(itm.value, 64);
@@ -354,11 +421,14 @@ if (testing) {
     itm = logRoot.logEntries[1].getChild(LogItem.Types.accelSteering);
     test(itm.value, -340);
 
-    itm = logRoot.logEntries[1].getChild(LogItem.Types.accelX);
+    itm = logRoot.logEntries[1].getChild(LogItem.Types.test_int32_1);
     test(itm.value, 18174981);
     
-    itm = logRoot.logEntries[1].getChild(LogItem.Types.accelY);
+    itm = logRoot.logEntries[1].getChild(LogItem.Types.test_int32_2);
     test(itm.value, -2143084273);
+
+    itm = logRoot.logEntries[1].getChild(LogItem.Types.accelZ);
+    test(itm.value, -8192);
 
     itm = logRoot.logEntries[1].getChild(LogItem.Types.slip0);
     test(itm.value, 0.25);
@@ -369,15 +439,15 @@ if (testing) {
     itm = logRoot.logEntries[1].getChild(LogItem.Types.slip2);
     test(itm.value.toPrecision(6), Math.PI.toPrecision(6));
 
-    itm = logRoot.logEntries[1].children[8];
+    itm = logRoot.logEntries[1].children[9];
     test(itm.value, Math.pow(2, -126));
 
     logRoot.parseLog(bArr, 48);
     test(logRoot.logEntries.length, 7);
 
     test(logRoot.logEntries[2].itemCnt(), 1);
-    test(logRoot.logEntries[3].itemCnt(), 13);
-    test(logRoot.logEntries[4].itemCnt(), 13);
+    test(logRoot.logEntries[3].itemCnt(), 14);
+    test(logRoot.logEntries[4].itemCnt(), 14);
     test(logRoot.logEntries[5].itemCnt(), 1);
     test(logRoot.logEntries[6].itemCnt(), 13);
 
