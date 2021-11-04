@@ -128,7 +128,11 @@ const LogItemTypesTranslated = {
   },
 }
 
-const viewlogFilter = [];
+// Types stored in this array will not be shown in the log
+const hideLogItems = JSON.parse(localStorage.getItem('hideLogItems') || "[]");
+window.addEventListener("beforeunload", (evt)=>{
+  localStorage.setItem('hideLogItems', JSON.stringify(hideLogItems));
+})
 
 const viewlogHtmlObj = {
   fetchLog: ()=>{
@@ -146,7 +150,11 @@ const viewlogHtmlObj = {
     const txt = j === 0 ? latest : latest + " - " + j;
     evt.target.parentNode.previousElementSibling.innerText = txt;
 
-    viewlogHtmlObj.buildItemDropdown(sessionIdx, lang)
+    // build dropdown with items to show
+    viewlogHtmlObj.buildItemDropdown(sessionIdx, lang);
+
+    // build the actual table
+    viewlogHtmlObj.rebuildLogTable(sessionIdx, lang);
   },
 
   buildItemDropdown: (sessionIdx, lang) => {
@@ -184,15 +192,16 @@ const viewlogHtmlObj = {
       const chkbox = document.createElement("input");
       chkbox.type = "checkbox";
       chkbox.className = "w3-button";
-      chkbox.value = itm.type;
-      chkbox.checked = checked;
-      chkbox.onclick = (evt)=>{
-        const idx = viewlogFilter.indexOf(evt.target.value);
-        if (!idx && evt.target.checked)
-          viewlogFilter.push(evt.target.value);
-        else if (idx && !evt.target.checked)
-          viewlogFilter.splice(idx);
-      }
+      chkbox.value = itm.entry.type;
+      chkbox.checked = hideLogItems.indexOf(itm.entry.type) > -1 ? false : checked;
+      chkbox.addEventListener("change", (evt)=>{
+        let vlu = parseInt(evt.target.value.trim());
+        const idx = hideLogItems.indexOf(vlu);
+        if (idx < 0 && !evt.target.checked)
+          hideLogItems.push(vlu);
+        else if (idx > -1 && evt.target.checked)
+          hideLogItems.splice(idx);
+      });
       lbl.appendChild(chkbox);
       lbl.appendChild(document.createTextNode(` ${itm.txt}`));
       dropdown.appendChild(lbl);
@@ -204,6 +213,9 @@ const viewlogHtmlObj = {
       lbl = lbl.nextElementSibling;
       lbl.firstElementChild.checked = evt.target.checked;
     }
+  },
+  rebuildLogTable: (sessionIdx, lang) => {
+    console.log("rebuildLogTable", lang)
   },
   lang: {
     en: {
@@ -268,7 +280,7 @@ const viewlogHtmlObj = {
               <button class="w3-button">${tr.showLogItem}</button>
               <div class="w3-dropdown-content w3-bar-block w3-card-4" id="showLogItemDropdown">
                 <label class="w3-bar-item w3-button">
-                  <input type="checkbox" class="w3-button" onclick="viewlogHtmlObj.selectAllClicked(event)" checked/> 
+                  <input type="checkbox" class="w3-button" onchange="viewlogHtmlObj.selectAllClicked(event)" checked/>
                   ${tr.chooseAll}
                 </label>
               </div>
