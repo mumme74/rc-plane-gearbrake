@@ -293,8 +293,12 @@ const viewlogHtmlObj = {
     // create a new log table
     console.log("rebuildLogTable", lang);
 
-    // get table and delete old entries
+    // get table remove from DOM to optimize
     let tbl = document.getElementById("logTableEntries");
+    const parentNode = tbl.parentElement;
+    tbl.remove();
+
+    // delete old entries
     while (tbl.firstChild)
       tbl.removeChild(tbl.lastChild);
 
@@ -356,6 +360,9 @@ const viewlogHtmlObj = {
         tbody.appendChild(tr);
     })
     tbl.appendChild(tbody);
+
+    // reattach tbl to DOM
+    parentNode.appendChild(tbl);
 
   },
   lang: {
