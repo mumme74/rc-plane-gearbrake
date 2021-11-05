@@ -84,12 +84,14 @@ class DeviceConfigBase {
   static deserialize(byteArr) {
     if (byteArr.length < 4) 
       throw new Error("Can't deserialize, header malformed");
-    
+
     let version = (byteArr[0] << 8) | byteArr[1];
     if (version > DeviceConfigBase.DeviceConfigVersions.length)
       throw new Error("Can't deserialize, device has a unsupported config version:" + version);
-    
-    let instance = new DeviceConfigBase.DeviceConfigVersions[version]();
+
+    const inst = DeviceConfigBase.DeviceConfigVersions.find(v=>v.header.storageVersion===version);
+    if (!inst) throw new Error(`Can't deserialize version ${version}, not supported`);
+    let instance = new inst();
     // read header
     instance.header.storageVersion = version;
     instance.header.size = (byteArr[2] << 8) | byteArr[3];
@@ -101,7 +103,7 @@ class DeviceConfigBase {
 }
 
 class DeviceConfig_v1 extends DeviceConfigBase {
-  header = {
+  static header = {
     storageVersion: 0x01,
     size: 16 - 4
   }

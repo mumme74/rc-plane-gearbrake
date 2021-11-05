@@ -69,7 +69,7 @@ const configureHtmlObj = {
       notifyUser({msg: err?.message || err, type: notifyTypes.Warn});
     }
   },
-  getSettings: async () => {
+  fetchSettings: async () => {
     try {
       const byteArr = await SerialBase.instance().getAllSettings();
       if (!byteArr) throw "Could't get settings from device";
@@ -80,7 +80,7 @@ const configureHtmlObj = {
       notifyUser({msg: err?.message || err, type: notifyTypes.Warn});
     }
   },
-  saveSettings: async () => {
+  pushSettings: async () => {
     console.log("save settings")
     try {
       const byteArr = DeviceConfigBase.instance().serialize();
@@ -91,6 +91,30 @@ const configureHtmlObj = {
       console.error(err);
       notifyUser({msg: err?.message || err, type: notifyTypes.Warn});
     }
+  },
+  saveSettingsToFile: async () => {
+    const fileHandle = await window.showSaveFilePicker({
+      suggestedName: 'myconf.rcconf',
+      types: [{
+      description: 'Configure file *.rcconf',
+      accept: {'application/octet-stream': ['.rcconf']},
+    }]});
+    const fileStream = await fileHandle.createWritable();
+    const byteArr = DeviceConfigBase.instance().serialize();
+    await fileStream.write(new Blob([byteArr],
+                {type: "application/octet-stream"}));
+    await fileStream.close();
+  },
+
+  openSettingsFromFile: async () => {
+    const [fileHandle] = await window.showOpenFilePicker({types: [{
+      description: 'Configure file *.rcconf',
+      accept: {'application/octet-stream': ['.rcconf']},
+    }]});
+    const file = await fileHandle.getFile();
+    const byteArr = new Uint8Array(await file.arrayBuffer());
+    DeviceConfigBase.deserialize(byteArr);
+    routeMainContent(); // for refresh values
   },
 
   formItems: {
@@ -334,8 +358,10 @@ const configureHtmlObj = {
           header: "Configure your device",
           p1: `HTML frontend must be loaded by chrome version 89 or later or the latest Edge browser. 
                 This is due to the Use of Webserial to "talk" to the microcontroller via virtual com port and USB`,
-          readConfigureBtn: "Fetch settings from device",
-          saveConfigureBtn: "Save settings into device",
+          fetchConfigureBtn: "Fetch settings from device",
+          pushConfigureBtn: "Save settings into device",
+          saveConfigureToFileBtn: "Save settings to file",
+          openConfigureFromFileBtn: "Open settings from file",
           setDefaultConfigureBtn: "Set device default values",
           curSettings: "Settings:",
       },
@@ -343,8 +369,10 @@ const configureHtmlObj = {
           header: "Konfigurera din device",
           p1: `HTML framände måste ladddas med chrome version 89 eller senare, eller senaste Edge webbläsaren. 
                 Detta beror på att WebSerial interfacet för att "prata" med mikrocontrollern via virtuel COM port och USB.`,
-          readConfigureBtn: "Hämta inställningar från enhet",
-          saveConfigureBtn: "Spara inställningar i enhet",
+          fetchConfigureBtn: "Hämta inställningar från enhet",
+          pushConfigureBtn: "Spara inställningar i enhet",
+          saveConfigureToFileBtn: "Spara inställningar till fil",
+          openConfigureFromFileBtn: "Öppna inställningar från fil",
           setDefaultConfigureBtn: "Sätt default värden i enheten",
           curSettings: "Inställningar:"
       },
@@ -386,11 +414,17 @@ const configureHtmlObj = {
         <div class="w3-twothird">
           <h1>${configureHtmlObj.lang[lang].header}</h1>
 
-          <button class="w3-button w3-blue w3-padding-large w3-large w3-margin-top" onclick="configureHtmlObj.getSettings();">
-            ${configureHtmlObj.lang[lang].readConfigureBtn}
+          <button class="w3-button w3-blue w3-padding-large w3-large w3-margin-top" onclick="configureHtmlObj.fetchSettings();">
+            ${configureHtmlObj.lang[lang].fetchConfigureBtn}
           </button>
-          <button class="w3-button w3-blue w3-padding-large w3-large w3-margin-top" onclick="configureHtmlObj.saveSettings()">
-            ${configureHtmlObj.lang[lang].saveConfigureBtn}
+          <button class="w3-button w3-blue w3-padding-large w3-large w3-margin-top" onclick="configureHtmlObj.pushSettings()">
+            ${configureHtmlObj.lang[lang].pushConfigureBtn}
+          </button>
+          <button class="w3-button w3-gray w3-padding-large w3-large w3-margin-top" onclick="configureHtmlObj.saveSettingsToFile()">
+            ${configureHtmlObj.lang[lang].saveConfigureToFileBtn}
+          </button>
+          <button class="w3-button w3-gray w3-padding-large w3-large w3-margin-top" onclick="configureHtmlObj.openSettingsFromFile()">
+            ${configureHtmlObj.lang[lang].openConfigureFromFileBtn}
           </button>
           <h5 class="w3-padding-8">${configureHtmlObj.lang[lang].curSettings}</h5>
           <form id="config">

@@ -160,9 +160,11 @@ const viewlogHtmlObj = {
     }
   },
   saveLog: async () => {
-    const fileHandle = await window.showSaveFilePicker({types: [{
-      description: 'Log file *.blg',
-      accept: {'application/octet-stream': ['.blg']},
+    const fileHandle = await window.showSaveFilePicker({
+      suggestedName: 'mylog.rclog',
+      types: [{
+      description: 'Log file *.rclog',
+      accept: {'application/octet-stream': ['.rclog']},
     }]});
     const fileStream = await fileHandle.createWritable();
     const logRoot = LogRoot.instance();
@@ -179,8 +181,8 @@ const viewlogHtmlObj = {
   },
   readLog: async () => {
     const [fileHandle] = await window.showOpenFilePicker({types: [{
-      description: 'Log file *.blg',
-      accept: {'application/octet-stream': ['.blg']},
+      description: 'Log file *.rclog',
+      accept: {'application/octet-stream': ['.rclog']},
     }]});
     const file = await fileHandle.getFile();
     LogRoot.instance().clear();
