@@ -110,6 +110,33 @@ class LogItem {
         this.value = vlu;
     }
 
+    /**
+     * @brief saves value to bytearray
+     * @param byteArray = save to this buffer
+     * @param startPos = at this pos
+     * @returns number of bytes saved
+     */
+    save(byteArray = this.parent.parent.byteArray,
+         startPos = this.startPos)
+    {
+        let headerByte = ((this.type & 0x3F) << 2) |
+                         ((this.size - 1) & 0x03);
+        let pos = startPos;
+        byteArray[pos++] = headerByte;
+        byteArray[pos++] = this.value & 0xFF;
+        if (this.size > 1)
+            byteArray[pos++] = (this.value & 0xFF00) >> 8;
+        if (this.size > 2)
+            byteArray[pos++] = (this.value & 0xFF0000) >> 16;
+        if (this.size > 3)
+            byteArray[pos++] = (this.value & 0xFF000000) >> 24;
+        return pos - startPos;
+    }
+
+    /**
+     * @brief Gets the unit for this type
+     * @returns string with correct postfix
+     */
     unit() {
         switch (this.type) {
         case LogItem.Types.speedOnGround:
@@ -137,31 +164,33 @@ class LogItem {
         }
     }
 
+    /**
+     * @brief returns rounded and converted value
+     *         if applicable
+     * @returns value based based of type
+     */
     realVlu() {
-        let roundMe = (vlu)=>{
-            return Math.round(vlu*100) / 100;
-        }
         switch (this.type) {
+            case LogItem.Types.slip0:
+            case LogItem.Types.slip1:
+            case LogItem.Types.slip2:
+                return this.value.toPrecision(3);
+            case LogItem.Types.accel:
+            case LogItem.Types.accelX:
+            case LogItem.Types.accelY:
+            case LogItem.Types.accelZ:
+                return (this.value / 512).toPrecision(2);
             case LogItem.Types.speedOnGround:
             case LogItem.Types.wheelRPS_0:
             case LogItem.Types.wheelRPS_1:
             case LogItem.Types.wheelRPS_2:
-                return this.value;
             case LogItem.Types.wantedBrakeForce:
             case LogItem.Types.brakeForce0_out:
             case LogItem.Types.brakeForce1_out:
             case LogItem.Types.brakeForce2_out:
             case LogItem.Types.accelSteering:
             case LogItem.Types.wsSteering:
-            case LogItem.Types.slip0:
-            case LogItem.Types.slip1:
-            case LogItem.Types.slip2:
-                return roundMe(this.value);
-            case LogItem.Types.accel:
-            case LogItem.Types.accelX:
-            case LogItem.Types.accelY:
-            case LogItem.Types.accelZ:
-                return roundMe(this.value / 512);
+                return Math.round(this.value *100) / 100;
             default:
                 return this.value;
             }
@@ -183,16 +212,46 @@ class LogEntry {
     this.size = this.parent.byteArray[this.startPos+1];
   }
 
+  /**
+   * @brief Saves this log entry to given byteArray
+   * @param {*} byteArray byte array to save to, default current
+   * @param {*} startPos first byte pos in memory
+   * @returns number of bytes written
+   */
+  save(byteArray = this.parent.byteArray,
+       startPos = this.startPos)
+  {
+      this.scanChildren();
+      byteArray[startPos] = this.children.length;
+      let pos = startPos + 2;
+      for (const child of this.children)
+          pos += child.save(byteArray, pos);
+
+      byteArray[startPos+1] = pos - startPos;
+      return byteArray[startPos+1];
+  }
+
+  /**
+   * @breif how many items this log entry contains
+   * @returns number of children
+   */
   itemCnt() {
     return this.parent.byteArray[this.startPos]; // first byte is number of items
   }
 
+  /**
+   * @param {*} type get the logitem in this entry with type
+   * @returns the logItem found or undefined
+   */
   getChild(type) {
     if (!this.children.length)
       this._generateChildren();
     return this.children.find(itm=>itm.type === type);
   }
 
+  /**
+   * @brief generte internal cache
+   */
   scanChildren() {
     if (!this.children.length)
       this._generateChildren();
@@ -212,6 +271,10 @@ class LogEntry {
 class LogRoot {
     static _instance = null;
 
+    /**
+     * @param construct a new singleton
+     * @returns the LogRoot singleton
+     */
     static instance() {
         if (!LogRoot._instance)
             LogRoot._instance = new LogRoot();
@@ -222,8 +285,10 @@ class LogRoot {
         this.clear();
     }
 
+    /**
+     * @brief resets instance
+     */
     clear() {
-        this.logEntries = [];
         this.byteArray = new Uint8Array(128 * 1024);
         this.logEntries = [];
         this.coldStarts = [];
@@ -235,6 +300,11 @@ class LogRoot {
 //    coldStarts = [];
 //    startPos = -1;
 
+    /**
+     * @brief get all entries for coldtart index
+     * @param coldStartIdx which coldstart we should return
+     * @returns returns array with all entries
+     */
     getSession(coldStartIdx) {
         let entries = [];
         const start = this.coldStarts[coldStartIdx];
@@ -247,6 +317,12 @@ class LogRoot {
         return entries;
     }
 
+    /**
+     * @brief parse a new log or continued log,
+     *         might be usefull if log contains null bytes
+     * @param {*} byteArray the memory to start from
+     * @param {*} startAddr the startAddr in byteArray
+     */
     parseLog(byteArray, startAddr) {
         this.byteArray = byteArray;
         this.startPos = startAddr;
@@ -465,8 +541,58 @@ if (testing) {
     test(logRoot.logEntries[5].itemCnt(), 1);
     test(logRoot.logEntries[6].itemCnt(), 13);
 
-    //logRoot.clear();
-    //test(logRoot.logEntries.length, 0);
+    let btArr = new Uint8Array(128*1024);
+    btArr.set(logRoot.byteArray);
+    logRoot.clear();
+    test(logRoot.logEntries.length, 0);
+
+    logRoot.parseLog(btArr, 2);
+    logRoot.parseLog(btArr, 51);
+
+    // expand with more entries
+    {
+        const cloneItem = (orig, savePos) => {
+            let itm = new LogItem(savePos, orig.parent);
+            itm.size = orig.size;
+            itm.type = orig.type;
+            itm.endPos = savePos + itm.size +1;
+            let rndVlu, newVlu, diff;
+            // dont take a value to close to 0
+            do {
+                rndVlu = Math.random() * 0.5 - 0.25;
+                newVlu = orig.value + orig.value * rndVlu;
+                diff = (orig.value - newVlu) / orig.value;
+            } while(diff > 10);
+            itm.value = newVlu;
+            itm.save();
+            return itm;
+        }
+
+        const cloneEntry = (orig) => {
+            orig.scanChildren();
+            let entry = new LogEntry(orig.startPos + orig.size, orig.parent);
+            entry.size = orig.size;
+            let pos = orig.startPos +2;
+            for (const child of orig.children) {
+                const itm = cloneItem(child, pos);
+                entry.children.push(itm);
+                pos += itm.size +1;
+            }
+            entry.save();
+            return entry;
+        }
+
+        let lastEntry = logRoot.logEntries[logRoot.logEntries.length-1];
+        lastEntry.scanChildren();
+
+        while (lastEntry.startPos + lastEntry.size < 128 * 1024 -4 - lastEntry.size) {
+            let entry = cloneEntry(lastEntry);
+            logRoot.logEntries.push(entry);
+            lastEntry = entry;
+        }
+
+        console.log(lastEntry.startPos + lastEntry.size)
+    }
 
     console.log(`have runned ${testCnt} tests`);
 }
