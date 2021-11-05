@@ -116,12 +116,20 @@ const LogItemTypesTranslated = {
     }
   },
   
-  // must be last, indicates end of log items
+  // must be last of items from board, indicates end of log items
   log_end: {txt: {en: "Log end", sv: "Log slut"}},
 
   invalid: {
     txt:{en: "Invalid/test", sv: "Ogilltig/test"},
     title: {en: "Invalid, can be test header", sv: "Ogilltig, kan vara test rubrik"}
+  },
+
+  logIndex: {
+    txt: {en: "index", sv: "index"},
+    title: {
+      en: "Index from session start, starts at 1 and counts upward for each logpoint",
+      sv: "Index från sessions start, börjar räkna up från 1 varje logpunkt"
+    }
   },
 
   // special         
@@ -308,8 +316,6 @@ const viewlogHtmlObj = {
     // create a header
     let thead = document.createElement("thead");
     let tr = document.createElement("tr");
-    thead.appendChild(tr);
-    tbl.appendChild(thead);
 
     let colTypes = [];
 
@@ -330,9 +336,23 @@ const viewlogHtmlObj = {
       }
     });
 
+    // specialcase counter column
+    if (tr.firstChild) {
+      const idxTh = document.createElement("th");
+      idxTh.className = "index";
+      idxTh.textContent = LogItemTypesTranslated.logIndex.txt[lang];
+      idxTh.title = idxTh.textContent + "\n" +
+                    LogItemTypesTranslated.logIndex.title[lang];
+      tr.insertBefore(idxTh, tr.firstChild);
+    }
+
+    thead.appendChild(tr);
+    tbl.appendChild(thead);
+
     // create table body
     let entries = LogRoot.instance().getSession(sessionIdx);
     let tbody = document.createElement("tbody");
+    let counter = 1;
     entries.forEach(entry => {
       let tr = document.createElement("tr");
       entry.scanChildren();
@@ -356,9 +376,15 @@ const viewlogHtmlObj = {
         }
       });
 
-      if (showRow) // only if we have any children
+      if (showRow) {// only if we have any children
+        let td = document.createElement("td");
+        td.className = "index";
+        td.textContent = counter++;
+        tr.insertBefore(td, tr.firstChild);
         tbody.appendChild(tr);
-    })
+      }
+    });
+
     tbl.appendChild(tbody);
 
     // reattach tbl to DOM
