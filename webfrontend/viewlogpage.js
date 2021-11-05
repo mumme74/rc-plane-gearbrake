@@ -141,6 +141,7 @@ window.addEventListener("beforeunload", (evt)=>{
 })
 
 const viewlogHtmlObj = {
+  currentSession: -1,
   fetchLog: async ()=>{
     console.log("Fetch log from device");
     let startAddr = await SerialBase.instance().getLogNextAddr();
@@ -194,7 +195,7 @@ const viewlogHtmlObj = {
     routeMainContent();
   },
   selectStart: (evt, sessionIdx) => {
-    console.log("view log " + sessionIdx);
+    viewlogHtmlObj.currentSession = sessionIdx;
     // change text on dropdown btn
     const lang = document.querySelector("html").lang;
     const latest = viewlogHtmlObj.lang[lang].latestSession;
@@ -265,7 +266,7 @@ const viewlogHtmlObj = {
           hideLogItems.push(vlu);
           viewlogHtmlObj.rebuildLogTable(sessionIdx, lang);
         } else if (idx > -1 && evt.target.checked) {
-          hideLogItems.splice(idx);
+          hideLogItems.splice(idx, 1);
           viewlogHtmlObj.rebuildLogTable(sessionIdx, lang);
         }
       });
@@ -278,7 +279,14 @@ const viewlogHtmlObj = {
     let lbl = evt.target.parentNode;
     while(lbl.nextElementSibling) {
       lbl = lbl.nextElementSibling;
-      lbl.firstElementChild.checked = evt.target.checked;
+      const chkBox = lbl.firstElementChild;
+      chkBox.checked = evt.target.checked;
+      if (chkBox.checked) hideLogItems.splice(0, hideLogItems.length);
+      else hideLogItems.push(parseInt(chkBox.value.trim()));
+    }
+    if (viewlogHtmlObj.currentSession > -1) {
+      const lang = document.querySelector("html").lang;
+      viewlogHtmlObj.rebuildLogTable(viewlogHtmlObj.currentSession, lang);
     }
   },
   rebuildLogTable: (sessionIdx, lang) => {
@@ -411,8 +419,6 @@ const viewlogHtmlObj = {
           </button>
           <h5 class="w3-padding-8">${tr.fetchedLogPoints}</h5>
           <div class="w3-bar w3-light-grey">
-            <!--<button class="w3-bar-item w3-button">Home</button>
-            <button class="w3-bar-item w3-button">Link 1</button>-->
             <div class="w3-dropdown-hover">
               <button class="w3-button">${tr.selectLog}</button>
               <div class="w3-dropdown-content w3-bar-block w3-card-4">
