@@ -127,6 +127,7 @@ class LogItem {
         case LogItem.Types.slip1:
         case LogItem.Types.slip2:
             return "%";
+        case LogItem.Types.accel:
         case LogItem.Types.accelX:
         case LogItem.Types.accelY:
         case LogItem.Types.accelZ:
@@ -156,6 +157,7 @@ class LogItem {
             case LogItem.Types.slip1:
             case LogItem.Types.slip2:
                 return roundMe(this.value);
+            case LogItem.Types.accel:
             case LogItem.Types.accelX:
             case LogItem.Types.accelY:
             case LogItem.Types.accelZ:
@@ -216,10 +218,22 @@ class LogRoot {
         return LogRoot._instance;
     }
 
-    byteArray = new Uint8Array(128 * 1024);
-    logEntries = [];
-    coldStarts = [];
-    startPos = -1;
+    constructor() {
+        this.clear();
+    }
+
+    clear() {
+        this.logEntries = [];
+        this.byteArray = new Uint8Array(128 * 1024);
+        this.logEntries = [];
+        this.coldStarts = [];
+        this.startPos = -1;
+    }
+
+//    byteArray = new Uint8Array(128 * 1024);
+//    logEntries = [];
+//    coldStarts = [];
+//    startPos = -1;
 
     getSession(coldStartIdx) {
         let entries = [];
@@ -275,7 +289,7 @@ if (testing) {
         (LogItem.Types.log_coldStart << 2) | 0, 0x5A,
 
         // log entry with 9 items
-        10, 45,
+        10, 43,
         // first logitem uin8_t, 2 bytes long, positive 64
         (LogItem.Types.speedOnGround << 2) | 0, 0x40,
         // logitem 2 int16_t, 3bytes long, positive 0x0132 (306)
@@ -296,7 +310,7 @@ if (testing) {
         (LogItem.Types.slip2 << 2) | 3, 0xDB, 0x0F, 0x49, 0x40,
         // logitem 9 float 5 bytes long positive smallest number 2^-126 (0x00800000)
         (LogItem.Types.slip0 << 2) | 3, 0x00, 0x00, 0x80, 0x00,
-        // trailing stuff at end
+        // trailing stuff at end, should halt the parse
         0,0,
 
 
@@ -375,13 +389,13 @@ if (testing) {
         // first logitem uin8_t, 2 bytes long, positive 64
         (LogItem.Types.speedOnGround << 2) | 0, 0x40,
         // logitem 2 int16_t, 3bytes long, positive 0x0132 (306)
-        (LogItem.Types.wsSteering << 2) | 1, 0x32, 0x01,
+        (LogItem.Types.wsSteering << 2) | 1, 0x32, 0x00,
         // logitem 3 int16_t 3bytes long, negative 0xFEAD (-341)
-        (LogItem.Types.accelSteering << 2) | 1, 0xAD, 0xFE,
+        (LogItem.Types.accelSteering << 2) | 1, 0xAD, 0xFF,
         // logitem 4 int32_t 5bytes long positive 0x01815405 (25252869)
-        (LogItem.Types.test_int32_1 << 2) | 3, 0x05, 0x54, 0x15, 0x01,
+        (LogItem.Types.accel << 2) | 1, 0x05, 0x04,
         // logitem 5 int32_t 5 bytes long negative 0x8043210F (-4399376)
-        (LogItem.Types.test_int32_2 << 2) | 3, 0x0F, 0x34, 0x43, 0x80,
+        (LogItem.Types.accelX << 2) | 1, 0x0F, 0x0E,
         // logitem 6 float 5 bytes long positive 0.25 (0x3E800000)
         (LogItem.Types.slip0 << 2) | 3, 0x00, 0x00, 0x80, 0x3E,
         // logitem 6 float 5 bytes long negative -2.0 (0xC0000000)
@@ -407,7 +421,7 @@ if (testing) {
 
     test(logRoot.logEntries[1].itemCnt(), 10);
 
-    //test(logRoot.logEntries.length, 2)
+    test(logRoot.logEntries.length, 2)
 
     itm = logRoot.logEntries[1].getChild(LogItem.Types.speedOnGround);
     test(itm.value, 64);
@@ -423,7 +437,7 @@ if (testing) {
 
     itm = logRoot.logEntries[1].getChild(LogItem.Types.test_int32_1);
     test(itm.value, 18174981);
-    
+
     itm = logRoot.logEntries[1].getChild(LogItem.Types.test_int32_2);
     test(itm.value, -2143084273);
 
@@ -442,7 +456,7 @@ if (testing) {
     itm = logRoot.logEntries[1].children[9];
     test(itm.value, Math.pow(2, -126));
 
-    logRoot.parseLog(bArr, 48);
+    logRoot.parseLog(bArr, 51);
     test(logRoot.logEntries.length, 7);
 
     test(logRoot.logEntries[2].itemCnt(), 1);
@@ -451,5 +465,8 @@ if (testing) {
     test(logRoot.logEntries[5].itemCnt(), 1);
     test(logRoot.logEntries[6].itemCnt(), 13);
 
-    console.log(`have runned ${testCnt} tests`)
+    //logRoot.clear();
+    //test(logRoot.logEntries.length, 0);
+
+    console.log(`have runned ${testCnt} tests`);
 }

@@ -141,11 +141,55 @@ window.addEventListener("beforeunload", (evt)=>{
 })
 
 const viewlogHtmlObj = {
-  fetchLog: ()=>{
-    console.log("Fetch log from device")
+  fetchLog: async ()=>{
+    console.log("Fetch log from device");
+    let startAddr = await SerialBase.instance().getLogNextAddr();
+    let log = await SerialBase.instance().readLog();
+    if (isNaN(startAddr) || (!Array.isArray(log) || !(log instanceof Uint8Array)))
+      return;
+
+    const logRoot = LogRoot.instance();
+    logRoot.clear();
+    logRoot.parseLog(log, startAddr);
   },
-  clearLog: ()=>{
-    console.log("Clear log in device")
+  clearLog: async ()=>{
+    console.log("Clear log in device");
+    const res = await SerialBase.instance().clearLogEntries();
+    if (res) {
+      LogRoot.instance().clear();
+    }
+  },
+  saveLog: async () => {
+    const fileHandle = await window.showSaveFilePicker({types: [{
+      description: 'Log file *.blg',
+      accept: {'application/octet-stream': ['.blg']},
+    }]});
+    const fileStream = await fileHandle.createWritable();
+    const logRoot = LogRoot.instance();
+    let endPos = logRoot.byteArray.byteLength;
+    const logWithStartAddr = new Uint8Array(endPos + 4);
+    logWithStartAddr.set(logRoot.byteArray);
+    logWithStartAddr[endPos++] = (logRoot.startPos & 0x000000FF)>>0;
+    logWithStartAddr[endPos++] = (logRoot.startPos & 0x0000FF00)>>8;
+    logWithStartAddr[endPos++] = (logRoot.startPos & 0x00FF0000)>>16;
+    logWithStartAddr[endPos++] = (logRoot.startPos & 0xFF000000)>>24;
+    await fileStream.write(new Blob([logWithStartAddr],
+                {type: "application/octet-stream"}));
+    await fileStream.close();
+  },
+  readLog: async () => {
+    const [fileHandle] = await window.showOpenFilePicker({types: [{
+      description: 'Log file *.blg',
+      accept: {'application/octet-stream': ['.blg']},
+    }]});
+    const file = await fileHandle.getFile();
+    LogRoot.instance().clear();
+    const log = new Uint8Array(await file.arrayBuffer());
+    const size = log.byteLength;
+    const startAddr = log[size-1] << 24 | log[size-2] << 16 |
+                      log[size-3] << 8 | log[size-4];
+    LogRoot.instance().parseLog(log, startAddr);
+    routeMainContent();
   },
   selectStart: (evt, sessionIdx) => {
     console.log("view log " + sessionIdx);
@@ -311,6 +355,8 @@ const viewlogHtmlObj = {
             This is due to the Use of Webserial to "talk" to the microcontroller via virtual com port and USB`,
       fetchLogBtn: "Fetch log from device",
       clearLogBtn: "Clear log in device",
+      saveLogBtn: "Save log to file",
+      readLogBtn: "Read log from file",
       fetchedLogPoints: "Fetched log:",
       selectLog: "Select log",
       latestSession: "Latest session",
@@ -323,6 +369,8 @@ const viewlogHtmlObj = {
             Detta beror på att WebSerial interfacet för att "prata" med mikrocontrollern via virtuel COM port och USB finns inte tillgänglig innan dessa`,
       fetchLogBtn: "Hämta logg från enhet",
       clearLogBtn: "Nollställ loggminne i enhet",
+      saveLogBtn: "Spara logg till fil",
+      readLogBtn: "Läs logg från fil",
       fetchedLogPoints: "Hämtad logg:",
       selectLog: "Välj logg",
       latestSession: "Senaste session",
@@ -352,6 +400,12 @@ const viewlogHtmlObj = {
           </button> 
           <button class="w3-button w3-orange w3-padding-large w3-large w3-margin-top" onclick="viewlogHtmlObj.clearLog()">
             ${tr.clearLogBtn}
+          </button>
+          <button class="w3-button w3-gray w3-padding-large w3-large w3-margin-top" onclick="viewlogHtmlObj.saveLog()">
+            ${tr.saveLogBtn}
+          </button>
+          <button class="w3-button w3-gray w3-padding-large w3-large w3-margin-top" onclick="viewlogHtmlObj.readLog()">
+            ${tr.readLogBtn}
           </button>
           <h5 class="w3-padding-8">${tr.fetchedLogPoints}</h5>
           <div class="w3-bar w3-light-grey">
