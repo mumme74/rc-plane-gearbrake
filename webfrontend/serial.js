@@ -4,7 +4,7 @@ if (!window.isSecureContext) {
     let tr = {
         en: `This page is not considered safe by the browser, serial communication is dispabled.\n
              Try to serve as top level page from a https: server.`,
-        sv: `Denna sida anses inte var säker av webbläsaren, seriel kommunikation är inaktiverad.\n 
+        sv: `Denna sida anses inte var säker av webbläsaren, seriel kommunikation är inaktiverad.\n
              Försök med att serva sidan som Top sida från en https: webbserver`
     }
     alert(tr[document.querySelector("html").lang]);
@@ -46,7 +46,7 @@ class MsgStreamReader {
             // move to beginning
             for (let i = 0, j = this._msglen; j < this._bufferIter; ++i, ++j)
                 this._buffer[i] = this._buffer[j];
-            
+
             this._bufferIter -= this._msglen;
             this._msglen = SerialBase._readResponseHeader(this._buffer).len;
             // fraction might be a complete msg, call recursively
@@ -98,7 +98,7 @@ class SerialBase {
                 btn.classList.add("connected");
             });
         });
-        
+
         navigator.serial.addEventListener('disconnect', (e) => {
             if (e.target === this.port) {
                 this.port = null;
@@ -108,11 +108,11 @@ class SerialBase {
             }
         });
         this._encoder = new TextEncoder();
-        this._decoder = new TextDecoder();        
+        this._decoder = new TextDecoder();
     }
 
     static instance() {
-        if (!Serial._instance) 
+        if (!Serial._instance)
             Serial._instance = new SerialBase.LatestVersionSubClass();
         return Serial._instance;
     }
@@ -181,7 +181,7 @@ class SerialBase {
     /**
      * @brief Write to device on serial interface
      * @param {cmd} the command to send to device
-     * @param {byteArr} optional the data to send to device, Uint8Array 
+     * @param {byteArr} optional the data to send to device, Uint8Array
      * @returns the request id associated with this write
      */
     async write({cmd, byteArr = null}) {
@@ -213,15 +213,15 @@ class SerialBase {
       // we might have this message in our cache
       let msgIdx = this._responseMsgs.findIndex(m=>((id===m[2] || id < 0) && (cmd === m[1] || cmd < 0)));
       if (msgIdx > -1) return this._responseMsgs.splice(msgIdx);
-    
+
       // get from device
       let exit = false;
       while(!exit) {
         const {value: msg, done: exit} = await this._reader.read();
         const header = SerialBase._readResponseHeader(msg);
         if (header.len > -1 &&
-            (id === -1 || id === header.id) && 
-            (cmd === -1 || cmd === header.cmd)) 
+            (id === -1 || id === header.id) &&
+            (cmd === -1 || cmd === header.cmd))
         {
             return includeHeader ? msg : msg.subarray(header.payloadStart);
         }
@@ -229,7 +229,7 @@ class SerialBase {
       }
     }
 
-    _getId() { 
+    _getId() {
         if (this._reqId > 0xFD) // 0xFF is a error
             return this._reqId = 0;
         return this._reqId++;
@@ -296,7 +296,7 @@ class Serial_v1 extends SerialBase {
 
     /**
      * @brief get All settings stored in device including the settings version
-     * @returns a Uint8Array with the device settings struct serialized 
+     * @returns a Uint8Array with the device settings struct serialized
      */
     async getAllSettings() {
         let msg = new Uint8Array([3, SerialBase.Cmds.SettingsGetAll, this._getId()]);
@@ -311,7 +311,7 @@ class Serial_v1 extends SerialBase {
     /**
      * @brief Sets configuration struct in device
      * @param byteArr Uint8Array, must be aligned as the struct in device
-     * @returns true/false depending on success 
+     * @returns true/false depending on success
      */
     async setAllSettings(byteArr) {
         let msg = new Uint8Array([3 + byteArr.length, SerialBase.Cmds.SettingsSetAll, this._getId()]);

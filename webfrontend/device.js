@@ -34,7 +34,7 @@ class DeviceConfigBase {
     Log_160ms: 3,
     Log_320ms: 4,
     Log_640ms: 5,
-    Log_1280ms: 6, 
+    Log_1280ms: 6,
     Log_2560ms: 7,
   }
 
@@ -82,7 +82,7 @@ class DeviceConfigBase {
   }
 
   static deserialize(byteArr) {
-    if (byteArr.length < 4) 
+    if (byteArr.length < 4)
       throw new Error("Can't deserialize, header malformed");
 
     let version = (byteArr[0] << 8) | byteArr[1];
@@ -220,7 +220,7 @@ class DeviceConfig_v1 extends DeviceConfigBase {
     byteVlu = byteArr[idx++];
     this.accelerometer_active = Boolean(byteVlu & 0x01);
     this.accelerometer_axis_invert = Boolean(byteVlu & 0x01);
-    this.dontLogWhenStill = Boolean(byteVlu & 0x01); 
+    this.dontLogWhenStill = Boolean(byteVlu & 0x01);
     this.LogPeriodicity = (byteVlu & 0xE0) >> 5;
     // wheelsensors
     this.WheelSensor0_pulses_per_rev = byteArr[idx++];

@@ -42,10 +42,10 @@ class LogItem {
         accelX: 14,
         accelY: 15,
         accelZ: 16,
-        
+
         // must be last, indicates end of log items
-        log_end: 17,  
-        // special         
+        log_end: 17,
+        // special
         log_coldStart: 0x3F,
 
         // only for testing purposes
@@ -308,7 +308,7 @@ class LogRoot {
     getSession(coldStartIdx) {
         let entries = [];
         const start = this.coldStarts[coldStartIdx];
-        const end = this.coldStarts.length-1 > coldStartIdx ? 
+        const end = this.coldStarts.length-1 > coldStartIdx ?
                         this.coldStarts[coldStartIdx+1] : this.logEntries.length;
         for (let i = start; i < end; ++i) {
             entries.push(this.logEntries[i]);
@@ -332,7 +332,7 @@ class LogRoot {
                 let entry = new LogEntry(pos, this);
                 if (entry.size < 1) break;
                 this.logEntries.push(entry);
-                if (entry.itemCnt() === 1 && 
+                if (entry.itemCnt() === 1 &&
                     entry.getChild(LogItem.Types.log_coldStart))
                 {
                   this.coldStarts.push(this.logEntries.length-1);
@@ -352,7 +352,7 @@ class LogRoot {
 if (testing) {
     let testCnt = 0;
     let test = (vlu, expect)=> {
-        if (vlu !== expect) 
+        if (vlu !== expect)
             console.warn(`fail ${vlu} !== ${expect}`);
         testCnt++;
     }

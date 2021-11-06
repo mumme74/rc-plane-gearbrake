@@ -20,7 +20,7 @@ function renderBase(tag, {key, rdonly = false, txt, title}) {
   return {
     lbl: `<label for="${key}">${txt}</label>`,
     part: `<${tag} ${readonly} name="${key}" title="${title}"`
-  } 
+  }
 }
 
 function renderTextbox({key, vlu, txt, title, rdonly = false}) {
@@ -47,7 +47,7 @@ function renderSelect({key, vlu, txt, title, rdonly = false,
   const {lbl, part} = renderBase("select", {key, txt, title, rdonly});
   const lan = document.querySelector("html").lang;
   const options = Object.keys(selections).map(sel=>{
-    const str = (!lang || !lang[sel]) ? sel : 
+    const str = (!lang || !lang[sel]) ? sel :
                   typeof lang[sel] === 'string' ? lang[sel]: lang[sel][lan];
     const selected = vlu === selections[key] ? "selected" : "";
     return `<option value="${selections[sel]}" ${selected}
@@ -123,7 +123,7 @@ const configureHtmlObj = {
     children: [
       {
         key: "header.storageVersion",
-        txt:{en: "Config version", sv: "Lagringsversion"}, 
+        txt:{en: "Config version", sv: "Lagringsversion"},
         title: {en: "Which version in device firmware", sv: "Vilken version i device firmware"},
         render: renderTextbox,
         renderOptions: {rdonly: true},
@@ -134,8 +134,8 @@ const configureHtmlObj = {
         children: [
           {
             key: "lower_threshold",
-            txt: {en: "Start threshold", sv: "Starttröskel"}, 
-            title: {en: "At what point brakes begin to activate", 
+            txt: {en: "Start threshold", sv: "Starttröskel"},
+            title: {en: "At what point brakes begin to activate",
               sv: "Vid vilken punkt som bromsar börjar aktiveras"},
             render: renderSpinbox
           },
@@ -312,7 +312,7 @@ const configureHtmlObj = {
             key: "accelerometer_axis_invert",
             txt: {en: "Invert control axis", sv: "Invertera kontroll axel"},
             title: {
-              en: "Invert signal for control axis, instead of putting brake PCB upside down", 
+              en: "Invert signal for control axis, instead of putting brake PCB upside down",
               sv: "Invertera signalen för kontrol axel. Använd istället för att lägga kretskortet upp och ned."
             },
             render: renderCheckbox
@@ -335,7 +335,7 @@ const configureHtmlObj = {
             key: "dontLogWhenStill",
             txt: {en: "Only log when wheel rotates", sv: "Logga bara när hjul snurrar"},
             title: {
-              en: "Stop logging when wheels arent moving", 
+              en: "Stop logging when wheels arent moving",
               sv: "Stoppa loggning när hjulen inte snurrar"
             },
             render: renderCheckbox
@@ -347,7 +347,7 @@ const configureHtmlObj = {
             render: renderSelect,
             renderOptions: {
               selections: DeviceConfigBase.LogPeriodicity
-            } 
+            }
           }
         ]
       }
@@ -356,7 +356,7 @@ const configureHtmlObj = {
   lang: {
       en: {
           header: "Configure your device",
-          p1: `HTML frontend must be loaded by chrome version 89 or later or the latest Edge browser. 
+          p1: `HTML frontend must be loaded by chrome version 89 or later or the latest Edge browser.
                 This is due to the Use of Webserial to "talk" to the microcontroller via virtual com port and USB`,
           fetchConfigureBtn: "Fetch settings from device",
           pushConfigureBtn: "Save settings into device",
@@ -367,7 +367,7 @@ const configureHtmlObj = {
       },
       sv: {
           header: "Konfigurera din device",
-          p1: `HTML framände måste ladddas med chrome version 89 eller senare, eller senaste Edge webbläsaren. 
+          p1: `HTML framände måste ladddas med chrome version 89 eller senare, eller senaste Edge webbläsaren.
                 Detta beror på att WebSerial interfacet för att "prata" med mikrocontrollern via virtuel COM port och USB.`,
           fetchConfigureBtn: "Hämta inställningar från enhet",
           pushConfigureBtn: "Spara inställningar i enhet",
@@ -394,7 +394,7 @@ const configureHtmlObj = {
 
           return child.render({
             ...child.renderOptions,
-            key: child.key, 
+            key: child.key,
             txt: child.txt[lang],
             title: child.title[lang],
             vlu: vluRoot[keys[0]],

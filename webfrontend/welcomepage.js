@@ -4,13 +4,13 @@ const welcomeHtmlObj = {
     lang: {
         en: {
             header: "Configure your device",
-            p1: `HTML frontend must be loaded by chrome version 89 or later or the latest Edge browser. 
+            p1: `HTML frontend must be loaded by chrome version 89 or later or the latest Edge browser.
                  This is due to the Use of Webserial to "talk" to the microcontroller via virtual com port and USB is only available inter versions of those browsers.`,
             btn: "Get Started!",
         },
         sv: {
             header: "Konfigurera din device",
-            p1: `HTML framände måste laddas med antingen Google Chrome v89 eller senare, eller Microsoft Edge v89 eller senare.<br/> 
+            p1: `HTML framände måste laddas med antingen Google Chrome v89 eller senare, eller Microsoft Edge v89 eller senare.<br/>
                  Detta beror på att WebSerial interfacet för att "prata" med mikrocontrollern via virtuel COM port och USB endast finns i nyare versioner av dessa webbläsare`,
             btn: "Börja nu!",
         },

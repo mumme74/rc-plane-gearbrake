@@ -53,21 +53,21 @@ const LogItemTypesTranslated = {
   slip0: {
     txt: {en: "Brake 0 wheel slip", sv: "Broms 0 hjulsläpp"},
     title: {
-      en: "Brake 0 calculated wheel slippage", 
+      en: "Brake 0 calculated wheel slippage",
       sv: "Broms 0 beräknat hjulsläpp"
     }
   },
   slip1: {
     txt: {en: "Brake 1 wheel slip", sv: "Broms 1 hjulsläpp"},
     title: {
-      en: "Brake 1 calculated wheel slippage", 
+      en: "Brake 1 calculated wheel slippage",
       sv: "Broms 1 beräknat hjulsläpp"
     }
   },
   slip2: {
     txt: {en: "Brake 2 wheel slip", sv: "Broms 2 hjulsläpp"},
     title: {
-      en: "Brake 2 calculated wheel slippage", 
+      en: "Brake 2 calculated wheel slippage",
       sv: "Broms 2 beräknad hjulsläpp"
     }
   },
@@ -82,7 +82,7 @@ const LogItemTypesTranslated = {
   wsSteering: {
     txt: {en: "Wheel brake steering", sv: "Hjulbroms styrning"},
     title: {
-      en: "Wheel brake differential steering based of different sheel speed", 
+      en: "Wheel brake differential steering based of different sheel speed",
       sv: "Hjulbroms styrning baserat på olika hjulhatighet"
     }
   },
@@ -115,7 +115,7 @@ const LogItemTypesTranslated = {
       sv: "Accelerometer värde för Z-axeln"
     }
   },
-  
+
   // must be last of items from board, indicates end of log items
   log_end: {txt: {en: "Log end", sv: "Log slut"}},
 
@@ -132,7 +132,7 @@ const LogItemTypesTranslated = {
     }
   },
 
-  // special         
+  // special
   log_coldStart: {
     txt: {en: "Start from reset", sv: "Uppstart från reset"},
     title: {
@@ -236,7 +236,7 @@ const viewlogHtmlObj = {
           else
             tr = LogItemTypesTranslated.invalid;
           items.push({entry:itm, txt:tr.txt[lang], title:tr.title[lang]});
-        } 
+        }
       })
     });
     return items;
@@ -394,7 +394,7 @@ const viewlogHtmlObj = {
   lang: {
     en: {
       header: "View log",
-      p1: `HTML frontend must be loaded by chrome version 89 or later or the latest Edge browser. 
+      p1: `HTML frontend must be loaded by chrome version 89 or later or the latest Edge browser.
             This is due to the Use of Webserial to "talk" to the microcontroller via virtual com port and USB`,
       fetchLogBtn: "Fetch log from device",
       clearLogBtn: "Clear log in device",
@@ -408,7 +408,7 @@ const viewlogHtmlObj = {
     },
     sv: {
       header: "Visa logg",
-      p1: `HTML framände måste laddas med chrome version 89 eller senare, eller senaste Edge webbläsaren. 
+      p1: `HTML framände måste laddas med chrome version 89 eller senare, eller senaste Edge webbläsaren.
             Detta beror på att WebSerial interfacet för att "prata" med mikrocontrollern via virtuel COM port och USB finns inte tillgänglig innan dessa`,
       fetchLogBtn: "Hämta logg från enhet",
       clearLogBtn: "Nollställ loggminne i enhet",
@@ -440,7 +440,7 @@ const viewlogHtmlObj = {
 
           <button class="w3-button w3-blue w3-padding-large w3-large w3-margin-top" onclick="viewlogHtmlObj.fetchLog()">
             ${tr.fetchLogBtn}
-          </button> 
+          </button>
           <button class="w3-button w3-orange w3-padding-large w3-large w3-margin-top" onclick="viewlogHtmlObj.clearLog()">
             ${tr.clearLogBtn}
           </button>
@@ -468,7 +468,7 @@ const viewlogHtmlObj = {
               </div>
             </div>
           </div>
-          
+
           <div class="w3-row">
             <table id="logTableEntries" class="w3-table w3-bordered w3-border w3-responsive">
             </table>

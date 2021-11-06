@@ -37,7 +37,7 @@ document.addEventListener('DOMContentLoaded', () =>{
         a.href = typeof itm.hash === 'string' ? `#${hashParts.join("&")}` : "javascript:void(0)";
         a.className = itm.cls || classes.bar;
         a.innerHTML = typeof itm.txt === 'string' ? itm.txt : itm.txt[lang];
-        if (itm.tip) 
+        if (itm.tip)
             a.title = itm.tip[lang];
         if (itm.action)
             a.addEventListener("click", itm.action);
