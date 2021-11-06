@@ -206,6 +206,9 @@ include $(RULESPATH)/rules.mk
 #
 # Custom rules
 ##############################################################################
-all: size
+all: dfu size
 size:
 	python memusage.py
+	
+dfu:
+	python bin2dfu.py -b 0x08000000:$(BUILDDIR)/$(PROJECT).bin $(BUILDDIR)/$(PROJECT).dfu
