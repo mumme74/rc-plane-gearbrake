@@ -174,12 +174,12 @@ class LogItem {
             case LogItem.Types.slip0:
             case LogItem.Types.slip1:
             case LogItem.Types.slip2:
-                return this.value.toPrecision(3);
+                return Number(this.value.toPrecision(3));
             case LogItem.Types.accel:
             case LogItem.Types.accelX:
             case LogItem.Types.accelY:
             case LogItem.Types.accelZ:
-                return (this.value / 512).toPrecision(2);
+                return Number((this.value / 512).toPrecision(2));
             case LogItem.Types.speedOnGround:
             case LogItem.Types.wheelRPS_0:
             case LogItem.Types.wheelRPS_1:
@@ -190,7 +190,7 @@ class LogItem {
             case LogItem.Types.brakeForce2_out:
             case LogItem.Types.accelSteering:
             case LogItem.Types.wsSteering:
-                return Math.round(this.value *100) / 100;
+                return Number(this.value.toPrecision(2))//Math.round(this.value *100) / 100;
             default:
                 return this.value;
             }
@@ -591,7 +591,24 @@ if (testing) {
             lastEntry = entry;
         }
 
+        // dump some values to console for testing chart
         console.log(lastEntry.startPos + lastEntry.size)
+        let speed= [], times = [], accelX = [], wheel0=[], wheel1=[];
+        let entries = logRoot.getSession(2)
+        for(let i = 1; i < Math.min(10, entries.length); ++i) {
+            const entry = entries[i];
+            times.push(i);
+            speed.push(entry.getChild(LogItem.Types.speedOnGround).realVlu());
+            accelX.push(entry.getChild(LogItem.Types.accelX).realVlu());
+            wheel0.push(entry.getChild(LogItem.Types.brakeForce0_out).realVlu());
+            wheel1.push(entry.getChild(LogItem.Types.brakeForce1_out).realVlu())
+        }
+
+        console.log("times",JSON.stringify(times))
+        console.log("speed", JSON.stringify(speed))
+        console.log("accelX", JSON.stringify(accelX))
+        console.log("brake0", JSON.stringify(wheel0))
+        console.log("brake1", JSON.stringify(wheel1))
     }
 
     console.log(`have runned ${testCnt} tests`);
