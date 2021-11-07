@@ -8,6 +8,7 @@ const appSettingsHtmlObj = {
                  This is due to the Use of Webserial to "talk" to the microcontroller via virtual com port and USB`,
             chooseLang: `Choose language`,
             updateFirmware: `Update device firmware`,
+            nofileSelected: "You must select a firmwre file first!",
             firmwareHelp: `You must push and hold the device boot button during power reset to go to bootloader mode.`,
             firmwareHelpStep1: "Disconnect power and USB from device",
             firmwareHelpStep2: "Push and hold boot button",
@@ -25,6 +26,7 @@ const appSettingsHtmlObj = {
                  Detta beror på att WebSerial interfacet för att "prata" med mikrocontrollern via virtuel COM port och USB.`,
             chooseLang: `Välj språk`,
             updateFirmware: `Uppdatera enhetens firmware`,
+            nofileSelected: "Du måste välja en firmware fil först!",
             firmwareHelp: `Du måste trycka ned boot knappen på enheten under end strömreset för att gå till bootloader mode.`,
             firmwareHelpStep1: "Koppla från ström och USB från enheten",
             firmwareHelpStep2: "Tryck och håll boot knappen",
@@ -39,32 +41,48 @@ const appSettingsHtmlObj = {
     },
     backupPushed: ()=>{
       console.log("backup pushed")
+      appSettingsHtmlObj._dfuUtil.upload();
     },
     downloadPushed: () => {
       console.log("dl pushed");
-      let fileNode = document.getElementById("firmwareFileInput");
-      if (fileNode.files.length == 1) {
+      if (!document.querySelector('input[type="file"]').files.length) {
+        const lang = document.documentElement.lang;
+        notifyUser({msg: appSettingsHtmlObj.lang[lang].nofileSelected});
+        return;
       }
+      appSettingsHtmlObj._dfuUtil.download();
     },
-    connectPushed: (event) => {
+    _dfuUtil: null,
+    connectPushed: async (event) => {
       let btn = event.target;
-      let connected = btn.classList.contains("connected");
       let lang = document.querySelector("html").lang;
-      if (!connected) {
+
+      // split to separate functions to be able to use as callbacks for DfuUtil
+      let connectFn = () => {
         menuCloseConnection();
         btn.innerText = appSettingsHtmlObj.lang[lang].disconnectButton;
         btn.classList.add("connected");
-      } else {
+        for(const input of btn.parentNode.querySelectorAll("input"))
+          input.disabled = false;
+      }
+      let disconnectFn = () => {
         btn.innerText = appSettingsHtmlObj.lang[lang].connectButton;
         btn.classList.remove("connected");
+        for(const input of btn.parentNode.querySelectorAll("input"))
+          input.disabled = true;
       }
-      let inputs = btn.parentNode.querySelectorAll("input");
-      for(const input of inputs) {
-        if (connected)
-          input.setAttribute("disabled", null);
-        else
-          input.removeAttribute("disabled")
+
+      // create a DfuUtil classs
+      if (!appSettingsHtmlObj._dfuUtil) {
+        const file = btn.parentNode.querySelector('input[type="file"]');
+        const log = document.getElementById("firmwareLog");
+        appSettingsHtmlObj._dfuUtil =
+          new DfuUtil(connectFn, disconnectFn, file, log, log);
+        appSettingsHtmlObj._dfuUtil.setLogContext(log);
       }
+
+      let connected = appSettingsHtmlObj._dfuUtil.device != null;
+      await appSettingsHtmlObj._dfuUtil[connected ? "disconnect" : "connect"]();
 
     },
     html: (lang) => {
@@ -104,11 +122,11 @@ const appSettingsHtmlObj = {
                     id="firmwareFileInput" disabled
                     value="${appSettingsHtmlObj.lang[lang].selectFile}"
               />
-              <input type="button" onclick="appSettingsHtmlObj.downloadPushed()"
+              <input type="button" onclick="appSettingsHtmlObj.downloadPushed(event)"
                 class="w3-margin w3-small w3-button" disabled
                 value="${appSettingsHtmlObj.lang[lang].downloadFirmware}""
               />
-              <div id="firmwareLog"><div>
+              <div id="firmwareLog" class="w3-margin"><div>
             </div>
           </div>
 
