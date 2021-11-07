@@ -140,24 +140,36 @@ class SerialBase {
     }
 
 
-    openPort() {
+    async openPort() {
         const usbVendorId = 0x0483;
-        navigator.serial.requestPort({ filters: [{ usbVendorId }]}).then((port) => {
+        try {
+          await navigator.serial.requestPort({ filters: [{ usbVendorId }]});
           // Connect to `port` or add it to the list of available ports.
           this.port = port;
-          this.port.open({baudRate: 115200}).then(()=>{
+          try {
+            await this.port.open({baudRate: 115200});
             this._reader = port.readable.getReader();
             this._writer = port.writable.getWriter();
             this._reader.pipeThrough(new MsgStreamReader());
             return true;
-          }).catch(e=>{
+          } catch(e) {
               console.log("There was an error opening port: " + e);
-          });
+          };
 
-        }).catch((e) => {
+        } catch(e) {
           // The user didn't select a port.
           console.log("User did not select a port");
-        });
+        };
+        return false;
+    }
+
+    togglePort() {
+        if (!this.port)
+            return this.openPort();
+
+        // port open, close it
+        this.port.close();
+        this.port = null;
         return false;
     }
 

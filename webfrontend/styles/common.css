@@ -1,0 +1,23 @@
+body,h1,h2,h3,h4,h5,h6 {font-family: sans-serif}
+.w3-bar,h1,button {font-family: sans-serif}
+.fa-anchor,.fa-coffee {font-size:200px}
+.connected {background-color: #29eb49;}
+form label {
+    display: inline-block;
+    width: 15em;
+    padding: 0.2em;
+}
+#notifier {
+    width: 100%;
+    font-size: large;
+    position:fixed;
+    top: -1000px;
+    z-index: 1000;
+    transition:0.5s ease-in-out;
+    padding: 1em;
+}
+#notifier.active {
+    top:0;
+}
+
+@import url(logtable.css);

@@ -25,8 +25,12 @@ document.addEventListener('DOMContentLoaded', () =>{
         {txt: {en: "View log", sv: "Visa log"}, hash: "viewlog"},
         {txt: {en: "View log graphic", sv: "Visa grafisk log"}, hash: "viewloggraphic"},
         {txt: {en: "Settings", sv: "Inställningar"}, hash: "settings"},
-        {action: SerialBase.instance().openPort, txt: "&#x1F517;",
-            tip: {en: "Connect to device", sv: "Anslut till enhet"},
+        {id: "connectBtn", action: async (event)=>{
+            let res = await SerialBase.instance().togglePort();
+            event.target.classList[res ? 'add' : 'remove']("connected")
+        }, txt: "&#x1F517;",
+            tip: {en: "Toggle connection to device",
+                  sv: "Toggla anslutning till enhet"},
          cls: classes.bar + " connectBtn"}
     ];
 
@@ -42,7 +46,7 @@ document.addEventListener('DOMContentLoaded', () =>{
         if (itm.action)
             a.addEventListener("click", itm.action);
         if (itm.id)
-            a.id = tm.id;
+            a.id = itm.id;
         parent.appendChild(a);
     }
 
@@ -57,3 +61,9 @@ document.addEventListener('DOMContentLoaded', () =>{
         buildLink(itm, navPopup);
     });
 });
+
+function menuCloseConnection() {
+    let link = document.getElementById("connectBtn");
+    if (link.classList.contains("connected"))
+        link.click();
+}

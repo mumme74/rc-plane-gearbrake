@@ -1,90 +1,29 @@
 <!DOCTYPE html>
 <!--template originally from w3schools.org-->
 <html lang="en">
-    <head>
-        <title>RC-plane Gearbrake</title>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1">
-        <link rel="stylesheet" href="w3.css">
-        <style>
-            body,h1,h2,h3,h4,h5,h6 {font-family: sans-serif}
-            .w3-bar,h1,button {font-family: sans-serif}
-            .fa-anchor,.fa-coffee {font-size:200px}
-            .connected {background-color: #29eb49;}
-            form label {
-              display: inline-block;
-              width: 15em;
-              padding: 0.2em;
-            }
-            #notifier {
-              width: 100%;
-              font-size: large;
-              position:fixed;
-              top: -1000px;
-              z-index: 1000;
-              transition:0.5s ease-in-out;
-              padding: 1em;
-            }
-            #notifier.active {
-              top:0;
-            }
-            #logTableEntries {
-              overflow:auto;
-              max-height:calc(80vw * 0.5625);
-            }
-            #logTableEntries > thead > tr > th,
-            #logTableEntries > tbody > tr > td	 {
-              max-width:8rem;
-              white-space: nowrap;
-              padding: 0.1rem 0.2rem;
-            }
-            #logTableEntries > thead > tr > th.index,
-            #logTableEntries > tbody > tr > td.index	{
-              background-color: #EEE;
-              color: #333;
-            }
-            #logTableEntries > thead > tr > th > span {
-              min-width: 1rem;
-              max-width: calc(100% - 1rem);
-              overflow: hidden;
-              text-overflow: ellipsis;
-              display: inline-block;
-              vertical-align: bottom;
-            }
-            #logTableEntries th, #logTableEntries td {
-              border-right: 1px solid #CCCCCC;
-              margin:0, inherit;
-              padding: 0 inherit;
-              max-height: 1rem;
-            }
-        </style>
-        <script>
-          {
-            // Lets us do a quick and easy switch on testing frontend
-            // just add #testingGui
-            var testing = location.hash.indexOf("testingGui") > -1;
-
-            let lang;
-            if (localStorage.getItem("lang")) {
-              lang = localStorage.getItem("lang");
-            } else {
-              lang = navigator.language.substr(0, 2); // only use "en" not "en-US"
-            }
-            document.querySelector("html").lang = lang;
-          }
-        </script>
-        <script src="notifier.js"></script>
-        <script src="serial.js"></script>
-        <script src="device.js"></script>
-        <script src="logger.js"></script>
-        <script src="menu.js"></script>
-        <script src="welcomepage.js"></script>
-        <script src="configurepage.js"></script>
-        <script src="viewlogpage.js"></script>
-        <script src="settingspage.js"></script>
-        <script src="router.js"></script>
-    </head>
-    <body>
+  <head>
+    <title>RC-plane Gearbrake</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="styles/w3.css">
+    <link rel="stylesheet" href="styles/common.css">
+    <link rel="stylesheet" href="styles/logtable.css">
+    <script src="logic/appinit.js"></script>
+    <script src="logic/notifier.js"></script>
+    <script src="logic/serial.js"></script>
+    <script src="logic/device.js"></script>
+    <script src="logic/logger.js"></script>
+    <script src="views/menuview.js"></script>
+    <script src="views/welcomepage.js"></script>
+    <script src="views/configurepage.js"></script>
+    <script src="views/viewlogpage.js"></script>
+    <script src="views/settingspage.js"></script>
+    <script src="logic/router.js"></script>
+    <script src="webdfu/dfu-util.js"></script>
+    <script src="webdfu/dfu.js"></script>
+    <script src="webdfu/dfuse.js"></script>
+  </head>
+  <body>
 
     <!-- Navbar -->
     <div class="w3-top">
@@ -105,8 +44,5 @@
         <a href="https://www.w3schools.com/w3css/default.asp" target="_blank">w3.css</a>
      </p>
     </footer>
-
-
-
-    </body>
+  </body>
 </html>
