@@ -6,7 +6,7 @@ const notifyTypes = {
     Error: 2
 }
 
-function notifyUser({msg, type = notifyTypes.Info}) {
+function notifyUser({msg, type = notifyTypes.Info, time = 3000}) {
     clearInterval(notifyUser._tmr);
     const node = document.getElementById("notifier");
     let classes = "active ";
@@ -25,5 +25,5 @@ function notifyUser({msg, type = notifyTypes.Info}) {
     notifyUser._tmr = setInterval(()=>{
         node.className = "";
         node.innerHTML = "";
-    }, 2000);
+    }, time);
 }
