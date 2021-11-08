@@ -60,13 +60,15 @@ class ChartWidgetCls {
 	_renderAxel(ctx, axelIdx) {
 		ctx.strokeStyle = axisColors[axelIdx];
 		let itm = this.logEntries[0].children[axelIdx];
+		const info = LogItem.Types.info(itm.type);
+		const bottom = this.canvasNode.height - horizBarHeight;
+		const factor = bottom / info.max;
 		ctx.beginPath();
 		ctx.lineWidth = "2";
-		ctx.moveTo(vertBarWidth, itm.realVlu());
+		ctx.moveTo(vertBarWidth, bottom - factor * itm.realVlu());
 		for(let i = 1; i < this.logEntries.length; ++i) {
 			itm = this.logEntries[i].children[axelIdx];
-			ctx.lineTo(vertBarWidth + i * stepFactor,
-					   this.canvasNode.height - horizBarHeight - itm.realVlu());
+			ctx.lineTo(vertBarWidth + i * stepFactor, bottom - factor * itm.realVlu());
 		}
 		ctx.stroke();
 	}
@@ -104,36 +106,3 @@ class ChartWidgetCls {
 }
 ChartWidget = ChartWidgetCls;
 } // namespace block
-
-
-/*
-// a quick test, saved as template for future work
-<!DOCTYPE html>
-<html>
-<body>
-
-<div  style="border:1px solid #d3d3d3;max-width:300; overflow: auto;">
-<canvas id="myCanvas" height="200">
-Your browser does not support the HTML canvas tag.</canvas>
-</div>
-
-<script>
-const stepFactor = 15;
-var c = document.getElementById("myCanvas");
-var values =  [96,93,82,95,78,90,94,71,76,85,93,100,110,120,99,96,87,76,87,71,86,84,89,92,100,93,75,74,82,71,58,67,69,76,75,87,87,67,68,52,39,41,43,51,45,49,50,61,73,72,76,86,77,89,77,92,70,59,59,70,81,67,72,55,61,70,59,68,81,91,100,89,78,97,90,84,68,85,81,79,71,54,63,78,66,68,61,64,51,52,55,44,55,42,35,44,37,45,36];
-const height = c.height;
-c.width = values.length * stepFactor;
-var ctx = c.getContext("2d");
-let x = stepFactor;
-ctx.moveTo(x, height  - values[0]);
-for(let i = 1; i < values.length; ++i) {
-	x += stepFactor
-	ctx.lineTo(x, height  - values[i])
-}
-ctx.stroke();
-</script>
-
-</body>
-</html>
-*/
-

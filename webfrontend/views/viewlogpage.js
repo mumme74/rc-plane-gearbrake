@@ -218,6 +218,8 @@ const viewlogHtmlObj = {
     viewlogHtmlObj.rebuildLogTable(sessionIdx, lang);
 
     // the chart
+    if (!viewlogHtmlObj.chart)
+      viewlogHtmlObj.chart = new ChartWidget(document.getElementById("chartContainer"));
     viewlogHtmlObj.chartUpdate();
   },
 
@@ -287,11 +289,6 @@ const viewlogHtmlObj = {
       lbl.appendChild(document.createTextNode(` ${itm.txt}`));
       dropdown.appendChild(lbl);
     });
-
-    if (!viewlogHtmlObj.chart)
-      viewlogHtmlObj.chart = new ChartWidget(document.getElementById("chartContainer"));
-    viewlogHtmlObj.chartUpdate();
-
   },
   selectAllClicked: (evt)=>{
     let lbl = evt.target.parentNode;
@@ -306,6 +303,7 @@ const viewlogHtmlObj = {
       const lang = document.querySelector("html").lang;
       viewlogHtmlObj.rebuildLogTable(viewlogHtmlObj.currentSession, lang);
     }
+    viewlogHtmlObj.chartUpdate();
   },
   rebuildLogTable: (sessionIdx, lang) => {
     // create a new log table
@@ -405,8 +403,8 @@ const viewlogHtmlObj = {
     let lang = document.documentElement.lang;
     let entries = LogRoot.instance().getSession(viewlogHtmlObj.currentSession);
     entries.splice(0, 1)
-    let types = viewlogHtmlObj._sessionItems(viewlogHtmlObj.currentSession, lang);
-    types = types.filter(type=>hideLogItems.indexOf(type) === -1).map(itm=>itm.entry.type);
+    let types = viewlogHtmlObj._sessionItems(viewlogHtmlObj.currentSession, lang).map(itm=>itm.entry.type);
+    types = types.filter(type=>hideLogItems.indexOf(type) === -1);
     viewlogHtmlObj.chart.dataChange(types, entries);
   },
   lang: {

@@ -50,7 +50,31 @@ class LogItem {
 
         // only for testing purposes
         test_int32_1: 0x30,
-        test_int32_2: 0x31
+        test_int32_2: 0x31,
+
+        info: (type) => {
+            let min = 0, max = 0, mid = 0, groups = [];
+            const t = LogItem.Types;
+            if (type >= t.speedOnGround && type <= t.wheelRPS_2) {
+                max = 255;
+                groups = [t.speedOnGround,t.wheelRPS_0,
+                          t.wheelRPS_1,t.wheelRPS_2];
+            } else if (type >= t.wantedBrakeForce && type <= t.brakeForce2_out) {
+                max = 255;
+                groups = [t.wantedBrakeForce,t.brakeForce0_out,
+                          t.brakeForce1_out,t.brakeForce2_out];
+            } else if (type >= t.slip0 && type <= t.slip2) {
+                max = 100;
+                groups = [t.slip0,t.slip2,t.slip2];
+            } else if (type >= t.accelSteering && type <= t.wsSteering) {
+                min = 100; max = 100;
+                groups = [t.slip0,t.slip2,t.slip2];
+            } else if (type >= t.accel && type <= t.accelZ) {
+                max = 16.0; min = -16.0;
+                groups = [t.slip0,t.slip2,t.slip2];
+            }
+            return {min, max, mid, groups}
+        }
 
     }
 
