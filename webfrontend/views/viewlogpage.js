@@ -216,6 +216,9 @@ const viewlogHtmlObj = {
 
     // build the actual table
     viewlogHtmlObj.rebuildLogTable(sessionIdx, lang);
+
+    // the chart
+    viewlogHtmlObj.chartUpdate();
   },
 
   _sessionItems: (sessionIdx, lang) => {
@@ -273,15 +276,22 @@ const viewlogHtmlObj = {
         if (idx < 0 && !evt.target.checked) {
           hideLogItems.push(vlu);
           viewlogHtmlObj.rebuildLogTable(sessionIdx, lang);
+          viewlogHtmlObj.chartUpdate();
         } else if (idx > -1 && evt.target.checked) {
           hideLogItems.splice(idx, 1);
           viewlogHtmlObj.rebuildLogTable(sessionIdx, lang);
+          viewlogHtmlObj.chartUpdate();
         }
       });
       lbl.appendChild(chkbox);
       lbl.appendChild(document.createTextNode(` ${itm.txt}`));
       dropdown.appendChild(lbl);
-    })
+    });
+
+    if (!viewlogHtmlObj.chart)
+      viewlogHtmlObj.chart = new ChartWidget(document.getElementById("chartContainer"));
+    viewlogHtmlObj.chartUpdate();
+
   },
   selectAllClicked: (evt)=>{
     let lbl = evt.target.parentNode;
@@ -391,6 +401,14 @@ const viewlogHtmlObj = {
     parentNode.appendChild(tbl);
 
   },
+  chartUpdate: () => {
+    let lang = document.documentElement.lang;
+    let entries = LogRoot.instance().getSession(viewlogHtmlObj.currentSession);
+    entries.splice(0, 1)
+    let types = viewlogHtmlObj._sessionItems(viewlogHtmlObj.currentSession, lang);
+    types = types.filter(type=>hideLogItems.indexOf(type) === -1).map(itm=>itm.entry.type);
+    viewlogHtmlObj.chart.dataChange(types, entries);
+  },
   lang: {
     en: {
       header: "View log",
@@ -472,6 +490,7 @@ const viewlogHtmlObj = {
           <div class="w3-row">
             <table id="logTableEntries" class="w3-table w3-bordered w3-border w3-responsive">
             </table>
+            <div style="overflow: auto; max-width: 80vw;" id="chartContainer"></div>
           </div>
           <p class="w3-text-grey">${viewlogHtmlObj.lang[lang].p1}</p>
         </div>
