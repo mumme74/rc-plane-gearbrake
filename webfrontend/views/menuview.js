@@ -23,7 +23,6 @@ document.addEventListener('DOMContentLoaded', () =>{
         {txt: {en: "Home", sv: "Hem"}, cls: classes.home, hash: ""},
         {txt: {en: "Configure", sv: "Konfigurera"}, hash: "conf"},
         {txt: {en: "View log", sv: "Visa log"}, hash: "viewlog"},
-        {txt: {en: "View log graphic", sv: "Visa grafisk log"}, hash: "viewloggraphic"},
         {txt: {en: "Settings", sv: "Inställningar"}, hash: "settings"},
         {id: "connectBtn", action: async (event)=>{
             let res = await SerialBase.instance().togglePort();

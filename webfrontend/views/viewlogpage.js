@@ -143,9 +143,9 @@ const LogItemTypesTranslated = {
 }
 
 // Types stored in this array will not be shown in the log
-const hideLogItems = JSON.parse(localStorage.getItem('hideLogItems') || "[]");
+const showLogItems = JSON.parse(localStorage.getItem('showLogItems') || "[]");
 window.addEventListener("beforeunload", (evt)=>{
-  localStorage.setItem('hideLogItems', JSON.stringify(hideLogItems));
+  localStorage.setItem('showLogItems', JSON.stringify(showLogItems));
 })
 
 const viewlogHtmlObj = {
@@ -215,7 +215,7 @@ const viewlogHtmlObj = {
     viewlogHtmlObj.buildItemDropdown(sessionIdx, lang);
 
     // build the actual table
-    viewlogHtmlObj.rebuildLogTable(sessionIdx, lang);
+    viewlogHtmlObj.rebuildLogTable();
 
     // the chart
     if (!viewlogHtmlObj.chart)
@@ -271,18 +271,16 @@ const viewlogHtmlObj = {
       chkbox.type = "checkbox";
       chkbox.className = "w3-button";
       chkbox.value = itm.entry.type;
-      chkbox.checked = hideLogItems.indexOf(itm.entry.type) > -1 ? false : checked;
+      chkbox.checked = showLogItems.indexOf(itm.entry.type) > -1 ? checked : false;
       chkbox.addEventListener("change", (evt)=>{
         let vlu = parseInt(evt.target.value.trim());
-        const idx = hideLogItems.indexOf(vlu);
-        if (idx < 0 && !evt.target.checked) {
-          hideLogItems.push(vlu);
-          viewlogHtmlObj.rebuildLogTable(sessionIdx, lang);
-          viewlogHtmlObj.chartUpdate();
-        } else if (idx > -1 && evt.target.checked) {
-          hideLogItems.splice(idx, 1);
-          viewlogHtmlObj.rebuildLogTable(sessionIdx, lang);
-          viewlogHtmlObj.chartUpdate();
+        const idx = showLogItems.indexOf(vlu);
+        if (idx < 0 && evt.target.checked) {
+          showLogItems.push(vlu);
+          viewlogHtmlObj.triggerReRender();
+        } else if (idx > -1 && !evt.target.checked) {
+          showLogItems.splice(idx, 1);
+          viewlogHtmlObj.triggerReRender();
         }
       });
       lbl.appendChild(chkbox);
@@ -296,16 +294,34 @@ const viewlogHtmlObj = {
       lbl = lbl.nextElementSibling;
       const chkBox = lbl.firstElementChild;
       chkBox.checked = evt.target.checked;
-      if (chkBox.checked) hideLogItems.splice(0, hideLogItems.length);
-      else hideLogItems.push(parseInt(chkBox.value.trim()));
+      if (!chkBox.checked) showLogItems.splice(0, showLogItems.length);
+      else showLogItems.push(parseInt(chkBox.value.trim()));
     }
-    if (viewlogHtmlObj.currentSession > -1) {
-      const lang = document.querySelector("html").lang;
-      viewlogHtmlObj.rebuildLogTable(viewlogHtmlObj.currentSession, lang);
-    }
-    viewlogHtmlObj.chartUpdate();
+    viewlogHtmlObj.triggerReRender();
   },
-  rebuildLogTable: (sessionIdx, lang) => {
+  triggerReRender: () => {
+    if (viewlogHtmlObj.triggerReRender.tmr)
+      clearTimeout(viewlogHtmlObj.triggerReRender.tmr);
+    viewlogHtmlObj.triggerReRender.tmr = setTimeout(()=>{
+        viewlogHtmlObj.rebuildLogTable();
+        viewlogHtmlObj.chartUpdate();
+    }, 400);
+
+  },
+  selectView: (event, type) => {
+    let buttons = event.target.parentElement.querySelectorAll(":scope>button");
+    buttons.forEach(btn=>{
+      btn.classList[btn === event.target ? "add" : "remove"]("w3-gray");
+    });
+    const sel = ["tab", "chart"];
+    const nodes = [document.getElementById("logTableEntries"),
+                   document.getElementById("chartContainer")]
+    nodes.forEach(n=>n.style.cssText="display:none");
+    nodes[sel.indexOf(type)].style.cssText = "";
+  },
+  rebuildLogTable: () => {
+    const lang = document.querySelector("html").lang;
+    const sessionIdx = viewlogHtmlObj.currentSession
     // create a new log table
     console.log("rebuildLogTable", lang);
 
@@ -328,7 +344,7 @@ const viewlogHtmlObj = {
     let colTypes = [];
 
     items.forEach(itm => {
-      if (hideLogItems.indexOf(itm.entry.type) < 0) {
+      if (showLogItems.indexOf(itm.entry.type) > -1) {
         let th = document.createElement("th");
         // split to 2 strings to be able to ellide
         //<th><span>long text to be clipped</span>not clipped</th>
@@ -374,7 +390,7 @@ const viewlogHtmlObj = {
 
       let showRow = false;
       entry.children.forEach(itm=>{
-        if (hideLogItems.indexOf(itm.type) < 0) {
+        if (showLogItems.indexOf(itm.type) > -1) {
           let td = tdNodes[colTypes.indexOf(itm.type)];
           if (td && !td.firstChild) {
             td.appendChild(
@@ -404,7 +420,7 @@ const viewlogHtmlObj = {
     let entries = LogRoot.instance().getSession(viewlogHtmlObj.currentSession);
     entries.splice(0, 1)
     let types = viewlogHtmlObj._sessionItems(viewlogHtmlObj.currentSession, lang).map(itm=>itm.entry.type);
-    types = types.filter(type=>hideLogItems.indexOf(type) === -1);
+    types = types.filter(type=>showLogItems.indexOf(type) > -1);
     viewlogHtmlObj.chart.dataChange(types, entries);
   },
   lang: {
@@ -421,6 +437,8 @@ const viewlogHtmlObj = {
       latestSession: "Latest session",
       showLogItem: "Show log items",
       chooseAll: "Choose all",
+      tblTabHeader: "Show table",
+      chartTabHeader: "Show chart",
     },
     sv: {
       header: "Visa logg",
@@ -435,6 +453,8 @@ const viewlogHtmlObj = {
       latestSession: "Senaste session",
       showLogItem: "Visa logg saker",
       chooseAll: "Välj alla",
+      tblTabHeader: "Visa tabell",
+      chartTabHeader: "Visa graf",
     },
   },
   html: (lang) => {
@@ -451,7 +471,7 @@ const viewlogHtmlObj = {
     return `
       <div class="w3-row-padding w3-padding-64 w3-container">
       <div class="w3-content">
-        <div class="">
+        <div>
           <h1>${tr.header}</h1>
 
           <button class="w3-button w3-blue w3-padding-large w3-large w3-margin-top" onclick="viewlogHtmlObj.fetchLog()">
@@ -483,10 +503,12 @@ const viewlogHtmlObj = {
                 </label>
               </div>
             </div>
+            <button class="w3-bar-item w3-button w3-gray" onclick="viewlogHtmlObj.selectView(event, 'chart')">${tr.chartTabHeader}</button>
+            <button class="w3-bar-item w3-button" onclick="viewlogHtmlObj.selectView(event, 'tab')">${tr.tblTabHeader}</button>
           </div>
 
           <div class="w3-row">
-            <table id="logTableEntries" class="w3-table w3-bordered w3-border w3-responsive">
+            <table id="logTableEntries" class="w3-table w3-bordered w3-border w3-responsive" style="display:none">
             </table>
             <div style="overflow: auto; max-width: 80vw;" id="chartContainer"></div>
           </div>
