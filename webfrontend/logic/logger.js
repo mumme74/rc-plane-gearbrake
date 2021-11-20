@@ -67,7 +67,7 @@ class LogItem {
                 max = 100;
                 groups = [t.slip0,t.slip2,t.slip2];
             } else if (type >= t.accelSteering && type <= t.wsSteering) {
-                min = 100; max = 100;
+                min = -100; max = 100;
                 groups = [t.slip0,t.slip2,t.slip2];
             } else if (type >= t.accel && type <= t.accelZ) {
                 max = 16.0; min = -16.0;
@@ -582,12 +582,13 @@ if (testing) {
             itm.endPos = savePos + itm.size +1;
             let rndVlu, newVlu, diff;
             // dont take a value to close to 0
+            const info = LogItem.Types.info(itm.type);
             do {
                 rndVlu = Math.random() * 0.5 - 0.25;
                 newVlu = orig.value + orig.value * rndVlu;
                 diff = (orig.value - newVlu) / orig.value;
             } while(diff > 10);
-            itm.value = newVlu;
+            itm.value = Math.max(Math.min(newVlu, info.max), info.min);
             itm.save();
             return itm;
         }
