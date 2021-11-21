@@ -10,6 +10,7 @@ class ViewLogCls {
   typeDrpDwnWgt = null;
   showLogItems = [];
   activeDisplayWgt = new WidgetBaseCls();
+  selectMenuWgt = null;
 
   translationObj = {
     en: {
@@ -27,6 +28,7 @@ class ViewLogCls {
       chooseAll: "Choose all",
       tblTabHeader: "Show table",
       chartTabHeader: "Show chart",
+      downloadData: "Download data",
     },
     sv: {
       header: "Visa logg",
@@ -43,6 +45,7 @@ class ViewLogCls {
       chooseAll: "Välj alla",
       tblTabHeader: "Visa tabell",
       chartTabHeader: "Visa graf",
+      downloadData: "Ladda ned data",
     },
   }
 
@@ -124,6 +127,15 @@ class ViewLogCls {
       data.splice(0,1); // cut away cold startindex entry
     const colData = LogRoot.instance().getColumnTypes(sessionIdx);
 
+    if (!this.selectMenuWgt) {
+      this.selectMenuWgt = new SelectMenuWgtCls(
+        document.getElementById("logViewMenuBar"),
+        this.translationObj, this.showLogItems, colData, data
+      );
+    }
+    this.selectMenuWgt.setData(colData, data);
+
+/*
     // build dropdown with items to show
     if (!this.typeDrpDwnWgt) {
       this.typeDrpDwnWgt = new SelectTypesDropDownWgt(
@@ -154,6 +166,7 @@ class ViewLogCls {
     this.typeDrpDwnWgt.setData(colData, data);
     this.tblWgt.setData(colData, data);
     this.chartWgt.setData(colData, data);
+    */
   }
 
   selectActiveView(event, type) {
@@ -197,7 +210,7 @@ class ViewLogCls {
             ${tr.readLogBtn}
           </button>
           <h5 class="w3-padding-8">${tr.fetchedLogPoints}</h5>
-          <div class="w3-bar w3-light-grey">
+          <div class="w3-bar w3-light-grey" id="logViewMenuBar">
             <div class="w3-dropdown-hover">
               <button class="w3-button">${tr.selectLog}</button>
               <div class="w3-dropdown-content w3-bar-block w3-card-4">
@@ -206,15 +219,7 @@ class ViewLogCls {
             </div>
             <div class="w3-dropdown-hover" id="showLogItm">
               <button class="w3-button">${tr.showLogItem}</button>
-              <!--<div class="w3-dropdown-content w3-bar-block w3-card-4" id="showLogItemDropdown">
-                <label class="w3-bar-item w3-button">
-                  <input type="checkbox" class="w3-button" onchange="viewlogHtmlObj.selectAllClicked(event)" checked/>
-                  ${tr.chooseAll}
-                </label>
-              </div>-->
             </div>
-            <button class="w3-bar-item w3-button w3-gray" onclick="viewlogHtmlObj.selectActiveView(event, 'chart')">${tr.chartTabHeader}</button>
-            <button class="w3-bar-item w3-button" onclick="viewlogHtmlObj.selectActiveView(event, 'tab')">${tr.tblTabHeader}</button>
           </div>
 
           <div class="w3-row" id="logViewContainer">
