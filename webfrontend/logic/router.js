@@ -7,11 +7,8 @@ function routeMainContent() {
     let htmlFunctor;
 
     switch(page) {
-    case 'viewloggraphic':
-        htmlFunctor = ()=>{return "viewloggraphic"};
-        break;
     case 'viewlog':
-        htmlFunctor = viewlogHtmlObj.html;
+        htmlFunctor = viewlogHtmlObj.html.bind(viewlogHtmlObj);
         break;
     case 'conf':
         htmlFunctor = configureHtmlObj.html;
