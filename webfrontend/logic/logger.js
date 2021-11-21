@@ -17,6 +17,148 @@ typedef struct {
  * @brief LogItem is a single item, such value of accelerometer
  */
 class LogItem {
+    static TypesTranslated = {
+        uninitialized: {
+            txt: {en: "Unintialized", sv: "Oinitialiserad"},
+            title: {en: "Not valid", sv: "Ej gilltig"}
+        },
+
+        // speed as in wheel revs / sec
+        speedOnGround: {
+            txt: {en: "Wheel revs on ground", sv: "Hjul rotation på marken"},
+            title: {en: "Calculated speed on the ground", sv: "Beräknad hastighet på marken"}
+        },
+        wheelRPS_0: {
+            txt: {en: "Wheel sensor 0", sv: "Hjulsensor 0"},
+            title: {en: "Measured value", sv: "Uppmätt värde"}
+        },
+        wheelRPS_1: {
+            txt: {en: "Wheel sensor 1", sv: "Hjulsensor 1"},
+            title: {en: "Measured value", sv: "Uppmätt värde"}
+        },
+        wheelRPS_2: {
+            txt: {en: "Wheel sensor 2", sv: "Hjulsensor 2"},
+            title: {en: "Measured value", sv: "Uppmätt värde"}
+        },
+        // brake force
+        wantedBrakeForce: {
+            txt: {en: "Requested brakeforce", sv: "Begärd bromskraft"},
+            title: {en: "Brakeforce from reciever", sv: "Bromskraft från mottagaren"}
+        },
+        brakeForce0_out: {
+            txt: {en: "Brake 0 output force", sv: "Broms 0 utkraft"},
+            title: {
+            en: "Brake 0 force sent to wheel brake 0-100%",
+            sv: "Broms 0 kraft sänt till hjulbroms"
+            }
+        },
+        brakeForce1_out: {
+            txt: {en: "Brake 1 output force", sv: "Broms 1 utkraft"},
+            title: {
+            en: "Brake 1 force sent to wheel brake 0-100%",
+            sv: "Broms 1 kraft sänt till hjulbroms"
+            }
+        },
+        brakeForce2_out: {
+            txt: {en: "Brake 2 output force", sv: "Broms 2 utkraft"},
+            title: {
+            en: "Brake 2 force sent to wheel brake 0-100%",
+            sv: "Broms 2 kraft sänt till hjulbroms"
+            }
+        },
+        // wheel slip
+        slip0: {
+            txt: {en: "Brake 0 wheel slip", sv: "Broms 0 hjulsläpp"},
+            title: {
+            en: "Brake 0 calculated wheel slippage",
+            sv: "Broms 0 beräknat hjulsläpp"
+            }
+        },
+        slip1: {
+            txt: {en: "Brake 1 wheel slip", sv: "Broms 1 hjulsläpp"},
+            title: {
+            en: "Brake 1 calculated wheel slippage",
+            sv: "Broms 1 beräknat hjulsläpp"
+            }
+        },
+        slip2: {
+            txt: {en: "Brake 2 wheel slip", sv: "Broms 2 hjulsläpp"},
+            title: {
+            en: "Brake 2 calculated wheel slippage",
+            sv: "Broms 2 beräknad hjulsläpp"
+            }
+        },
+        // steering brakes
+        accelSteering: {
+            txt: {en: "Accelerometer steering",  sv: "Accelerometer styrning"},
+            title: {
+            en: "How much steeringbrake due to accelerometer sensing",
+            sv: "Hur mycket styrbroms från accelerometern"
+            }
+        },
+        wsSteering: {
+            txt: {en: "Wheel brake steering", sv: "Hjulbroms styrning"},
+            title: {
+            en: "Wheel brake differential steering based of different sheel speed",
+            sv: "Hjulbroms styrning baserat på olika hjulhatighet"
+            }
+        },
+        // accelerometer
+        accel: {
+            txt: {en: "Accel. control axis", sv: "Accel. kontroll axel"},
+            title: {
+            en: "Accelerometer control axis value\nThe value form the axis used to steer brake",
+            sv: "Accelerometer kontrol axel värde\nDet värde som används för att styrbromsa"
+            }
+        },
+        accelX: {
+            txt: {en: "Accelerometer X", sv: "Accelerometer X"},
+            title: {
+            en: "Accelerometer value for X-axis",
+            sv: "Accelerometer värde för X-axeln"
+            }
+        },
+        accelY: {
+            txt: {en: "Accelerometer Y", sv: "Accelerometer Y"},
+            title: {
+            en: "Accelerometer value for Y-axis",
+            sv: "Accelerometer värde för Y-axeln"
+            }
+        },
+        accelZ: {
+            txt: {en: "Accelerometer Z", sv: "Accelerometer Z"},
+            title: {
+            en: "Accelerometer value for Z-axis",
+            sv: "Accelerometer värde för Z-axeln"
+            }
+        },
+
+        // must be last of items from board, indicates end of log items
+        log_end: {txt: {en: "Log end", sv: "Log slut"}},
+
+        invalid: {
+            txt:{en: "Invalid/test", sv: "Ogilltig/test"},
+            title: {en: "Invalid, can be test header", sv: "Ogilltig, kan vara test rubrik"}
+        },
+
+        logIndex: {
+            txt: {en: "index", sv: "index"},
+            title: {
+            en: "Index from session start, starts at 1 and counts upward for each logpoint",
+            sv: "Index från sessions start, börjar räkna up från 1 varje logpunkt"
+            }
+        },
+
+        // special
+        log_coldStart: {
+            txt: {en: "Start from reset", sv: "Uppstart från reset"},
+            title: {
+            en: "A special log point to mark a device restart.\nUse to find out when a new flying session started",
+            sv: "En speciell log punkt för att markera en omstart.\nAnvänd för att se när en ny flygsession börjar"
+            },
+        },
+    }
+
     static Types = {
         uninitialized: -1,
 
@@ -340,6 +482,32 @@ class LogRoot {
 
         return entries;
     }
+
+   /**
+   * @brief scans dataset to find all possible columns i the current data set
+   * @param {Number} coldStartIndex The data from this coldStart
+   * @returns {Array} object with all possible types and it tranlation obj {entry, trObj}
+   */
+   getColumnTypes(coldStartIdx) {
+    // iterate over each entry and check if we have a new item
+    const typeKeys = Object.keys(LogItem.Types); // is offset by 1, ie: -1 -> 0
+    let items = [];
+    for (const entry of this.getSession(coldStartIdx).values()) {
+      entry.scanChildren();
+      for (const itm of entry.children.values()) {
+        if (items.findIndex(item=>item.entry.type===itm.type) === -1) {
+          if (itm.type === LogItem.Types.log_coldStart)
+            continue; // no use to have this as a column
+          else if (itm.type < LogItem.Types.log_end) {
+            // +1 due to typeKeys is offset by 1
+            items.push({entry: itm, tr: LogItem.TypesTranslated[typeKeys[itm.type +1]]});
+          } else
+            items.push({entry: itm, tr: LogItem.TypesTranslated.invalid});
+        }
+      }
+    }
+    return items;
+  }
 
     /**
      * @brief parse a new log or continued log,

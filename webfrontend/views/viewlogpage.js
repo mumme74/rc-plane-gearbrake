@@ -1,429 +1,17 @@
 'use strict';
 
-const LogItemTypesTranslated = {
-  uninitialized: {
-    txt: {en: "Unintialized", sv: "Oinitialiserad"},
-    title: {en: "Not valid", sv: "Ej gilltig"}
-  },
+let viewlogHtmlObj;
+{ // namespace scope
 
-  // speed as in wheel revs / sec
-  speedOnGround: {
-    txt: {en: "Wheel revs on ground", sv: "Hjul rotation på marken"},
-    title: {en: "Calculated speed on the ground", sv: "Beräknad hastighet på marken"}
-  },
-  wheelRPS_0: {
-    txt: {en: "Wheel sensor 0", sv: "Hjulsensor 0"},
-    title: {en: "Measured value", sv: "Uppmätt värde"}
-  },
-  wheelRPS_1: {
-    txt: {en: "Wheel sensor 1", sv: "Hjulsensor 1"},
-    title: {en: "Measured value", sv: "Uppmätt värde"}
-  },
-  wheelRPS_2: {
-    txt: {en: "Wheel sensor 2", sv: "Hjulsensor 2"},
-    title: {en: "Measured value", sv: "Uppmätt värde"}
-  },
-  // brake force
-  wantedBrakeForce: {
-    txt: {en: "Requested brakeforce", sv: "Begärd bromskraft"},
-    title: {en: "Brakeforce from reciever", sv: "Bromskraft från mottagaren"}
-  },
-  brakeForce0_out: {
-    txt: {en: "Brake 0 output force", sv: "Broms 0 utkraft"},
-    title: {
-      en: "Brake 0 force sent to wheel brake 0-100%",
-      sv: "Broms 0 kraft sänt till hjulbroms"
-    }
-  },
-  brakeForce1_out: {
-    txt: {en: "Brake 1 output force", sv: "Broms 1 utkraft"},
-    title: {
-      en: "Brake 1 force sent to wheel brake 0-100%",
-      sv: "Broms 1 kraft sänt till hjulbroms"
-    }
-  },
-  brakeForce2_out: {
-    txt: {en: "Brake 2 output force", sv: "Broms 2 utkraft"},
-    title: {
-      en: "Brake 2 force sent to wheel brake 0-100%",
-      sv: "Broms 2 kraft sänt till hjulbroms"
-    }
-  },
-  // wheel slip
-  slip0: {
-    txt: {en: "Brake 0 wheel slip", sv: "Broms 0 hjulsläpp"},
-    title: {
-      en: "Brake 0 calculated wheel slippage",
-      sv: "Broms 0 beräknat hjulsläpp"
-    }
-  },
-  slip1: {
-    txt: {en: "Brake 1 wheel slip", sv: "Broms 1 hjulsläpp"},
-    title: {
-      en: "Brake 1 calculated wheel slippage",
-      sv: "Broms 1 beräknat hjulsläpp"
-    }
-  },
-  slip2: {
-    txt: {en: "Brake 2 wheel slip", sv: "Broms 2 hjulsläpp"},
-    title: {
-      en: "Brake 2 calculated wheel slippage",
-      sv: "Broms 2 beräknad hjulsläpp"
-    }
-  },
-  // steering brakes
-  accelSteering: {
-    txt: {en: "Accelerometer steering",  sv: "Accelerometer styrning"},
-    title: {
-      en: "How much steeringbrake due to accelerometer sensing",
-      sv: "Hur mycket styrbroms från accelerometern"
-    }
-  },
-  wsSteering: {
-    txt: {en: "Wheel brake steering", sv: "Hjulbroms styrning"},
-    title: {
-      en: "Wheel brake differential steering based of different sheel speed",
-      sv: "Hjulbroms styrning baserat på olika hjulhatighet"
-    }
-  },
-  // accelerometer
-  accel: {
-    txt: {en: "Accel. control axis", sv: "Accel. kontroll axel"},
-    title: {
-      en: "Accelerometer control axis value\nThe value form the axis used to steer brake",
-      sv: "Accelerometer kontrol axel värde\nDet värde som används för att styrbromsa"
-    }
-  },
-  accelX: {
-    txt: {en: "Accelerometer X", sv: "Accelerometer X"},
-    title: {
-      en: "Accelerometer value for X-axis",
-      sv: "Accelerometer värde för X-axeln"
-    }
-  },
-  accelY: {
-    txt: {en: "Accelerometer Y", sv: "Accelerometer Y"},
-    title: {
-      en: "Accelerometer value for Y-axis",
-      sv: "Accelerometer värde för Y-axeln"
-    }
-  },
-  accelZ: {
-    txt: {en: "Accelerometer Z", sv: "Accelerometer Z"},
-    title: {
-      en: "Accelerometer value for Z-axis",
-      sv: "Accelerometer värde för Z-axeln"
-    }
-  },
+class ViewLogCls {
+  currentSession = -1;
+  tblWgt = null;
+  chartWgt = null;
+  typeDrpDwnWgt = null;
+  showLogItems = [];
+  activeDisplayWgt = new WidgetBaseCls();
 
-  // must be last of items from board, indicates end of log items
-  log_end: {txt: {en: "Log end", sv: "Log slut"}},
-
-  invalid: {
-    txt:{en: "Invalid/test", sv: "Ogilltig/test"},
-    title: {en: "Invalid, can be test header", sv: "Ogilltig, kan vara test rubrik"}
-  },
-
-  logIndex: {
-    txt: {en: "index", sv: "index"},
-    title: {
-      en: "Index from session start, starts at 1 and counts upward for each logpoint",
-      sv: "Index från sessions start, börjar räkna up från 1 varje logpunkt"
-    }
-  },
-
-  // special
-  log_coldStart: {
-    txt: {en: "Start from reset", sv: "Uppstart från reset"},
-    title: {
-      en: "A special log point to mark a device restart.\nUse to find out when a new flying session started",
-      sv: "En speciell log punkt för att markera en omstart.\nAnvänd för att se när en ny flygsession börjar"
-    },
-  },
-}
-
-// Types stored in this array will not be shown in the log
-const showLogItems = JSON.parse(localStorage.getItem('showLogItems') || "[]");
-window.addEventListener("beforeunload", (evt)=>{
-  localStorage.setItem('showLogItems', JSON.stringify(showLogItems));
-})
-
-const viewlogHtmlObj = {
-  currentSession: -1,
-  fetchLog: async ()=>{
-    console.log("Fetch log from device");
-    let startAddr = await SerialBase.instance().getLogNextAddr();
-    let log = await SerialBase.instance().readLog();
-    if (isNaN(startAddr) || (!Array.isArray(log) || !(log instanceof Uint8Array)))
-      return;
-
-    const logRoot = LogRoot.instance();
-    logRoot.clear();
-    logRoot.parseLog(log, startAddr);
-  },
-  clearLog: async ()=>{
-    console.log("Clear log in device");
-    const res = await SerialBase.instance().clearLogEntries();
-    if (res) {
-      LogRoot.instance().clear();
-    }
-  },
-  saveLog: async () => {
-    const fileHandle = await window.showSaveFilePicker({
-      suggestedName: 'mylog.rclog',
-      types: [{
-      description: 'Log file *.rclog',
-      accept: {'application/octet-stream': ['.rclog']},
-    }]});
-    const fileStream = await fileHandle.createWritable();
-    const logRoot = LogRoot.instance();
-    let endPos = logRoot.byteArray.byteLength;
-    const logWithStartAddr = new Uint8Array(endPos + 4);
-    logWithStartAddr.set(logRoot.byteArray);
-    logWithStartAddr[endPos++] = (logRoot.startPos & 0x000000FF)>>0;
-    logWithStartAddr[endPos++] = (logRoot.startPos & 0x0000FF00)>>8;
-    logWithStartAddr[endPos++] = (logRoot.startPos & 0x00FF0000)>>16;
-    logWithStartAddr[endPos++] = (logRoot.startPos & 0xFF000000)>>24;
-    await fileStream.write(new Blob([logWithStartAddr],
-                {type: "application/octet-stream"}));
-    await fileStream.close();
-  },
-  readLog: async () => {
-    const [fileHandle] = await window.showOpenFilePicker({types: [{
-      description: 'Log file *.rclog',
-      accept: {'application/octet-stream': ['.rclog']},
-    }]});
-    const file = await fileHandle.getFile();
-    LogRoot.instance().clear();
-    const log = new Uint8Array(await file.arrayBuffer());
-    const size = log.byteLength;
-    const startAddr = log[size-1] << 24 | log[size-2] << 16 |
-                      log[size-3] << 8 | log[size-4];
-    LogRoot.instance().parseLog(log, startAddr);
-    routeMainContent();
-  },
-  selectStart: (evt, sessionIdx) => {
-    viewlogHtmlObj.currentSession = sessionIdx;
-    // change text on dropdown btn
-    const lang = document.querySelector("html").lang;
-    const latest = viewlogHtmlObj.lang[lang].latestSession;
-    const j = LogRoot.instance().coldStarts.length - 1 - sessionIdx;
-    const txt = j === 0 ? latest : latest + " - " + j;
-    evt.target.parentNode.previousElementSibling.innerText = txt;
-
-    // build dropdown with items to show
-    viewlogHtmlObj.buildItemDropdown(sessionIdx, lang);
-
-    // build the actual table
-    viewlogHtmlObj.rebuildLogTable();
-
-    // the chart
-    if (!viewlogHtmlObj.chart)
-      viewlogHtmlObj.chart = new ChartWidget(document.getElementById("chartContainer"));
-    viewlogHtmlObj.chartUpdate();
-  },
-
-  _sessionItems: (sessionIdx, lang) => {
-    // iterate over each entry and check if we have a new item
-    let items = [];
-    const typeKeys = Object.keys(LogItem.Types); // is offset by 1, ie: -1 -> 0
-    const entries = LogRoot.instance().getSession(sessionIdx);
-    entries.forEach(entry=>{
-      entry.scanChildren();
-      entry.children.forEach(itm=>{
-        if (items.findIndex(item=>item.entry.type===itm.type) === -1) {
-          let tr;
-          if (itm.type < LogItem.Types.log_end) {
-            // +1 due to typeKeys is offset by 1
-            tr = LogItemTypesTranslated[typeKeys[itm.type +1]];
-          } else if (itm.type === LogItem.Types.log_coldStart)
-            return; // no use to have this as a column
-          else
-            tr = LogItemTypesTranslated.invalid;
-          items.push({entry:itm, txt:tr.txt[lang], title:tr.title[lang]});
-        }
-      })
-    });
-    return items;
-  },
-
-  buildItemDropdown: (sessionIdx, lang) => {
-    // create dropdown to select what items to show
-
-    // get items in this session
-    let items = viewlogHtmlObj._sessionItems(sessionIdx, lang)
-                    .sort((a, b) =>a.txt < b.txt);
-
-    // remove old entres in dropdown
-    const dropdown = document.getElementById("showLogItemDropdown");
-    while(dropdown.lastElementChild != dropdown.firstElementChild)
-      dropdown.removeChild(dropdown.lastElementChild);
-
-    // global checked base on select all chkbox
-    const checked = dropdown.firstElementChild.firstElementChild.checked
-
-    // create all checkboxes
-    items.forEach(itm=>{
-      const lbl = document.createElement("label");
-      lbl.className = "w3-bar-item w3-button";
-      lbl.title = itm.title;
-      const chkbox = document.createElement("input");
-      chkbox.type = "checkbox";
-      chkbox.className = "w3-button";
-      chkbox.value = itm.entry.type;
-      chkbox.checked = showLogItems.indexOf(itm.entry.type) > -1 ? checked : false;
-      chkbox.addEventListener("change", (evt)=>{
-        let vlu = parseInt(evt.target.value.trim());
-        const idx = showLogItems.indexOf(vlu);
-        if (idx < 0 && evt.target.checked) {
-          showLogItems.push(vlu);
-          viewlogHtmlObj.triggerReRender();
-        } else if (idx > -1 && !evt.target.checked) {
-          showLogItems.splice(idx, 1);
-          viewlogHtmlObj.triggerReRender();
-        }
-      });
-      lbl.appendChild(chkbox);
-      lbl.appendChild(document.createTextNode(` ${itm.txt}`));
-      dropdown.appendChild(lbl);
-    });
-  },
-  selectAllClicked: (evt)=>{
-    let lbl = evt.target.parentNode;
-    while(lbl.nextElementSibling) {
-      lbl = lbl.nextElementSibling;
-      const chkBox = lbl.firstElementChild;
-      chkBox.checked = evt.target.checked;
-      if (!chkBox.checked) showLogItems.splice(0, showLogItems.length);
-      else showLogItems.push(parseInt(chkBox.value.trim()));
-    }
-    viewlogHtmlObj.triggerReRender();
-  },
-  triggerReRender: () => {
-    if (viewlogHtmlObj.triggerReRender.tmr)
-      clearTimeout(viewlogHtmlObj.triggerReRender.tmr);
-    viewlogHtmlObj.triggerReRender.tmr = setTimeout(()=>{
-        viewlogHtmlObj.rebuildLogTable();
-        viewlogHtmlObj.chartUpdate();
-    }, 400);
-
-  },
-  selectView: (event, type) => {
-    let buttons = event.target.parentElement.querySelectorAll(":scope>button");
-    buttons.forEach(btn=>{
-      btn.classList[btn === event.target ? "add" : "remove"]("w3-gray");
-    });
-    const sel = ["tab", "chart"];
-    const nodes = [document.getElementById("logTableEntries"),
-                   document.getElementById("chartContainer")]
-    nodes.forEach(n=>n.style.cssText="display:none");
-    nodes[sel.indexOf(type)].style.cssText = "";
-  },
-  rebuildLogTable: () => {
-    const lang = document.querySelector("html").lang;
-    const sessionIdx = viewlogHtmlObj.currentSession
-    // create a new log table
-    console.log("rebuildLogTable", lang);
-
-    // get table remove from DOM to optimize
-    let tbl = document.getElementById("logTableEntries");
-    const parentNode = tbl.parentElement;
-    tbl.remove();
-
-    // delete old entries
-    while (tbl.firstChild)
-      tbl.removeChild(tbl.lastChild);
-
-    // fetch all items (headers) for this log session
-    let items = viewlogHtmlObj._sessionItems(sessionIdx, lang);
-
-    // create a header
-    let thead = document.createElement("thead");
-    let tr = document.createElement("tr");
-
-    let colTypes = [];
-
-    items.forEach(itm => {
-      if (showLogItems.indexOf(itm.entry.type) > -1) {
-        let th = document.createElement("th");
-        // split to 2 strings to be able to ellide
-        //<th><span>long text to be clipped</span>not clipped</th>
-        let span = document.createElement("span")
-        span.appendChild(document.createTextNode(
-                    itm.txt.substr(0, itm.txt.length-2)));
-        th.appendChild(span);
-        th.appendChild(document.createTextNode(
-                    itm.txt.substr(itm.txt.length-2)));
-        th.title = itm.txt + "\n" +itm.title;
-        tr.appendChild(th);
-        colTypes.push(itm.entry.type);
-      }
-    });
-
-    // specialcase counter column
-    if (tr.firstChild) {
-      const idxTh = document.createElement("th");
-      idxTh.className = "index";
-      idxTh.textContent = LogItemTypesTranslated.logIndex.txt[lang];
-      idxTh.title = idxTh.textContent + "\n" +
-                    LogItemTypesTranslated.logIndex.title[lang];
-      tr.insertBefore(idxTh, tr.firstChild);
-    }
-
-    thead.appendChild(tr);
-    tbl.appendChild(thead);
-
-    // create table body
-    let entries = LogRoot.instance().getSession(sessionIdx);
-    let tbody = document.createElement("tbody");
-    let counter = 1;
-    entries.forEach(entry => {
-      let tr = document.createElement("tr");
-      entry.scanChildren();
-
-      // create a row with all shown types
-      let tdNodes = colTypes.map(type=>{
-        let td = document.createElement("td");
-        tr.appendChild(td);
-        return td;
-      });
-
-      let showRow = false;
-      entry.children.forEach(itm=>{
-        if (showLogItems.indexOf(itm.type) > -1) {
-          let td = tdNodes[colTypes.indexOf(itm.type)];
-          if (td && !td.firstChild) {
-            td.appendChild(
-              document.createTextNode(itm.realVlu() + itm.unit()));
-            showRow = true;
-          }
-        }
-      });
-
-      if (showRow) {// only if we have any children
-        let td = document.createElement("td");
-        td.className = "index";
-        td.textContent = counter++;
-        tr.insertBefore(td, tr.firstChild);
-        tbody.appendChild(tr);
-      }
-    });
-
-    tbl.appendChild(tbody);
-
-    // reattach tbl to DOM
-    parentNode.appendChild(tbl);
-
-  },
-  chartUpdate: () => {
-    let lang = document.documentElement.lang;
-    let entries = LogRoot.instance().getSession(viewlogHtmlObj.currentSession);
-    entries.splice(0, 1)
-    let types = viewlogHtmlObj._sessionItems(viewlogHtmlObj.currentSession, lang).map(itm=>itm.entry.type);
-    types = types.filter(type=>showLogItems.indexOf(type) > -1);
-    viewlogHtmlObj.chart.dataChange(types, entries);
-  },
-  lang: {
+  translationObj = {
     en: {
       header: "View log",
       p1: `HTML frontend must be loaded by chrome version 89 or later or the latest Edge browser.
@@ -456,16 +44,138 @@ const viewlogHtmlObj = {
       tblTabHeader: "Visa tabell",
       chartTabHeader: "Visa graf",
     },
-  },
-  html: (lang) => {
-    const tr = viewlogHtmlObj.lang[lang];
+  }
+
+  constructor() {
+    // Types stored in this array will not be shown in the log
+    this.showLogItems = JSON.parse(localStorage.getItem('showLogItems') || "[]");
+    window.addEventListener("beforeunload", (evt)=>{
+      localStorage.setItem('showLogItems', JSON.stringify(this.showLogItems));
+    })
+  }
+
+  async fetchLog() {
+    console.log("Fetch log from device");
+    let startAddr = await SerialBase.instance().getLogNextAddr();
+    let log = await SerialBase.instance().readLog();
+    if (isNaN(startAddr) || (!Array.isArray(log) || !(log instanceof Uint8Array)))
+      return;
+
+    const logRoot = LogRoot.instance();
+    logRoot.clear();
+    logRoot.parseLog(log, startAddr);
+  }
+
+  async clearLog() {
+    console.log("Clear log in device");
+    const res = await SerialBase.instance().clearLogEntries();
+    if (res) {
+      LogRoot.instance().clear();
+    }
+  }
+
+  async saveLog(){
+    const fileHandle = await window.showSaveFilePicker({
+      suggestedName: 'mylog.rclog',
+      types: [{
+      description: 'Log file *.rclog',
+      accept: {'application/octet-stream': ['.rclog']},
+    }]});
+    const fileStream = await fileHandle.createWritable();
+    const logRoot = LogRoot.instance();
+    let endPos = logRoot.byteArray.byteLength;
+    const logWithStartAddr = new Uint8Array(endPos + 4);
+    logWithStartAddr.set(logRoot.byteArray);
+    logWithStartAddr[endPos++] = (logRoot.startPos & 0x000000FF)>>0;
+    logWithStartAddr[endPos++] = (logRoot.startPos & 0x0000FF00)>>8;
+    logWithStartAddr[endPos++] = (logRoot.startPos & 0x00FF0000)>>16;
+    logWithStartAddr[endPos++] = (logRoot.startPos & 0xFF000000)>>24;
+    await fileStream.write(new Blob([logWithStartAddr],
+                {type: "application/octet-stream"}));
+    await fileStream.close();
+  }
+
+  async readLog() {
+    const [fileHandle] = await window.showOpenFilePicker({types: [{
+      description: 'Log file *.rclog',
+      accept: {'application/octet-stream': ['.rclog']},
+    }]});
+    const file = await fileHandle.getFile();
+    LogRoot.instance().clear();
+    const log = new Uint8Array(await file.arrayBuffer());
+    const size = log.byteLength;
+    const startAddr = log[size-1] << 24 | log[size-2] << 16 |
+                      log[size-3] << 8 | log[size-4];
+    LogRoot.instance().parseLog(log, startAddr);
+    routeMainContent();
+  }
+
+  selectSession(evt, sessionIdx) {
+    this.currentSession = sessionIdx;
+    // change text on dropdown btn
+    const lang = document.documentElement.lang;
+    const latest = this.translationObj[lang].latestSession;
+    const j = LogRoot.instance().coldStarts.length - 1 - sessionIdx;
+    const txt = j === 0 ? latest : latest + " - " + j;
+    evt.target.parentNode.previousElementSibling.innerText = txt;
+
+    const data = LogRoot.instance().getSession(sessionIdx);
+    if (data.length && data[0].children[0].type === LogItem.Types.log_coldStart)
+      data.splice(0,1); // cut away cold startindex entry
+    const colData = LogRoot.instance().getColumnTypes(sessionIdx);
+
+    // build dropdown with items to show
+    if (!this.typeDrpDwnWgt) {
+      this.typeDrpDwnWgt = new SelectTypesDropDownWgt(
+          this.showLogItems,
+          document.getElementById("showLogItm"),
+          this.translationObj
+      );
+    }
+
+    // build the actual table
+    if (!this.tblWgt) {
+      this.tblWgt =
+        new TableWidget(this.showLogItems,
+                        document.getElementById("logViewContainer"));
+      this.typeDrpDwnWgt.addEventListener("change", this.tblWgt.scheduleRedraw, this.tblWgt);
+      this.typeDrpDwnWgt.addEventListener("selectall", this.tblWgt.scheduleRedraw, this.tblWgt);
+    }
+
+    // the chart
+    if (!this.chartWgt) {
+      this.activeDisplayWgt =  this.chartWgt =
+          new ChartWidget(this.showLogItems,
+                          document.getElementById("chartContainer"));
+      this.typeDrpDwnWgt.addEventListener("change", this.chartWgt.scheduleRedraw, this.chartWgt);
+      this.typeDrpDwnWgt.addEventListener("selectall", this.chartWgt.scheduleRedraw, this.chartWgt);
+    }
+
+    this.typeDrpDwnWgt.setData(colData, data);
+    this.tblWgt.setData(colData, data);
+    this.chartWgt.setData(colData, data);
+  }
+
+  selectActiveView(event, type) {
+    let buttons = event.target.parentElement.querySelectorAll(":scope>button");
+    buttons.forEach(btn=>{
+      btn.classList[btn === event.target ? "add" : "remove"]("w3-gray");
+    });
+
+    this.activeDisplayWgt = type === 'tab' ? this.tblWgt : this.chartWgt;
+    this.tblWgt.setVisible(type === 'tab');
+    this.chartWgt.setVisible(type === 'chart');
+  }
+
+  html(lang) {
+    const tr = this.translationObj[lang];
 
     const logRoot = LogRoot.instance();
     let starts = [];
     for (let i = logRoot.coldStarts.length -1, j = 0; i > -1 ; --i, ++j) {
       const latest = tr.latestSession;
       const txt = j === 0 ? latest : latest + " - " + j;
-      starts.push(`<button class="w3-bar-item w3-button" onclick="viewlogHtmlObj.selectStart(event, ${i})">${txt}</button>`);
+      starts.push(`<button class="w3-bar-item w3-button" onclick="viewlogHtmlObj.selectSession(event, ${i})">${txt}</button>`);
     }
 
     return `
@@ -496,23 +206,21 @@ const viewlogHtmlObj = {
             </div>
             <div class="w3-dropdown-hover" id="showLogItm">
               <button class="w3-button">${tr.showLogItem}</button>
-              <div class="w3-dropdown-content w3-bar-block w3-card-4" id="showLogItemDropdown">
+              <!--<div class="w3-dropdown-content w3-bar-block w3-card-4" id="showLogItemDropdown">
                 <label class="w3-bar-item w3-button">
                   <input type="checkbox" class="w3-button" onchange="viewlogHtmlObj.selectAllClicked(event)" checked/>
                   ${tr.chooseAll}
                 </label>
-              </div>
+              </div>-->
             </div>
-            <button class="w3-bar-item w3-button w3-gray" onclick="viewlogHtmlObj.selectView(event, 'chart')">${tr.chartTabHeader}</button>
-            <button class="w3-bar-item w3-button" onclick="viewlogHtmlObj.selectView(event, 'tab')">${tr.tblTabHeader}</button>
+            <button class="w3-bar-item w3-button w3-gray" onclick="viewlogHtmlObj.selectActiveView(event, 'chart')">${tr.chartTabHeader}</button>
+            <button class="w3-bar-item w3-button" onclick="viewlogHtmlObj.selectActiveView(event, 'tab')">${tr.tblTabHeader}</button>
           </div>
 
-          <div class="w3-row">
-            <table id="logTableEntries" class="w3-table w3-bordered w3-border w3-responsive" style="display:none">
-            </table>
+          <div class="w3-row" id="logViewContainer">
             <div style="overflow: auto; max-width: 80vw;" id="chartContainer"></div>
           </div>
-          <p class="w3-text-grey">${viewlogHtmlObj.lang[lang].p1}</p>
+          <p class="w3-text-grey">${tr.p1}</p>
         </div>
 
         <div class="w3-third w3-center">
@@ -521,4 +229,8 @@ const viewlogHtmlObj = {
       </div>
     </div>`
   }
-};
+}
+
+viewlogHtmlObj = new ViewLogCls();
+
+} // end namespace scope

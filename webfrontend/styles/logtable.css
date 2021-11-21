@@ -1,29 +1,30 @@
-#logTableEntries {
-    overflow:auto;
-    max-height:calc(80vw * 0.5625);
-  }
-  #logTableEntries > thead > tr > th,
-  #logTableEntries > tbody > tr > td	 {
-    max-width:8rem;
-    white-space: nowrap;
-    padding: 0.1rem 0.2rem;
-  }
-  #logTableEntries > thead > tr > th.index,
-  #logTableEntries > tbody > tr > td.index	{
-    background-color: #EEE;
-    color: #333;
-  }
-  #logTableEntries > thead > tr > th > span {
-    min-width: 1rem;
-    max-width: calc(100% - 1rem);
-    overflow: hidden;
-    text-overflow: ellipsis;
-    display: inline-block;
-    vertical-align: bottom;
-  }
-  #logTableEntries th, #logTableEntries td {
-    border-right: 1px solid #CCCCCC;
-    margin:0, inherit;
-    padding: 0 inherit;
-    max-height: 1rem;
-  }
+/* css for the table widget in log view */
+.logTableEntries {
+  overflow:auto;
+  max-height:calc(80vw * 0.5625);
+}
+.logTableEntries > thead > tr > th,
+.logTableEntries > tbody > tr > td	 {
+  max-width:8rem;
+  white-space: nowrap;
+  padding: 0.1rem 0.2rem;
+}
+.logTableEntries > thead > tr > th.index,
+.logTableEntries > tbody > tr > td.index	{
+  background-color: #EEE;
+  color: #333;
+}
+.logTableEntries > thead > tr > th > span {
+  min-width: 1rem;
+  max-width: calc(100% - 1rem);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: inline-block;
+  vertical-align: bottom;
+}
+.logTableEntries th, #logTableEntries td {
+  border-right: 1px solid #CCCCCC;
+  margin:0, inherit;
+  padding: 0 inherit;
+  max-height: 1rem;
+}
