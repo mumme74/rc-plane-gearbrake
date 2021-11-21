@@ -58,8 +58,20 @@ class ChartWidgetCls extends WidgetBaseCls {
   clear() {
     super.clear();
 	this.contex.beginPath();
-    this.contex.clearRect(0, 0, this.rootNode.width, this.rootNode.height);
+	this.contex.fillStyle = '#FFF';
+    this.contex.fillRect(0, 0, this.rootNode.width, this.rootNode.height);
 	this.contex.stroke();
+  }
+
+  downloadData() {
+    const blob = this.rootNode.toDataURL("image/png");
+    const a = document.createElement("a");
+    a.href = blob;
+    a.innerText = "download";
+    a.download = `loggraph_${new Date().toISOString()}.png`;
+    this.rootNode.parentElement.appendChild(a);
+    a.click();
+    a.remove();
   }
 
   _renderAxel(axelIdx) {
@@ -80,7 +92,8 @@ class ChartWidgetCls extends WidgetBaseCls {
 
   _renderHorizontalBar() {
     // render the horizontal bar
-    this.contex.clearRect(0, this.rootNode.height - horizBarHeight,
+	this.contex.fillStyle = '#FFF';
+    this.contex.fillRect(0, this.rootNode.height - horizBarHeight,
 		this.rootNode.width, horizBarHeight);
 
     const top = this.rootNode.height - horizBarHeight;
@@ -98,7 +111,8 @@ class ChartWidgetCls extends WidgetBaseCls {
   }
 
   _renderVerticalBar() {
-    this.contex.clearRect(0, 0, vertBarWidth, this.rootNode.height - horizBarHeight);
+	this.contex.fillStyle = '#FFF';
+    this.contex.fillRect(0, 0, vertBarWidth, this.rootNode.height - horizBarHeight);
     this.contex.beginPath();
     this.contex.lineWidth = "5";
     this.contex.moveTo(vertBarWidth - 2, 0);

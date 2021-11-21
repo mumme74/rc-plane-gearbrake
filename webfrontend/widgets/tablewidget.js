@@ -120,6 +120,17 @@ class TableWidgetCls extends WidgetBaseCls {
     this.rootNode.appendChild(tbody);
   }
 
+  downloadData() {
+    const html = this.rootNode.innerHTML;
+    const blob = new Blob([html], {type:'data:application/vnd.ms-excel;base64'});
+    const a = document.createElement("a");
+    a.href = window.URL.createObjectURL(blob);
+    a.innerText = "download";
+    a.download = `logtable_${new Date().toISOString()}.xlxs`;
+    this.rootNode.parentElement.appendChild(a);
+    a.click();
+    a.remove();
+  }
 }
 
 TableWidget = TableWidgetCls;
