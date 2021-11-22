@@ -4,13 +4,13 @@
   max-height:calc(80vw * 0.5625);
 }
 .logTableEntries > thead > tr > th,
-.logTableEntries > tbody > tr > td	 {
+.logTableEntries > tbody > tr > td {
   max-width:8rem;
   white-space: nowrap;
   padding: 0.1rem 0.2rem;
 }
 .logTableEntries > thead > tr > th.index,
-.logTableEntries > tbody > tr > td.index	{
+.logTableEntries > tbody > tr > td.index {
   background-color: #EEE;
   color: #333;
 }
