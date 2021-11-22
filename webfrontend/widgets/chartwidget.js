@@ -27,7 +27,7 @@ class ChartWidgetCls extends WidgetBaseCls {
     this.headerNode = document.createElement("div");
     this.headerNode.style.cssText = `position:sticky;left:0px;text-align:center;padding:5px;border-radius:5px;background-color:#FFF`;
     this.headerColor = document.createElement("div");
-    this.headerColor.style.cssText = "display:inline-block;min-height: 30px;min-width:60px;background-color:#FFF;margin: 5px;";
+    this.headerColor.style.cssText = "display:inline-block;min-height: 30px;min-width:60px;background-color:#FFF;margin: 5px;vertical-align:middle;";
     this.headerNode.appendChild(this.headerColor);
     this.headerSpan = document.createElement("span");
     this.headerNode.appendChild(this.headerSpan);
@@ -123,8 +123,8 @@ class ChartWidgetCls extends WidgetBaseCls {
     this.contex.lineTo(this.rootNode.width, origoAt.y);
     // do the small lines for each entry
     for(let i = 0; i < this.data.length; ++i) {
-        this.contex.moveTo(vertBarWidth + i * stepFactor, origoAt.y-2);
-        this.contex.lineTo(vertBarWidth + i * stepFactor, origoAt.y+4);
+      this.contex.moveTo(vertBarWidth + i * stepFactor, origoAt.y-2);
+      this.contex.lineTo(vertBarWidth + i * stepFactor, origoAt.y+4);
     }
     this.contex.stroke();
   }
@@ -148,14 +148,15 @@ class ChartWidgetCls extends WidgetBaseCls {
       this.render();
 
       if (selectType > -1) {
-          const types = Object.keys(LogItem.Types).slice(1);
-          console.log("match start", types[selectType]);
-        this.headerSpan.innerText = types[selectType];
+        const lang = document.documentElement.lang;
+        const types = Object.keys(LogItem.Types).slice(1);
+        const tr = LogItem.TypesTranslated[types[selectType]];
+        this.headerSpan.innerText = tr.txt[lang] + ", " + tr.title[lang];
         this.headerColor.style.backgroundColor = axisColors[selectType];
-      } else
+      } else {
         this.headerColor.style.backgroundColor = "#FFF";
-
-
+        this.headerSpan.innerText = "";
+      }
 
       // hide/show
       this.headerNode.style.backgroundColor = selectType < 0 ? "#FFF" : "#CCC";
@@ -168,6 +169,7 @@ class ChartWidgetCls extends WidgetBaseCls {
       const types = Object.keys(LogItem.Types).slice(1);
       console.log("match move", types[logItm.type]);
     }
+    this.rootNode.style.cursor = logItm ? "pointer" : "";
   }
 
   _touchstart(evt) {
@@ -181,6 +183,8 @@ class ChartWidgetCls extends WidgetBaseCls {
           realY = pnt.y - rect.top;
     const x = Math.round((realX - vertBarWidth) / stepFactor),
           y = Math.floor(origoAt.y - realY);
+
+    if (!this.data[x]) return;
 
     for(const itm of this.data[x].children.values()) {
       const info = LogItem.Types.info(itm.type);
