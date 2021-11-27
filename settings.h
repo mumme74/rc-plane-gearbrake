@@ -104,17 +104,12 @@ extern Settings_t settings;
 /**
  * @brief initialize settings, set to default and then load from EEPROM
  */
-msg_t settingsInit(void);
+void settingsInit(void);
 
 /**
  * @brief reset to default settings
  */
 void settingsDefault(void);
-
-/**
- * @brief load settings from EEPROM memory
- */
-msg_t settingsLoad(void);
 
 /**
  * @brief save settings into EEPROM memory

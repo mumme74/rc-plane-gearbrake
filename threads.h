@@ -14,13 +14,24 @@
 #endif
 
 // the total number of threads in this app (excluding idle thread)
-#define APP_NO_OF_THREADS       4
+#ifndef CH_CFG_MAX_THREADS
+#define CH_CFG_MAX_THREADS      5
+#endif
 
-#define PRIO_BRAKE_LOGIC_THD    3
-#define PRIO_ACCEL_THD          4
-#define PRIO_LOGGER_THD         5
-#define PRIO_USB_CDC_THD        6
+#define PRIO_BRAKE_LOGIC_THD    0
+#define PRIO_ACCEL_THD          1
+#define PRIO_LOGGER_THD         2
+#define PRIO_USB_CDC_THD        3
+#define PRIO_SETTINGS_I2C_THD   4
 
-extern const thread_descriptor_t nil_thd_configs[APP_NO_OF_THREADS +1];
+//extern const thread_descriptor_t nil_thd_configs[];
+
+
+/**
+ * @brief add thdDesc to thdDesc table
+ * Must be called before chSysInit
+ *//*
+thread_t *addThdAndCreate(thread_descriptor_t *thdDesc);
+*/
 
 #endif /* THREADS_H_ */

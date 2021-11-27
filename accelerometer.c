@@ -64,9 +64,10 @@ static thread_descriptor_t accelThdDesc = {
 const Accel_t accel;
 
 void accelInit(void) {
-  if (settings.accelerometer_active) {
+
+  //if (settings.accelerometer_active) {
     KXTJ3_1057ObjectInit(&accd);
-  }
+  //}
 }
 
 void accelSettingsChanged(void) {

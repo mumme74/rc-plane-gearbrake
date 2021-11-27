@@ -44,6 +44,8 @@
 #define CH_CFG_USE_JOBS                 FALSE
 #define CH_CFG_USE_OBJ_FIFOS            FALSE
 
+#define CH_CFG_AUTOSTART_THREADS        FALSE
+
 /*===========================================================================*/
 /**
  * @name Kernel parameters and options
@@ -61,7 +63,7 @@
  *          (0..CH_CFG_MAX_THREADS-1).
  */
 #if !defined(CH_CFG_MAX_THREADS)
-#define CH_CFG_MAX_THREADS                  8
+#define CH_CFG_MAX_THREADS                  5
 #endif
 
 /**

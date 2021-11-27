@@ -25,45 +25,13 @@
 #include "i2c_bus.h"
 #include "brake_logic.h"
 #include "logger.h"
-
-///*
-// * Thread 1.
-// */
-//THD_WORKING_AREA(waThread1, 128);
-//THD_FUNCTION(Thread1, arg) {
-//
-//  (void)arg;
-//
-//  while (true) {
-//    palSetPad(GPIOA, GPIOA_BRK_0);
-//    chThdSleepMilliseconds(500);
-//    palClearPad(GPIOA, GPIOA_BRK_0);
-//    chThdSleepMilliseconds(500);
-//  }
-//}
-//
-///*
-// * Thread 2.
-// */
-//THD_WORKING_AREA(waThread2, 128);
-//THD_FUNCTION(Thread2, arg) {
-//
-//  (void)arg;
-//
-//  while (true) {
-//    palSetPad(GPIOA, GPIOA_BRK_1);
-//    chThdSleepMilliseconds(250);
-//    palClearPad(GPIOA, GPIOA_BRK_1);
-//    chThdSleepMilliseconds(250);
-//  }
-//}
-//
+//#include "comms.h"
 
 //THD_TABLE_BEGIN
 //  THD_TABLE_THREAD(1, "blinker1", waThread1, Thread1, NULL)
 //  THD_TABLE_THREAD(2, "blinker2", waThread2, Thread2, NULL)
 //THD_TABLE_END
-//;
+;
 /*
  * Application entry point.
  */
@@ -84,6 +52,8 @@ int main(void) {
   accelInit();
   brakeLogicInit();
   loggerInit();
+  //commsInit();
+
   // done last of the initializations as main(void) now becomes idle thread
   chSysInit();
 

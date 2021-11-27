@@ -32,6 +32,7 @@ typedef struct {
   uint8_t        reqId; /* A reqId used to differentiate  */
 } CommsCmd_t;
 
+void commsInit(void);
 
 
 #endif /* COMMS_H_ */

@@ -14,16 +14,17 @@
 #include "brake_logic.h"
 #include "logger.h"
 #include "usbcfg.h"
+#include "threads.h"
 
 // this version should be bumped on each breaking ABI change to EEPROM storage
 #define STORAGE_VERSION 0x01
 
 #define SETTINGS_SIZE   (sizeof(Settings_t) - sizeof(settings.header))
 
-
 // -----------------------------------------------------------------
 
 // private stuff to this module
+static thread_t *settingsp = 0;
 
 /**
  * @brief ensures values are within allowed window (before save)
@@ -66,6 +67,65 @@ void notify(void) {
 }
 
 
+/**
+ * @brief load settings from EEPROM memory
+ */
+static msg_t settingsLoad(void) {
+  uint8_t *buf = (uint8_t*)&settings;
+  const size_t hdrSz = sizeof(Settings_header_t);
+
+  msg_t res = ee24m01r_read(&settings_ee, 0, buf, hdrSz);
+  if (res != MSG_OK) return res;
+
+   // ensure header version match with STORAGE_VERSION
+  // if not bail out
+  if (settings.header.size != SETTINGS_SIZE ||
+      settings.header.storageVersion != STORAGE_VERSION)
+  {
+    return MSG_RESET;
+  }
+
+  res = ee24m01r_read(&settings_ee, hdrSz, buf+hdrSz,
+                      sizeof(settings) - hdrSz );
+  if (res != MSG_OK) return res;
+
+
+  // notify subscribers that settings has loaded
+  notify();
+  return MSG_OK;
+}
+
+static THD_WORKING_AREA(waSettingsThd, 128);
+static THD_FUNCTION(SettingsThd, arg) {
+  (void)arg;
+
+  // load values from EEPROM
+  bool loopCnt = MSG_OK == settingsLoad();
+
+  while(loopCnt) {
+    thread_t *tp = chMsgWait();
+
+    // save values to EEPROM
+    validateValues();
+    const uint8_t *buf = (uint8_t*)&settings;
+    msg_t res = ee24m01r_write(&settings_ee, 0, buf, sizeof(settings));
+    if (res == MSG_OK)
+      notify();
+
+    chMsgRelease(tp, res);
+  }
+}
+
+static thread_descriptor_t settingsThdDesc = {
+   "settings",
+   THD_WORKING_AREA_BASE(waSettingsThd),
+   THD_WORKING_AREA_END(waSettingsThd),
+   PRIO_SETTINGS_I2C_THD,
+   SettingsThd,
+   NULL
+};
+
+
 // -----------------------------------------------------------------
 
 // public stuff
@@ -99,9 +159,9 @@ Settings_t settings = {
   SETTINGS_LOG_20MS,
 };
 
-msg_t settingsInit(void) {
+void settingsInit(void) {
   settingsDefault();
-  return settingsLoad();
+  settingsp = chThdCreate(&settingsThdDesc);
 }
 
 void settingsDefault(void) {
@@ -127,40 +187,8 @@ void settingsDefault(void) {
   settings.accelerometer_axis_invert = 0;
 }
 
-
-msg_t settingsLoad(void) {
-  uint8_t *buf = (uint8_t*)&settings;
-  const size_t hdrSz = sizeof(Settings_header_t);
-
-  msg_t res = ee24m01r_read(&settings_ee, 0, buf, hdrSz);
-  if (res != MSG_OK) return res;
-
-   // ensure header version match with STORAGE_VERSION
-  // if not bail out
-  if (settings.header.size != SETTINGS_SIZE ||
-      settings.header.storageVersion != STORAGE_VERSION)
-  {
-    return MSG_RESET;
-  }
-
-  res = ee24m01r_read(&settings_ee, hdrSz, buf+hdrSz,
-                      sizeof(settings) - hdrSz );
-  if (res != MSG_OK) return res;
-
-
-  // notify subscribers that settings has loaded
-  notify();
-  return MSG_OK;
-}
-
 msg_t settingsSave(void) {
-  validateValues();
-  const uint8_t *buf = (uint8_t*)&settings;
-  msg_t res = ee24m01r_write(&settings_ee, 0, buf, sizeof(settings));
-  if (res != MSG_OK) return res;
-
-  notify();
-  return res;
+  return chMsgSend(settingsp, MSG_OK);
 }
 
 void settingsGetAll(uint8_t obuf[], CommsCmd_t *cmd,
