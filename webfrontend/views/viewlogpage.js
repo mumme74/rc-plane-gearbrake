@@ -133,40 +133,8 @@ class ViewLogCls {
         this.translationObj, this.showLogItems, colData, data
       );
     }
+
     this.selectMenuWgt.setData(colData, data);
-
-/*
-    // build dropdown with items to show
-    if (!this.typeDrpDwnWgt) {
-      this.typeDrpDwnWgt = new SelectTypesDropDownWgt(
-          this.showLogItems,
-          document.getElementById("showLogItm"),
-          this.translationObj
-      );
-    }
-
-    // build the actual table
-    if (!this.tblWgt) {
-      this.tblWgt =
-        new TableWidget(this.showLogItems,
-                        document.getElementById("logViewContainer"));
-      this.typeDrpDwnWgt.addEventListener("change", this.tblWgt.scheduleRedraw, this.tblWgt);
-      this.typeDrpDwnWgt.addEventListener("selectall", this.tblWgt.scheduleRedraw, this.tblWgt);
-    }
-
-    // the chart
-    if (!this.chartWgt) {
-      this.activeDisplayWgt =  this.chartWgt =
-          new ChartWidget(this.showLogItems,
-                          document.getElementById("chartContainer"));
-      this.typeDrpDwnWgt.addEventListener("change", this.chartWgt.scheduleRedraw, this.chartWgt);
-      this.typeDrpDwnWgt.addEventListener("selectall", this.chartWgt.scheduleRedraw, this.chartWgt);
-    }
-
-    this.typeDrpDwnWgt.setData(colData, data);
-    this.tblWgt.setData(colData, data);
-    this.chartWgt.setData(colData, data);
-    */
   }
 
   selectActiveView(event, type) {
