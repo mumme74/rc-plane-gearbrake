@@ -6,7 +6,7 @@ const stepFactor = 15,
       headerHeight = 50,
       horizBarHeight = 50,
       vertBarWidth = 45,
-      canvasMinWidth = 85,
+      canvasMinWidth = 385,
       canvasHeight = 600,
       origoAt = {x: vertBarWidth, y: (canvasHeight - headerHeight) / 2 -1 + headerHeight},
       vertSteps = 10,
@@ -63,7 +63,7 @@ class ChartWidgetCls extends WidgetBaseCls {
   }
 
   render() {
-    console.time("render")
+    //console.time("render")
     this.clear();
     super.render();
     this._renderHorizontalBar();
@@ -79,7 +79,7 @@ class ChartWidgetCls extends WidgetBaseCls {
       }
     }
 
-    console.timeEnd("render")
+    //console.timeEnd("render")
   }
 
   clear() {
@@ -126,7 +126,7 @@ class ChartWidgetCls extends WidgetBaseCls {
     this.contex.lineWidth = "5";
     this.contex.moveTo(origoAt.x, origoAt.y);
     this.contex.strokeStyle = "#999";
-    this.contex.lineTo(this.rootNode.width, origoAt.y);
+    this.contex.lineTo(origoAt.x + this.data.length * stepFactor, origoAt.y);
     this.contex.stroke();
     this.contex.beginPath();
     this.contex.lineWidth = 1;
@@ -178,7 +178,9 @@ class ChartWidgetCls extends WidgetBaseCls {
         this.contex.beginPath();
         this.contex.moveTo(vertBarWidth -6, y);
         this.contex.lineTo(vertBarWidth, y);
-        this.contex.fillText(i +"", 0, y);
+		const vlu = Math.round(i);
+		const txt = vlu != 0 ? vlu : vlu + " " + LogItem.unitFor(this.selectedType);
+        this.contex.fillText(txt, 0, y);
         this.contex.stroke();
 
         this.contex.beginPath();
