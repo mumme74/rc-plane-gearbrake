@@ -198,7 +198,7 @@ class SerialBase {
      */
     async write({cmd, byteArr = null}) {
         if (!this._writer || !this._writer.locked)
-            if (!this.openPort()) return;
+            if (!await this.openPort()) return;
         let data = new Uint8Array(byteArr ? byteArr.length + 3 : 3);
         let i = 0;
         data[i++] = data.length;
