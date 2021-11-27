@@ -178,7 +178,7 @@ const configureHtmlObj = {
           {
             key: "Brake0_active",
             txt: {en: "Use brake 0", sv: "Använd broms 0"},
-            title: {en: "If brake output 0 is wired/used", sv: "Om broms 0 är kopplad"},
+            title: {en: "If brake output 0 is wired/used", sv: "Om broms 0 är inkopplad"},
             render: renderCheckbox
           },
           {
@@ -197,7 +197,7 @@ const configureHtmlObj = {
           {
             key: "Brake1_active",
             txt: {en: "Use brake 1", sv: "Använd broms 1"},
-            title: {en: "If brake outpt 1 is wired/used", sv: "Om broms 1 är kopplad"},
+            title: {en: "If brake outpt 1 is wired/used", sv: "Om broms 1 är inkopplad"},
             render: renderCheckbox
           },
           {
@@ -216,7 +216,7 @@ const configureHtmlObj = {
           {
             key: "Brake2_active",
             txt: {en: "Use brake 2", sv: "Använd broms 2"},
-            title: {en: "If brake outpt 2 is wired/used", sv: "Om broms 2 är kopplad"},
+            title: {en: "If brake outpt 2 is wired/used", sv: "Om broms 2 är inkopplad"},
             render: renderCheckbox
           },
           {
