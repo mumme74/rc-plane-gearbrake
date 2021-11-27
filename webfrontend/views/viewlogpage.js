@@ -67,6 +67,7 @@ class ViewLogCls {
     const logRoot = LogRoot.instance();
     logRoot.clear();
     logRoot.parseLog(log, startAddr);
+    this.setLogOrigin("Device");
   }
 
   async clearLog() {
@@ -104,23 +105,28 @@ class ViewLogCls {
       accept: {'application/octet-stream': ['.rclog']},
     }]});
     const file = await fileHandle.getFile();
-    LogRoot.instance().clear();
-    const log = new Uint8Array(await file.arrayBuffer());
-    const size = log.byteLength;
-    const startAddr = log[size-1] << 24 | log[size-2] << 16 |
-                      log[size-3] << 8 | log[size-4];
-    LogRoot.instance().parseLog(log, startAddr);
-    routeMainContent();
+    const logRoot = LogRoot.instance();
+    logRoot.clear();
+    const fileLog = new Uint8Array(await file.arrayBuffer());
+    const log = new Uint8Array(fileLog.slice(0, fileLog.byteLength-4));
+    const size = fileLog.byteLength;
+    const startAddr = fileLog[size-1] << 24 | fileLog[size-2] << 16 |
+                      fileLog[size-3] << 8 | fileLog[size-4];
+    logRoot.parseLog(log, startAddr);
+    const sel = document.querySelector("#selectSessionBtn > div");
+    sel.innerHTML = this.buildSessions().join("\n");
+    this.selectSession((logRoot.coldStarts.length || 1) -1);
+    this.setLogOrigin(file.name);
   }
 
-  selectSession(evt, sessionIdx) {
+  selectSession(sessionIdx) {
     this.currentSession = sessionIdx;
     // change text on dropdown btn
     const lang = document.documentElement.lang;
     const latest = this.translationObj[lang].latestSession;
     const j = LogRoot.instance().coldStarts.length - 1 - sessionIdx;
     const txt = j === 0 ? latest : latest + " - " + j;
-    evt.target.parentNode.previousElementSibling.innerText = txt;
+    document.querySelector("#selectSessionBtn > button").innerText = txt;
 
     const data = LogRoot.instance().getSession(sessionIdx);
     if (data.length && data[0].children[0].type === LogItem.Types.log_coldStart)
@@ -148,16 +154,26 @@ class ViewLogCls {
     this.chartWgt.setVisible(type === 'chart');
   }
 
-  html(lang) {
-    const tr = this.translationObj[lang];
-
+  buildSessions(lang = document.documentElement.lang) {
     const logRoot = LogRoot.instance();
+    const tr = this.translationObj[lang];
     let starts = [];
     for (let i = logRoot.coldStarts.length -1, j = 0; i > -1 ; --i, ++j) {
       const latest = tr.latestSession;
       const txt = j === 0 ? latest : latest + " - " + j;
-      starts.push(`<button class="w3-bar-item w3-button" onclick="viewlogHtmlObj.selectSession(event, ${i})">${txt}</button>`);
+      starts.push(`<button class="w3-bar-item w3-button" onclick="viewlogHtmlObj.selectSession(${i})">${txt}</button>`);
     }
+    return starts;
+  }
+
+  setLogOrigin(origin) {
+    const logOrigin = document.getElementById("logOrigin");
+    if (logOrigin) logOrigin.innerText = origin;
+  }
+
+  html(lang) {
+    const tr = this.translationObj[lang];
+    const logOrigin = location.hash.indexOf("testingGui") ? "Testing" : "";
 
     return `
       <div class="w3-row-padding w3-padding-64 w3-container">
@@ -177,12 +193,12 @@ class ViewLogCls {
           <button class="w3-button w3-gray w3-padding-large w3-large w3-margin-top" onclick="viewlogHtmlObj.readLog()">
             ${tr.readLogBtn}
           </button>
-          <h5 class="w3-padding-8">${tr.fetchedLogPoints}</h5>
+          <h5 class="w3-padding-8">${tr.fetchedLogPoints} <span id="logOrigin" style="font-weight:bold;">${logOrigin}</span></h5>
           <div class="w3-bar w3-light-grey" id="logViewMenuBar">
-            <div class="w3-dropdown-hover">
+            <div class="w3-dropdown-hover" id="selectSessionBtn">
               <button class="w3-button">${tr.selectLog}</button>
               <div class="w3-dropdown-content w3-bar-block w3-card-4">
-                ${starts.join("\n")}
+                ${this.buildSessions(lang).join("\n")}
               </div>
             </div>
             <div class="w3-dropdown-hover" id="showLogItm">
