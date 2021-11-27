@@ -44,6 +44,11 @@ document.addEventListener('DOMContentLoaded', () =>{
             a.title = itm.tip[lang];
         if (itm.action)
             a.addEventListener("click", itm.action);
+        else
+            a.addEventListener("click", (evt)=>{
+                evt.stopPropagation(); evt.preventDefault();
+                location.hash = hashParts.join("&");
+            })
         if (itm.id)
             a.id = itm.id;
         parent.appendChild(a);
