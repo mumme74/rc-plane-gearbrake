@@ -5,10 +5,15 @@ let ChartWidget;
 const stepFactor = 15,
       headerHeight = 50,
       horizBarHeight = 50,
-      vertBarWidth = 20,
-      canvasMinWidth = 50,
+      vertBarWidth = 45,
+      canvasMinWidth = 85,
       canvasHeight = 600,
-      origoAt = {x: vertBarWidth, y: canvasHeight / 2 -1};
+      origoAt = {x: vertBarWidth, y: (canvasHeight - headerHeight) / 2 -1 + headerHeight},
+      vertSteps = 10,
+      showPointMargin = 5,
+      showPointTimoeout = 300,
+      showPointOffset = 10;
+
 const axisColors = [
     '#e6194b', '#3cb44b', '#ffe119', '#4363d8', '#f58231',
     '#911eb4', '#46f0f0', '#f032e6', '#bcf60c', '#fabebe',
@@ -19,6 +24,7 @@ const axisColors = [
 class ChartWidgetCls extends WidgetBaseCls {
   selectedType = -1;
   contex = null;
+  showPnt = null;
 
   constructor(shownColumns, parentNode) {
     super(shownColumns);
@@ -99,7 +105,7 @@ class ChartWidgetCls extends WidgetBaseCls {
     let itm = this.data[0].children[axelIdx];
     this.contex.strokeStyle = axisColors[itm.type];
     const info = LogItem.Types.info(itm.type);
-    const factor = origoAt.y / info.max;
+    const factor = (origoAt.y-headerHeight) / info.max;
     this.contex.beginPath();
     this.contex.lineWidth = itm.type === this.selectedType ? "4" : "2";
     this.contex.moveTo(origoAt.x, origoAt.y - factor * itm.realVlu());
@@ -121,23 +127,66 @@ class ChartWidgetCls extends WidgetBaseCls {
     this.contex.moveTo(origoAt.x, origoAt.y);
     this.contex.strokeStyle = "#999";
     this.contex.lineTo(this.rootNode.width, origoAt.y);
+    this.contex.stroke();
+    this.contex.beginPath();
+    this.contex.lineWidth = 1;
+    this.contex.font = "10pt Sans serif";
+    this.contex.fillStyle = "#CCC";
+    this.contex.textBaseline = "top";
+    this.contex.textAlign = "center";
     // do the small lines for each entry
     for(let i = 0; i < this.data.length; ++i) {
-      this.contex.moveTo(vertBarWidth + i * stepFactor, origoAt.y-2);
-      this.contex.lineTo(vertBarWidth + i * stepFactor, origoAt.y+4);
+      const x = vertBarWidth + i * stepFactor;
+      this.contex.moveTo(x, origoAt.y-2);
+      this.contex.lineTo(x, origoAt.y+4);
+      if (i && (i % 10 == 0)) {
+        this.contex.fillText(i, x, origoAt.y + 6);
+      }
     }
     this.contex.stroke();
   }
 
   _renderVerticalBar() {
     this.contex.fillStyle = '#FFF';
-    this.contex.fillRect(0, 0, vertBarWidth, this.rootNode.height);
+    this.contex.fillRect(0, headerHeight, vertBarWidth, this.rootNode.height);
     this.contex.beginPath();
-    this.contex.lineWidth = "5";
-    this.contex.moveTo(vertBarWidth - 2, 0);
+    this.contex.lineWidth = "3";
+    this.contex.moveTo(vertBarWidth - 2, headerHeight);
     this.contex.strokeStyle = "#999";
     this.contex.lineTo(vertBarWidth - 2, this.rootNode.height);
     this.contex.stroke();
+    if (this.selectedType > -1)
+      this._renderScaleAndGrid();
+  }
+
+  _renderScaleAndGrid() {
+      // do the small lines for each entry
+      this.contex.lineWidth = "1";
+      this.contex.font = "10pt Sans serif";
+      this.contex.fillStyle = "#CCC";
+      this.contex.textBaseline = "middle";
+      this.contex.textAlign = "start";
+
+      const info = LogItem.Types.info(this.selectedType);
+      const vluSteps = Math.max(info.max, -info.min) / vertSteps;
+      const factor = (origoAt.y - headerHeight) / Math.max(info.max, -info.min);
+
+      for(let i = info.min; i <= info.max; i+=vluSteps) {
+        const y = origoAt.y - i * factor;
+        this.contex.strokeStyle = "#333";
+        this.contex.fillStyle = "#333";
+        this.contex.beginPath();
+        this.contex.moveTo(vertBarWidth -6, y);
+        this.contex.lineTo(vertBarWidth, y);
+        this.contex.fillText(i +"", 0, y);
+        this.contex.stroke();
+
+        this.contex.beginPath();
+        this.contex.strokeStyle = "#CCC";
+        this.contex.moveTo(vertBarWidth, y);
+        this.contex.lineTo(this.rootNode.width, y);
+        this.contex.stroke();
+      }
   }
 
   _selectAType(selectType) {
@@ -163,34 +212,76 @@ class ChartWidgetCls extends WidgetBaseCls {
     }
   }
 
+  _showPoint(pnt, logItm) {
+    if (this.showPnt) return;
+    this.showPnt = {pnt, logItm};
+    const txt = logItm.translatedType().txt + ": " + logItm.realVlu() + logItm.unit() +
+                  " (" + pnt.entry + ")";
+    const textMetrix = this.contex.measureText(txt);
+    const textHeight = textMetrix.actualBoundingBoxAscent +
+                     textMetrix.actualBoundingBoxDescent;
+    const rectWidth = showPointMargin*4 + 10 + textMetrix.width,
+          rectHeight = showPointMargin*2 + textHeight,
+          scrollLeft = this.rootNode.parentElement.scrollLeft,
+          viewRect = this.rootNode.parentElement.getBoundingClientRect();
+
+    // move if outside of visible bounds
+    let x = pnt.x + showPointOffset, y = pnt.y + showPointOffset;
+    if (x + rectWidth > scrollLeft + viewRect.width) x -= rectWidth +showPointOffset;
+    if (y + rectHeight > canvasHeight) y -= rectHeight +showPointOffset;
+
+    // containing rect
+    this.contex.strokeStyle = "#999";
+    this.contex.fillStyle = "#000";
+    this.contex.fillRect(x, y, rectWidth, showPointMargin*2 + textHeight);
+    // the color rect
+    this.contex.fillStyle = axisColors[logItm.type];
+    this.contex.fillRect(x+showPointMargin, y + showPointMargin, 10, 10);
+    // the text
+    this.contex.beginPath();
+    this.contex.fillStyle = "#FFF";
+    this.contex.textBaseline = "hanging";
+    this.contex.textAlign = "start";
+    this.contex.fillText(txt, x + 10 + showPointMargin*3, y + showPointMargin);
+    this.contex.stroke();
+  }
+
   _touchmove(evt) {
-    const logItm = this._mapPointToLogItem({x: evt.clientX, y: evt.clientY});
-    if (logItm) {
-      const types = Object.keys(LogItem.Types).slice(1);
-      console.log("match move", types[logItm.type]);
+    const pnt = {evtX: evt.clientX, evtY: evt.clientY};
+    this.pendingShowPoint = this._mapPointToLogItem(pnt);
+    this.rootNode.style.cursor = this.pendingShowPoint ? "pointer" : "";
+    clearTimeout(this._touchmove._tmr);
+
+    if (this.pendingShowPoint) {
+      this._touchmove._tmr = setTimeout(()=>this._showPoint(pnt, this.pendingShowPoint), showPointTimoeout);
+    } else if (this.showPnt) {
+      this.showPnt = null;
+      this.render();
     }
-    this.rootNode.style.cursor = logItm ? "pointer" : "";
   }
 
   _touchstart(evt) {
-    const logItm = this._mapPointToLogItem({x: evt.clientX, y: evt.clientY});
+    const logItm = this._mapPointToLogItem({evtX: evt.clientX, evtY: evt.clientY});
     this._selectAType(logItm ? logItm.type : -1);
   }
 
   _mapPointToLogItem(pnt) {
     const rect = this.rootNode.getBoundingClientRect();
-    const realX = pnt.x- rect.left,
-          realY = pnt.y - rect.top;
-    const x = Math.round((realX - vertBarWidth) / stepFactor),
-          y = Math.floor(origoAt.y - realY);
+    pnt.x = pnt.evtX- rect.left;
+    pnt.y = pnt.evtY - rect.top;
+    const x = Math.round((pnt.x - vertBarWidth) / stepFactor),
+          y = Math.floor(origoAt.y - pnt.y);
 
     if (!this.data[x]) return;
 
     for(const itm of this.data[x].children.values()) {
+      if (this.shownColumns.indexOf(itm.type) < 0)
+        continue;
       const info = LogItem.Types.info(itm.type);
-      const factor = origoAt.y / info.max;
+      const factor = (origoAt.y-headerHeight) / info.max;
       const itmY = Math.round(factor * itm.realVlu());
-      if (y <= itmY + 2 && y >= itmY -2) {
+      if (y <= itmY + 4 && y >= itmY -4) {
+        pnt.entry = x;
         return itm;
       }
     }

@@ -202,7 +202,7 @@ class LogItem {
                 groups = [t.speedOnGround,t.wheelRPS_0,
                           t.wheelRPS_1,t.wheelRPS_2];
             } else if (type >= t.wantedBrakeForce && type <= t.brakeForce2_out) {
-                max = 255;
+                max = 100;
                 groups = [t.wantedBrakeForce,t.brakeForce0_out,
                           t.brakeForce1_out,t.brakeForce2_out];
             } else if (type >= t.slip0 && type <= t.slip2) {
@@ -360,6 +360,12 @@ class LogItem {
             default:
                 return this.value;
             }
+    }
+
+    translatedType(lang = document.documentElement.lang) {
+        const keys = Object.keys(LogItem.TypesTranslated).slice(1);
+        const tr = LogItem.TypesTranslated[keys[this.type]];
+        return {txt: tr.txt[lang], title: tr.title[lang]};
     }
 }
 
