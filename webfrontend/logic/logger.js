@@ -304,7 +304,16 @@ class LogItem {
      * @returns string with correct postfix
      */
     unit() {
-        switch (this.type) {
+        return LogItem.unitFor(this.type);
+    }
+
+    /**
+     * @brief same as unit() but static
+     * @param {Number} type
+     * @returns string with correct postfix
+     */
+    static unitFor(type) {
+        switch (type) {
         case LogItem.Types.speedOnGround:
         case LogItem.Types.wheelRPS_0:
         case LogItem.Types.wheelRPS_1:
@@ -659,17 +668,17 @@ if (testing) {
         (LogItem.Types.log_coldStart << 2) | 0, 0x5A,
 
         // log entry with 13 items
-        13, 48,
+        13, 44,
         // first logitem uin8_t, 2 bytes long, positive 64
         (LogItem.Types.speedOnGround << 2) | 0, 0x40,
         // logitem 2 int16_t, 3bytes long, positive 0x0132 (306)
         (LogItem.Types.wsSteering << 2) | 1, 0x32, 0x00,
         // logitem 3 int16_t 3bytes long, negative 0xFEAD (-341)
         (LogItem.Types.accelSteering << 2) | 1, 0xAD, 0xFF,
-        // logitem 4 int32_t 5bytes long positive 0x01815405 (25252869)
-        (LogItem.Types.accel << 2) | 1, 0x05, 0x04,
-        // logitem 5 int32_t 5 bytes long negative 0x8043210F (-4399376)
-        (LogItem.Types.accelX << 2) | 1, 0x0F, 0x0E,
+        // logitem 4 int16_t 3bytes long positive 0x03F0 (1008)
+        (LogItem.Types.accel << 2) | 1, 0x03, 0xF0,
+        // logitem 5 int16_t 3bytes long negative 0xFCCF (-817)
+        (LogItem.Types.accelX << 2) | 1, 0xCF, 0xFC,
         // logitem 6 float 5 bytes long positive 0.25 (0x3E800000)
         (LogItem.Types.slip0 << 2) | 3, 0x00, 0x00, 0x80, 0x3E,
         // logitem 6 float 5 bytes long negative -2.0 (0xC0000000)
@@ -781,8 +790,15 @@ if (testing) {
             return entry;
         }
 
+        let coldStart = logRoot.logEntries[logRoot.logEntries.length-2];
+        coldStart.scanChildren();
+
         let lastEntry = logRoot.logEntries[logRoot.logEntries.length-1];
         lastEntry.scanChildren();
+
+        /*coldStart = cloneEntry(coldStart);
+        logRoot.logEntries.push(coldStart);
+        logRoot.coldStarts.push(coldStart);*/
 
         while (lastEntry.startPos + lastEntry.size < 128 * 1024 -4 - lastEntry.size) {
             let entry = cloneEntry(lastEntry);
@@ -793,7 +809,7 @@ if (testing) {
         // dump some values to console for testing chart
         console.log(lastEntry.startPos + lastEntry.size)
         let speed= [], times = [], accelX = [], wheel0=[], wheel1=[];
-        let entries = logRoot.getSession(2)
+        let entries = logRoot.getSession(3)
         for(let i = 1; i < Math.min(10, entries.length); ++i) {
             const entry = entries[i];
             times.push(i);
