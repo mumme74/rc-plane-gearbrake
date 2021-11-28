@@ -60,7 +60,7 @@ static void validateValues(void) {
  */
 void notify(void) {
   pwmoutSettingsChanged();
-  accelSettingsChanged();
+  //accelSettingsChanged();
   inputsSettingsChanged();
   brakeLogicSettingsChanged();
   loggerSettingsChanged();
@@ -161,6 +161,9 @@ Settings_t settings = {
 
 void settingsInit(void) {
   settingsDefault();
+}
+
+void settingsStart(void) {
   settingsp = chThdCreate(&settingsThdDesc);
 }
 

@@ -65,5 +65,7 @@ void pwmoutSetDuty(OutputCh_e ch, uint8_t duty);
  */
 void pwmoutSettingsChanged(void);
 
+void pwmoutInit(void);
+
 
 #endif /* PWMOUT_H_ */

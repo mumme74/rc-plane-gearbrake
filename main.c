@@ -25,13 +25,9 @@
 #include "i2c_bus.h"
 #include "brake_logic.h"
 #include "logger.h"
-//#include "comms.h"
+#include "comms.h"
 
-//THD_TABLE_BEGIN
-//  THD_TABLE_THREAD(1, "blinker1", waThread1, Thread1, NULL)
-//  THD_TABLE_THREAD(2, "blinker2", waThread2, Thread2, NULL)
-//THD_TABLE_END
-;
+
 /*
  * Application entry point.
  */
@@ -49,19 +45,29 @@ int main(void) {
   eepromInit();
   settingsInit();
   inputsInit();
-  accelInit();
-  brakeLogicInit();
   loggerInit();
-  //commsInit();
-
+  brakeLogicInit();
+  accelInit();
+  commsInit();
   // done last of the initializations as main(void) now becomes idle thread
   chSysInit();
 
+  // chSysInit must be invoked before any threads are created
+  settingsStart();
+  //accelStart();
+  loggerStart();
+  brakeLogicStart();
+  commsStart();
+
+
+  volatile uint32_t mk = 0;
   /* This is now the idle thread loop, you may perform here a low priority
      task but you must never try to sleep or wait in this loop. Note that
      this tasks runs at the lowest priority level so any instruction added
      here will be executed after all other tasks have been started.*/
-  while (1) { }
+  while (1) {
+    ++mk;
+  }
 
   return 0;
 }

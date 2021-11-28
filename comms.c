@@ -214,6 +214,8 @@ static thread_descriptor_t commsThdDesc = {
 // ------------------------------------------------------------------
 // public stuff
 
-void commsInit(void) {
+void commsInit(void) {}
+
+void commsStart(void) {
   commsThdp = chThdCreate(&commsThdDesc);
 }

@@ -34,5 +34,7 @@ typedef struct {
 
 void commsInit(void);
 
+void commsStart(void);
+
 
 #endif /* COMMS_H_ */

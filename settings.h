@@ -102,9 +102,14 @@ typedef struct {
 extern Settings_t settings;
 
 /**
- * @brief initialize settings, set to default and then load from EEPROM
+ * @brief initialize settings, set to default
  */
 void settingsInit(void);
+
+/**
+ * @brief start trhread to load from EEPROM
+ */
+void settingsStart(void);
 
 /**
  * @brief reset to default settings

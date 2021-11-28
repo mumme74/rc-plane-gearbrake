@@ -212,6 +212,10 @@ static thread_descriptor_t brakeLogicThdDesc = {
 // public stuff for this module
 
 void brakeLogicInit(void) {
+  pwmoutInit();
+}
+
+void brakeLogicStart(void) {
   brklogicp = chThdCreate(&brakeLogicThdDesc);
 }
 

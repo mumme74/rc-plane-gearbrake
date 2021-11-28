@@ -68,6 +68,8 @@ typedef struct {
 
 void loggerInit(void);
 
+void loggerStart(void);
+
 void loggerSettingsChanged(void);
 
 void loggerClearAll(uint8_t buf[], const size_t bufSz);

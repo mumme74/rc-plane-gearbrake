@@ -39,12 +39,14 @@ for app in APPS:
                 rom += int(columns[1])
             elif b".bss" in columns[0]:
                 ram += int(columns[1])
-            elif b".data" in columns[0]:
+            elif b".data" in columns[0] or b".ram0" in columns[0]:
                 ram += int(columns[1])
                 rom += int(columns[1])
             elif b".text" in columns[0]:
                 rom += int(columns[1])
             elif b".startup" in columns[0]:
+                rom += int(columns[1])
+            elif b".rodata" in columns[0]:
                 rom += int(columns[1])
 
         print ("\n" + app.name + ":")
@@ -59,4 +61,3 @@ for app in APPS:
         print ("ROM used: {}% - {}/{}".format((rom*100)/app.max_rom,
                                                    rom,
                                                    app.max_rom))
-        

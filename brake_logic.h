@@ -34,6 +34,7 @@ typedef struct {
 extern const Values_t values;
 
 void brakeLogicInit(void);
+void brakeLogicStart(void);
 
 void brakeLogicSettingsChanged(void);
 

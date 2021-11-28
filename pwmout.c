@@ -99,9 +99,15 @@ void pwmoutSetDuty(OutputCh_e ch, uint8_t duty) {
  * @brief called each time settings has changed
  */
 void pwmoutSettingsChanged(void) {
-  for(OutputCh_e ch = breakChStart; ch < brakeChEnd; ++ch) {
-    pwmDisableChannel(&PWMD3, ch);
+  if (PWMD3.state == PWM_READY) {
+    for(OutputCh_e ch = breakChStart; ch < brakeChEnd; ++ch) {
+      pwmDisableChannel(&PWMD3, ch);
+    }
   }
 
   pwmoutSetFrequency(settings.PwmFreq);
+}
+
+void pwmoutInit(void) {
+  pwmoutSettingsChanged();
 }

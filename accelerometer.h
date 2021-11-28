@@ -31,6 +31,8 @@ extern const Accel_t accel;
  */
 void accelInit(void);
 
+void accelStart(void);
+
 /**
  * @brief call whenever a setting has changed
  */

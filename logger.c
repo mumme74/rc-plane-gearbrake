@@ -179,8 +179,11 @@ static thread_descriptor_t loggerThdDesc = {
 thread_t *logthdp = 0;
 
 void loggerInit(void) {
-  logthdp = chThdCreate(&loggerThdDesc);
   logTimeout =  TIME_MS2I(settings.logPeriodicity);
+}
+
+void loggerStart(void) {
+  logthdp = chThdCreate(&loggerThdDesc);
 }
 
 void loggerSettingsChanged(void) {
