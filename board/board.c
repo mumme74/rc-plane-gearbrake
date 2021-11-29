@@ -265,4 +265,8 @@ bool mmc_lld_is_write_protected(MMCDriver *mmcp) {
  */
 void boardInit(void) {
 
+  /* Remap PA11-12 to PA9-10 for USB */
+  RCC->APB2ENR |= RCC_APB2ENR_SYSCFGCOMPEN;
+  SYSCFG->CFGR1 |= SYSCFG_CFGR1_PA11_PA12_RMP;
+
 }

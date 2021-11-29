@@ -95,7 +95,7 @@
       <pin9
         ID="USB_DM_PROXY"
         Type="PushPull"
-        Speed="Minimum"
+        Speed="Maximum"
         Resistor="PullDown"
         Level="High"
         Mode="Input"
@@ -103,7 +103,7 @@
       <pin10
         ID="USB_DP_PROXY"
         Type="PushPull"
-        Speed="Minimum"
+        Speed="Maximum"
         Resistor="PullUp"
         Level="High"
         Mode="Input"
@@ -111,7 +111,7 @@
       <pin11
         ID="USB_DM"
         Type="PushPull"
-        Speed="Minimum"
+        Speed="Maximum"
         Resistor="PullUp"
         Level="High"
         Mode="Input"
@@ -119,7 +119,7 @@
       <pin12
         ID="USB_DP"
         Type="PushPull"
-        Speed="Minimum"
+        Speed="Maximum"
         Resistor="PullUp"
         Level="High"
         Mode="Input"
@@ -130,7 +130,7 @@
         Speed="Maximum"
         Resistor="PullUp"
         Level="High"
-        Mode="Alternate"
+        Mode="Input"
         Alternate="0" />
       <pin14
         ID="SWCLK"
@@ -139,7 +139,7 @@
         Resistor="PullDown"
         Level="High"
         Mode="Alternate"
-        Alternate="0" />
+        Alternate="0" ></pin14>
       <pin15
         ID=""
         Type="PushPull"

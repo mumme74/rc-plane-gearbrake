@@ -189,11 +189,11 @@ THD_FUNCTION(CommsThd, arg) {
       cmd.size = buf[0];
       ++pbuf;
     }
-    if (nRead >= 1 && pbuf == &buf[1]) {
+    if (nRead >= 2 && pbuf == &buf[1]) {
       cmd.type = (CommsCmdType_e)buf[1];
       ++pbuf;
     }
-    if (nRead >=1 && pbuf == &buf[2]) {
+    if (nRead >=3 && pbuf == &buf[2]) {
       cmd.reqId = buf[2];
       pbuf = &buf[0];
       routeCmd();
