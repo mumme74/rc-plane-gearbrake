@@ -13,8 +13,7 @@
 #include "comms.h"
 #include <chtypes.h>
 
-#define LOG_OFFSET_SIZE     sizeof(uint32_t)
-#define LOG_NEXT_OFFSET     (EEPROM_LOG_SIZE - LOG_OFFSET_SIZE)
+//#define LOG_OFFSET_SIZE     sizeof(uint32_t)
 
 typedef enum {
   // use number here to prevent possible mismatch between
@@ -75,10 +74,9 @@ void loggerSettingsChanged(void);
 void loggerClearAll(uint8_t buf[], const size_t bufSz);
 
 void loggerReadAll(uint8_t obuf[], CommsCmd_t *cmd,
-                   const size_t bufSz, systime_t sendTimeout);
+                   const size_t bufSz);
 
-void loggerNextAddr(uint8_t obuf[], CommsCmd_t *cmd,
-                    systime_t sendTimeout);
+void loggerNextAddr(uint8_t obuf[], CommsCmd_t *cmd);
 
 
 extern thread_t *logthdp;

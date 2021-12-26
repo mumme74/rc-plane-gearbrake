@@ -19,5 +19,17 @@ form label {
 #notifier.active {
     top:0;
 }
+#menuBar progress {
+    border-radius: 0;
+    border: 1px solid #ccc;
+    background-color: #2196F3;
+    margin: 0.8rem;
+}
+
+#menuBar progress[value="0"],
+#menuBar progress[value="1"] {
+    display: none;
+    transition: 0.5s;
+}
 
 @import url(logtable.css);

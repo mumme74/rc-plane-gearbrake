@@ -19,9 +19,9 @@
 // Public stuff for this module
 // config for i2c, values from programming manual 21.4.10, 1Mhz
 const I2CConfig i2ccfg = {
-  STM32_TIMINGR_PRESC(5U) |
-  STM32_TIMINGR_SCLDEL(1U) | STM32_TIMINGR_SDADEL(0U) |
-  STM32_TIMINGR_SCLH(1U)  | STM32_TIMINGR_SCLL(3U),
+  STM32_TIMINGR_PRESC(5U) | //5U) |
+  STM32_TIMINGR_SCLDEL(0U)/*1U)*/ | STM32_TIMINGR_SDADEL(0U) |
+  STM32_TIMINGR_SCLH(1U)/*1U)*/  | STM32_TIMINGR_SCLL(0U),//3U),
   0,
   0
 };

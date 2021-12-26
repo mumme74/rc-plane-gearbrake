@@ -10,6 +10,7 @@
 
 
 #include <stdint.h>
+#include <stddef.h>
 
 typedef enum {
   commsCmd_Error = 0x00u,
@@ -35,6 +36,10 @@ typedef struct {
 void commsInit(void);
 
 void commsStart(void);
+
+size_t sendHeader(CommsCmdType_e type, uint32_t len);
+
+size_t sendPayload(uint16_t len);
 
 
 #endif /* COMMS_H_ */

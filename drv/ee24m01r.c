@@ -8,6 +8,7 @@
 
 #include "ee24m01r.h"
 #include <hal.h>
+#include <halconf.h>
 #include <ch.h>
 #include "board.h"
 
@@ -19,11 +20,11 @@
  * @ if exceeded i2c transmit sends
  */
 static systime_t calc_timeout(size_t bytes) {
-  uint32_t bits = 10 + 18 +  // dev.sel. and 2 address bytes with ACK bit
+  uint32_t bits = 16 + 18 +  // dev.sel. and 2 address bytes with ACK bit
                   (bytes * 9); // payload bits with ACK bit
-  uint32_t tmo = (bits / I2C_8BIT_TIME_US) +
-                 (bits % I2C_8BIT_TIME_US) +
-                 100; // +100us to be on the safe side
+  uint32_t tmo = bits * 1000000U;
+  tmo /= MIN_I2C_FREQUENCY;
+  tmo += 100; // +100us to be on the safe side
   return TIME_US2I(tmo);
 }
 
@@ -54,13 +55,13 @@ msg_t ee24m01r_read(const ee24partition_t *eep,
 
   // we can read from 2 partitions, only applicable when we read from the page in the middle
   uint8_t *bufp = buf;
-  uint8_t _len = len, lenPart1 = 0;
+  uint16_t _len = len, lenPart1 = 0;
   const size_t endAddr = eep->startAddr + offset + len;
   if ((eep->startAddr + offset <= EE24M01R_BANK1_END_ADDR) &&
       (endAddr > EE24M01R_BANK1_END_ADDR))
   {
     // we should read from 2 partitions, recursive read from first part
-    lenPart1 = endAddr - EE24M01R_BANK1_END_ADDR;
+    lenPart1 = EE24M01R_PAGE_SIZE - (endAddr - EE24M01R_BANK1_END_ADDR);
     osalDbgAssert(eep->startAddr + offset + lenPart1 <= EE24M01R_BANK1_END_ADDR,
                   "BANK1 range exceeded, drv bug");
 
@@ -77,8 +78,8 @@ msg_t ee24m01r_read(const ee24partition_t *eep,
   const uint32_t memAddr = eep->startAddr + offset + lenPart1;
   const uint8_t memAddrBuf[2] = {(memAddr & 0xFF00) >> 8, (memAddr & 0xFF)};
   // bit nr 2 in SAD represents high or low addrs so 0x0001xxxx -> sad: 0bxxxxxx1x
-  const uint8_t sad = eep->i2cAddrBase |
-                      (memAddr & 0x00010000) >> 15 |
+  const i2caddr_t sad = eep->i2cAddrBase |
+                      (memAddr & 0x00010000) >> 16 |
                       EE24M01R_READ_BIT;
 
   osalDbgAssert(((len <= eep->size) && ((offset + len) <= eep->size)),
@@ -87,7 +88,6 @@ msg_t ee24m01r_read(const ee24partition_t *eep,
 #if I2C_USE_MUTUAL_EXCLUSION
   i2cAcquireBus(eep->i2cp);
 #endif
-
   status = i2cMasterTransmitTimeout(eep->i2cp, sad, memAddrBuf, 2,
                                     bufp, _len,
                                     calc_timeout(_len));
@@ -124,13 +124,13 @@ msg_t ee24m01r_write(ee24partition_t *eep,
   // before going to partition 2
   // we can write to 2 partitions, only applicable when we
   // write to the page in the middle
-  uint8_t _len = len, lenPart1 = 0;
+  uint16_t _len = len, lenPart1 = 0;
   const size_t endAddr = eep->startAddr + offset + len;
   if ((eep->startAddr + offset <= EE24M01R_BANK1_END_ADDR) &&
       (endAddr > EE24M01R_BANK1_END_ADDR))
   {
     // we should read from 2 partitions, recursive write from first part
-    lenPart1 = endAddr - EE24M01R_BANK1_END_ADDR;
+    lenPart1 = EE24M01R_PAGE_SIZE - (endAddr - EE24M01R_BANK1_END_ADDR);
     osalDbgAssert(eep->startAddr + offset + lenPart1 <= EE24M01R_BANK1_END_ADDR,
                   "BANK1 range exceeded, drv bug");
 
@@ -159,7 +159,7 @@ msg_t ee24m01r_write(ee24partition_t *eep,
   *bufp++ = (uint8_t)((memAddr & 0xFF00) >> 8);
   *bufp++ = (uint8_t)(memAddr & 0xFF);
   // bit nr 2 in SAD represents high or low addrs so 0x0001xxxx -> sad: 0bxxxxxx1x
-  const uint8_t sad = eep->i2cAddrBase | (memAddr & 0x00010000) >> 15;
+  const i2caddr_t sad = eep->i2cAddrBase | (memAddr & 0x00010000) >> 16;
 
   // for memcpy to buffer
   while(wbuf < wrbuf+len) *bufp++ = *wbuf++;

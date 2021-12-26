@@ -1,19 +1,19 @@
 "use strict";
 
 if (!window.isSecureContext) {
-    let tr = {
-        en: `This page is not considered safe by the browser, serial communication is dispabled.\n
-             Try to serve as top level page from a https: server.`,
-        sv: `Denna sida anses inte var säker av webbläsaren, seriel kommunikation är inaktiverad.\n
-             Försök med att serva sidan som Top sida från en https: webbserver`
-    }
-    alert(tr[document.querySelector("html").lang]);
+  let tr = {
+    en: `This page is not considered safe by the browser, serial communication is dispabled.\n
+         Try to serve as top level page from a https: server.`,
+    sv: `Denna sida anses inte var säker av webbläsaren, seriel kommunikation är inaktiverad.\n
+        Försök med att serva sidan som Top sida från en https: webbserver`
+  }
+  alert(tr[document.querySelector("html").lang]);
 } else if (!("serial" in navigator)) {
-    let tr = {
-        en: `This browser does not have webserial interface activated, try with Google chrome/Microsoft Edge version 89 or later.`,
-        sv: `Denna webbläsare har inte webserial interfaceet aktiverat, försk med Google Chrome/Microsoft Edge version 89 eller senare.`
-    }
-    alert(tr[document.querySelector("html").lang]);
+  let tr = {
+    en: `This browser does not have webserial interface activated, try with Google chrome/Microsoft Edge version 89 or later.`,
+    sv: `Denna webbläsare har inte webserial interfaceet aktiverat, försk med Google Chrome/Microsoft Edge version 89 eller senare.`
+  }
+  alert(tr[document.querySelector("html").lang]);
 }
 
 /**
@@ -21,47 +21,80 @@ if (!window.isSecureContext) {
  * Use as a middleware to Serial interface before device data is released to User code.
  * Ensures that User code sees complete msg responses and not chunks.
  */
-class MsgStreamReader {
-  constructor() {
+const transformContent = {
+  start: (controller)=> {
     // A container for holding stream data until a new line.
-    this._buffer = Uint8Array(128*1024+256); // 128kb should be enough but add 256 to be safe (EEPROM is 128kb)
-    this._bufferIter =  0;
-    this._msglen  = -1;
-  }
+    controller._buffer = new Uint8Array(128*1024+256); // 128kb should be enough but add 256 to be safe (EEPROM is 128kb)
+    controller._bufferRcvd =  0;
+    controller._msglen  = -1;
+  },
 
-  transform(chunk, controller) {
+  transform: (chunk, controller)=> {
     // Copy over bytes to our buffer
     for (let i = 0; i < chunk.length; ++i) {
-        this._buffer[this._bufferIter++] = chunk[i];
+        controller._buffer[controller._bufferRcvd++] = chunk[i];
     }
+
+
     // it can be a new response, check the length of the response (first byte in msg should be response length 1-256)
-    if (this._msglen < 0) {
-        this._msglen = SerialBase._readResponseHeader(chunk).len;
+    if (controller._msglen < 0) {
+        controller._msglen = SerialBase._readResponseHeader(chunk).len;
+    }
+    console.log("recieved",controller._bufferRcvd, "of", controller._msglen);
+
+    // notify progress bar
+    SerialBase.progress.updatePos(controller._bufferRcvd, controller._msglen);
+
+    if (controller._bufferRcvd >= controller._msglen) {
+      controller.enqueue(controller._buffer.subarray(0, controller._msglen));
+      // we have a trailing fraction of a response after the completed msg
+      if (controller._bufferRcvd > controller._msglen && controller._msglen > 0) {
+        // move to beginning
+        for (let i = 0, j = controller._msglen; j < controller._bufferRcvd; ++i, ++j)
+          controller._buffer[i] = controller._buffer[j];
+
+        controller._bufferRcvd -= controller._msglen;
+        controller._msglen = SerialBase._readResponseHeader(controller._buffer).len;
+        // fraction might be a complete msg, call recursively
+        transformContent.transform(new Uint8Array(0), controller);
+      } else {
+        // complete msg, with no trailing fraction
+        controller._msglen = -1;
+        controller._bufferRcvd = 0;
+      }
     }
 
-    if (this._bufferIter >= this._msglen) {
-        controller.enqueue(this._buffer.subarray(0, this._msglen));
-        // we have a trailing fraction of a response after the completed msg
-        if (this._bufferIter > this._msglen) {
-            // move to beginning
-            for (let i = 0, j = this._msglen; j < this._bufferIter; ++i, ++j)
-                this._buffer[i] = this._buffer[j];
+  },
 
-            this._bufferIter -= this._msglen;
-            this._msglen = SerialBase._readResponseHeader(this._buffer).len;
-            // fraction might be a complete msg, call recursively
-            this.transform(Uint8Array(0), controller);
-        } else {
-            // complete msg, with no trailing fraction
-            this._msglen = -1;
-            this._bufferIter = 0;
-        }
-    }
-  }
-
-  flush(controller) {
+  flush:(controller)=> {
     // When the stream is closed, flush any remaining chunks out.
-    controller.enqueue(this._buffer.subarray(0, this._bufferIter));
+    controller.enqueue(controller._buffer.subarray(0, controller._bufferIter));
+   }
+}
+
+class MsgStreamReader extends TransformStream {
+  constructor() {
+    super({...transformContent, textencoder: new TextEncoder()});
+  }
+}
+
+class ProgressSend {
+  endPos = 0;
+  curPos = 0;
+  _callbacks = [];
+  updatePos(curPos, endPos = null) {
+    if (endPos !== null)
+      this.endPos = endPos;
+    this.curPos = curPos;
+
+    let percent = this.curPos / this.endPos;
+    percent = Math.min(Math.round(percent*100)/100, 1.0);
+    percent = isNaN(percent) ? 0 : percent;
+    for (let cb of this._callbacks)
+      cb(percent);
+  }
+  registerCallback(cb) {
+    this._callbacks.push(cb)
   }
 }
 
@@ -82,31 +115,31 @@ class SerialBase {
     }
     static IDError = 0xFF;
 
+    static progress = new ProgressSend();
+
     port = null;
-    _reader = null;
-    _writer = null;
     _encoder = null;
     _decoder = null;
     _msgQueue = [];
     _reqId = 0;
     _responseMsgs = [];
+    _onConnectCallbacks = [];
+    _onDisconnectCallbacks = [];
 
     constructor () {
         navigator.serial.addEventListener('connect', (e) => {
             this.port = e.target;
-            document.querySelectorAll(".connectBtn").forEach(btn=>{
-                btn.classList.add("connected");
-            });
+            this._reopenPort();
         });
 
         navigator.serial.addEventListener('disconnect', (e) => {
             if (e.target === this.port) {
                 this.port = null;
-                document.querySelectorAll(".connectBtn").forEach(btn=>{
-                    btn.classList.remove("connected");
-                });
+                for (let cb of this._onDisconnectCallbacks)
+                    cb();
             }
         });
+
         this._encoder = new TextEncoder();
         this._decoder = new TextDecoder();
     }
@@ -120,14 +153,15 @@ class SerialBase {
     static _readResponseHeader(byteArr) {
         // a bit in 8th pos means length occupies next byte too
         let nthByte = 0, len = 0;
-        while((chunk[nthByte++] & 0x80)) { // count how many bytes that are the length
-            if (byteArr.length === nthByte)
+        while((byteArr[nthByte] & 0x80)) { // count how many bytes that are the length
+            if (byteArr.length === ++nthByte)
              return -1; // not recieved all bytes yet
         }
 
         // set the length
         for (let i = 0; i < nthByte; ++i) {
-            len |= (byteArr[i] & 0x7F) << ((nthByte - 1) * 7);
+            let bits = (byteArr[i] & 0x7F);
+            len |= bits << ((nthByte -1 - i) * 7);
         }
 
         return {
@@ -139,22 +173,38 @@ class SerialBase {
         };
     }
 
+    onConnect(callback) {
+        this._onConnectCallbacks.push(callback);
+    }
+
+    onDisconnect(callback) {
+        this._onDisconnectCallbacks.push(callback);
+    }
+
+    async _reopenPort() {
+        try {
+            await this.port.open({baudRate: 115200});
+            this._writer = await this.port.writable.getWriter();
+            this._reader = await this.port.readable
+                                .pipeThrough(new MsgStreamReader())
+                                .getReader();
+        } catch(e) {
+            console.log("There was an error opening port: " + e);
+            return false;
+        };
+
+        // notify that we are connected (outside of try block)
+        for (let cb of this._onConnectCallbacks)
+            cb();
+        return true;
+    }
 
     async openPort() {
         const usbVendorId = 0x0483;
         try {
-          await navigator.serial.requestPort({ filters: [{ usbVendorId }]});
+          this.port = await navigator.serial.requestPort({ filters: [{ usbVendorId }]});
           // Connect to `port` or add it to the list of available ports.
-          this.port = port;
-          try {
-            await this.port.open({baudRate: 115200});
-            this._reader = port.readable.getReader();
-            this._writer = port.writable.getWriter();
-            this._reader.pipeThrough(new MsgStreamReader());
-            return true;
-          } catch(e) {
-              console.log("There was an error opening port: " + e);
-          };
+          return await this._reopenPort();
 
         } catch(e) {
           // The user didn't select a port.
@@ -173,22 +223,12 @@ class SerialBase {
         return false;
     }
 
-    /*
-    async writeStr(data) {
-      const dataArrayBuffer = this.encoder.encode(data);
-      return await this.write(dataArrayBuffer);
+    toInt(arrBuff) {
+        let res = 0;
+        for(let i = 0; i < arrBuff.length; ++i)
+            res |= arrBuff[i] << arrBuff.length -1 - i;
+        return res;
     }
-
-    async readStr() {
-      try {
-        const readerData = await this.read();
-        return this.decoder.decode(readerData.value);
-      } catch (err) {
-        const errorMessage = `error reading data: ${err}`;
-        console.error(errorMessage);
-        return errorMessage;
-      }
-    }*/
 
     /**
      * @brief Write to device on serial interface
@@ -197,18 +237,19 @@ class SerialBase {
      * @returns the request id associated with this write
      */
     async write({cmd, byteArr = null}) {
-        if (!this._writer || !this._writer.locked)
+        if (!this.port)
             if (!await this.openPort()) return;
         let data = new Uint8Array(byteArr ? byteArr.length + 3 : 3);
-        let i = 0;
+        let i = 0, id = this._getId();
         data[i++] = data.length;
         data[i++] = cmd;
-        data[i++] = this._getId();
+        data[i++] = id;
         for (let j = 0; i < data.length -3; ++i, ++j)
-           data[j] = byteArr[i];
+           data[i] = byteArr[j];
 
-        await this._writer.write(byteArr);
-        return data[2]; // id of this request
+        await this._writer.write(data);
+
+        return id; // id of this request
     }
 
     /**
@@ -219,16 +260,17 @@ class SerialBase {
      * @returns the found response matching param filters
      */
     async read({id = -1, cmd = -1, includeHeader = false}) {
-      if (!this._writer || !this._writer.locked)
-        if (!this.openPort()) return;
+      if (!this.port)
+        if (!await this.openPort()) return;
 
       // we might have this message in our cache
       let msgIdx = this._responseMsgs.findIndex(m=>((id===m[2] || id < 0) && (cmd === m[1] || cmd < 0)));
       if (msgIdx > -1) return this._responseMsgs.splice(msgIdx);
 
       // get from device
-      let exit = false;
+      let exit = false, msg;
       while(!exit) {
+
         const {value: msg, done: exit} = await this._reader.read();
         const header = SerialBase._readResponseHeader(msg);
         if (header.len > -1 &&
@@ -255,9 +297,9 @@ class Serial_v1 extends SerialBase {
      * @returns the complete message from device
      */
      async sendPing() {
-        let msg = new Uint8Array([3, SerialBase.Cmds.Ping, this._getId()]);
+        const cmd = SerialBase.Cmds.Ping;
         try {
-            let id = await this.write(msg);
+            let id = await this.write({cmd});
             return await this.read({id, cmd: SerialBase.Cmds.Pong, includeHeader: true});
         } catch(err) {
             console.log(err);
@@ -269,10 +311,10 @@ class Serial_v1 extends SerialBase {
      * @returns the version as responsed from device
      */
     async getVersion() {
-        let msg = new Uint8Array([3, SerialBase.Cmds.Version, this._getId()]);
+        const cmd = SerialBase.Cmds.Version;
         try {
-            let id = await this.write(msg);
-            return await this.read({id, cmd: SerialBase.Cmds.Version});
+            let id = await this.write({cmd});
+            return await this.read({id, cmd});
         } catch(err) {
             console.error(err);
         }
@@ -282,10 +324,10 @@ class Serial_v1 extends SerialBase {
      * @brief send a reset request to device
      */
     async sendReset() {
-        let msg = new Uint8Array([3, SerialBase.Cmds.Reset, this._getId()]);
+        const cmd = SerialBase.Cmds.Reset;
         try {
             // we don't expect any response here
-            await this.write(msg);
+            await this.write({cmd});
         } catch (err) {
             console.error(err);
         }
@@ -296,9 +338,9 @@ class Serial_v1 extends SerialBase {
      * @returns true/false depending on success
      */
     async setSettingsDefault() {
-        let msg = new Uint8Array([3, SerialBase.Cmds.SettingsSetAll, this._getId()]);
+        const cmd = SerialBase.Cmds.SettingsSetAll;
         try {
-            let id = await this.write(msg);
+            let id = await this.write({cmd});
             let resp = await this.read({id, includeHeader: true});
             return resp && SerialBase._readResponseHeader(resp).cmd === SerialBase.Cmds.OK;
         } catch(err) {
@@ -311,10 +353,10 @@ class Serial_v1 extends SerialBase {
      * @returns a Uint8Array with the device settings struct serialized
      */
     async getAllSettings() {
-        let msg = new Uint8Array([3, SerialBase.Cmds.SettingsGetAll, this._getId()]);
+        const cmd = SerialBase.Cmds.SettingsGetAll;
         try {
-            let id = await this.write(msg);
-            return await this.read({id, cmd: msg[1]});
+            let id = await this.write({cmd});
+            return await this.read({id, cmd});
         } catch (err) {
             console.error(err);
         }
@@ -326,12 +368,10 @@ class Serial_v1 extends SerialBase {
      * @returns true/false depending on success
      */
     async setAllSettings(byteArr) {
-        let msg = new Uint8Array([3 + byteArr.length, SerialBase.Cmds.SettingsSetAll, this._getId()]);
-        for (let i = 0, j = 3; i < byteArr.length; ++i, ++j)
-            msg[j] = byteArr[i];
+        const cmd = SerialBase.Cmds.SettingsSetAll;
 
         try {
-            let id = await this.write(msg);
+            let id = await this.write({byteArr, cmd});
             let resp = await this.read({id, includeHeader: true});
             return resp && SerialBase._readResponseHeader(resp).cmd === SerialBase.Cmds.OK;
 
@@ -345,10 +385,10 @@ class Serial_v1 extends SerialBase {
      * @returns the address in the EEPROM where next log is stored
      */
     async getLogNextAddr() {
-        let msg = new Uint8Array([3, SerialBase.Cmds.LogNextAddr, this._getId()]);
+        const cmd = SerialBase.Cmds.LogNextAddr;
         try {
-            let id = await this.write(msg);
-            return await this.read({id, cmd: msg[1]});
+            let id = await this.write({cmd});
+            return this.toInt(await this.read({id, cmd}));
         } catch (err) {
             console.error(err);
         }
@@ -359,9 +399,9 @@ class Serial_v1 extends SerialBase {
      * @returns true/false depending on success
      */
     async clearLogEntries() {
-        let msg = new Uint8Array([3, SerialBase.Cmds.LogClearAll, this._getId()]);
+        const cmd = SerialBase.Cmds.LogClearAll;
         try {
-            let id = await this.write(msg);
+            let id = await this.write({cmd});
             let resp = await this.read({id, includeHeader: true});
             return resp && SerialBase._readResponseHeader(resp).cmd === SerialBase.Cmds.OK;
         } catch(err) {
@@ -374,11 +414,11 @@ class Serial_v1 extends SerialBase {
      * @returns the complete log
      */
     async readLog() {
-        let msg = new Uint8Array([3, SerialBase.Cmds.LogGetAll, this._getId()]);
+        const cmd = SerialBase.Cmds.LogGetAll;
         try {
-            let id = await this.write(msg);
-            return await this.read({id, cmd: msg[1]});
-
+            let id = await this.write({cmd});
+            let res = await this.read({id, cmd});
+            return res;
         } catch (err) {
             console.error(err.message);
             console.log(err.data);

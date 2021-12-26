@@ -195,17 +195,14 @@ msg_t settingsSave(void) {
 }
 
 void settingsGetAll(uint8_t obuf[], CommsCmd_t *cmd,
-                    const size_t bufSz, systime_t sendTimeout)
+                    const size_t bufSz)
 {
-  obuf[0] = 3 + sizeof(settings);
-  obuf[1] = cmd->type;
-  obuf[2] = cmd->reqId;
+  sendHeader(cmd->type, sizeof(settings));
 
   osalDbgAssert(obuf[0] <= bufSz, "buffer bounds overflow");
 
-  for (size_t i = 0; i < sizeof(settings); ++i) {
-    obuf[i + 3] = ((uint8_t *)&settings)[i];
-  }
+  for (size_t i = 0; i < sizeof(settings); ++i)
+    obuf[i] = ((uint8_t *)&settings)[i];
 
-  obqWriteTimeout(&SDU1.obqueue, obuf, 3 + sizeof(settings), sendTimeout);
+  sendPayload(sizeof(settings));
 }

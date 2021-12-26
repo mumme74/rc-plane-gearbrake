@@ -18,7 +18,7 @@ document.addEventListener('DOMContentLoaded', () =>{
         popup: "w3-bar-item w3-button w3-padding-large w3-white"
     };
 
-    let menuItems = [
+    const menuItems = [
         {action: toggleMenu, txt: {en: '☰', sv: '☰'}, cls: classes.menubtn},
         {txt: {en: "Home", sv: "Hem"}, cls: classes.home, hash: ""},
         {txt: {en: "Configure", sv: "Konfigurera"}, hash: "conf"},
@@ -63,6 +63,19 @@ document.addEventListener('DOMContentLoaded', () =>{
     menuItems.forEach(itm => {
         itm.cls = classes.popup;
         buildLink(itm, navPopup);
+    });
+
+    let progress = document.createElement("progress");
+    progress.value = 0;
+    menuBar.appendChild(progress);
+    SerialBase.progress.registerCallback((value)=>{
+      progress.value = value;
+    });
+    SerialBase.instance().onConnect(()=>{
+        document.querySelector(".connectBtn").classList.add("connected");
+    });
+    SerialBase.instance().onDisconnect(()=>{
+        document.querySelector(".connectBtn").classList.remove("connected");
     });
 });
 

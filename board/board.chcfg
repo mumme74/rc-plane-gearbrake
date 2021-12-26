@@ -672,16 +672,16 @@
     <GPIOF>
       <pin0
         ID="I2C_SDA"
-        Type="PushPull"
-        Speed="Minimum"
-        Resistor="Floating"
+        Type="OpenDrain"
+        Speed="High"
+        Resistor="PullUp"
         Level="High"
         Mode="Alternate"
         Alternate="1" />
       <pin1
         ID="I2C_SCL"
         Type="PushPull"
-        Speed="Minimum"
+        Speed="High"
         Resistor="Floating"
         Level="High"
         Mode="Alternate"

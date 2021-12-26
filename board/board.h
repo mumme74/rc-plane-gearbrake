@@ -843,7 +843,7 @@
                                      PIN_MODE_INPUT(GPIOF_PIN13) |          \
                                      PIN_MODE_INPUT(GPIOF_PIN14) |          \
                                      PIN_MODE_INPUT(GPIOF_PIN15))
-#define VAL_GPIOF_OTYPER            (PIN_OTYPE_PUSHPULL(GPIOF_I2C_SDA) |    \
+#define VAL_GPIOF_OTYPER            (PIN_OTYPE_OPENDRAIN(GPIOF_I2C_SDA) |    \
                                      PIN_OTYPE_PUSHPULL(GPIOF_I2C_SCL) |    \
                                      PIN_OTYPE_PUSHPULL(GPIOF_PIN2) |       \
                                      PIN_OTYPE_PUSHPULL(GPIOF_PIN3) |       \
@@ -859,8 +859,8 @@
                                      PIN_OTYPE_PUSHPULL(GPIOF_PIN13) |      \
                                      PIN_OTYPE_PUSHPULL(GPIOF_PIN14) |      \
                                      PIN_OTYPE_PUSHPULL(GPIOF_PIN15))
-#define VAL_GPIOF_OSPEEDR           (PIN_OSPEED_VERYLOW(GPIOF_I2C_SDA) |    \
-                                     PIN_OSPEED_VERYLOW(GPIOF_I2C_SCL) |    \
+#define VAL_GPIOF_OSPEEDR           (PIN_OSPEED_HIGH(GPIOF_I2C_SDA) |    \
+                                     PIN_OSPEED_HIGH(GPIOF_I2C_SCL) |    \
                                      PIN_OSPEED_VERYLOW(GPIOF_PIN2) |       \
                                      PIN_OSPEED_VERYLOW(GPIOF_PIN3) |       \
                                      PIN_OSPEED_VERYLOW(GPIOF_PIN4) |       \
@@ -875,8 +875,8 @@
                                      PIN_OSPEED_VERYLOW(GPIOF_PIN13) |      \
                                      PIN_OSPEED_VERYLOW(GPIOF_PIN14) |      \
                                      PIN_OSPEED_VERYLOW(GPIOF_PIN15))
-#define VAL_GPIOF_PUPDR             (PIN_PUPDR_FLOATING(GPIOF_I2C_SDA) |    \
-                                     PIN_PUPDR_FLOATING(GPIOF_I2C_SCL) |    \
+#define VAL_GPIOF_PUPDR             (PIN_PUPDR_PULLUP(GPIOF_I2C_SDA) |    \
+                                     PIN_PUPDR_PULLUP(GPIOF_I2C_SCL) |    \
                                      PIN_PUPDR_PULLUP(GPIOF_PIN2) |         \
                                      PIN_PUPDR_PULLUP(GPIOF_PIN3) |         \
                                      PIN_PUPDR_PULLUP(GPIOF_PIN4) |         \

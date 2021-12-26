@@ -61,7 +61,7 @@ class ViewLogCls {
     console.log("Fetch log from device");
     let startAddr = await SerialBase.instance().getLogNextAddr();
     let log = await SerialBase.instance().readLog();
-    if (isNaN(startAddr) || (!Array.isArray(log) || !(log instanceof Uint8Array)))
+    if (isNaN(startAddr) || (!Array.isArray(log) && !(log instanceof Uint8Array)))
       return;
 
     const logRoot = LogRoot.instance();

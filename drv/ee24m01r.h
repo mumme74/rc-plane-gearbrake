@@ -12,9 +12,11 @@
 
 // driver for EEPROM 1Mbit 24M01R
 
-#define EE24M01R_12C_ADDR_BASE              0x50U
-#define EE24M01R_I2C_DEV_SEL(devid)            ((devid & 0x03U) << 1)
-#define EE24M01R_I2C_DEV_SEL_ID_PAGE(devid)    ((devid & 0x03U) << 1)
+#define EE24M01R_12C_ADDR_BASE              0x50U // this is 7bit based, Rd/Wr bit set automatically by chibios
+#define EE24M01R_I2C_DEV_SEL(devid)           (EE24M01R_12C_ADDR_BASE | \
+                                                 ((devid & 0x03U) << 1))
+#define EE24M01R_I2C_DEV_SEL_ID_PAGE(devid)   (EE24M01R_12C_ADDR_BASE | \
+                                                 ((devid & 0x03U) << 1))
 
 #define EE24M01R_I2C_LOW_BANK(devid)        EE24M01R_12C_ADDR_BASE \
                                              | EE24M01R_I2C_DEV_SEL(devid)

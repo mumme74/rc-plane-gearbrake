@@ -123,6 +123,6 @@ void settingsDefault(void);
 msg_t settingsSave(void);
 
 void settingsGetAll(uint8_t obuf[], CommsCmd_t *cmd,
-                    const size_t bufSz, systime_t sendTimeout);
+                    const size_t bufSz);
 
 #endif /* SETTINGS_H_ */

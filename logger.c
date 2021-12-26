@@ -116,7 +116,7 @@ THD_FUNCTION(LoggerThd, arg) {
   (void)arg;
 
   // read start pos of low address
-  msg_t res = ee24m01r_read(&log_ee, LOG_NEXT_OFFSET,
+  msg_t res = ee24m01r_read(&log_ee, EEPROM_LOG_NEXT_ADDR_LOC,
                             (uint8_t*)&offsetNext, sizeof(offsetNext));
   if (res != MSG_OK) {
     chThdExit(res);
@@ -145,7 +145,7 @@ THD_FUNCTION(LoggerThd, arg) {
     buildLog();
 
     // at end, flip around
-    if (offsetNext >= LOG_NEXT_OFFSET)
+    if (offsetNext >= EEPROM_LOG_NEXT_ADDR_LOC)
       offsetNext = 0;
     // store it
     res = ee24m01r_write(&log_ee, offsetNext, (uint8_t*)&log, log.size);
@@ -155,7 +155,7 @@ THD_FUNCTION(LoggerThd, arg) {
     }
 
     // update nextOffset in memory
-    res = ee24m01r_write(&log_ee, LOG_NEXT_OFFSET,
+    res = ee24m01r_write(&log_ee, EEPROM_LOG_NEXT_ADDR_LOC,
                          (uint8_t*)&offsetNext, sizeof(offsetNext));
     if (res != MSG_OK) {
       chThdExit(res);
@@ -191,7 +191,9 @@ void loggerSettingsChanged(void) {
 }
 
 void loggerClearAll(uint8_t obuf[], const size_t bufSz) {
-  chThdSuspendTimeoutS(&logthdp, TIME_INFINITE);
+  //chThdSuspendTimeoutS(&logthdp, TIME_INFINITE);
+  logTimeout =  TIME_MS2I(TIME_INFINITE); // when USB is attached we stop logging
+
   size_t offset = 0;
   for(size_t i = 0; i < bufSz; ++i)
     obuf[i] = 0xFF;
@@ -203,57 +205,51 @@ void loggerClearAll(uint8_t obuf[], const size_t bufSz) {
     offset += bufSz;
   } while(offset < EEPROM_LOG_SIZE);
 
-  chThdResume(&logthdp, MSG_OK);
+  //chThdResume(&logthdp, MSG_OK);
+  logTimeout =  TIME_MS2I(settings.logPeriodicity);
+
 }
 
-void loggerReadAll(uint8_t obuf[], CommsCmd_t *cmd,
-                   const size_t bufSz, systime_t sendTimeout)
+void loggerReadAll(uint8_t txbuf[], CommsCmd_t *cmd,
+                   const size_t bufSz)
 {
-  chThdSuspendTimeoutS(&logthdp, TIME_INFINITE);
+  //chThdSuspendTimeoutS(&logthdp, TIME_INFINITE);
+  logTimeout =  TIME_MS2I(TIME_INFINITE); // when USB is attached we stop logging
   size_t offset = 0;
 
   // send header build up size bytes...
-  static const uint32_t logSize = EEPROM_LOG_SIZE + 3u; // +3 to include header
-  uint8_t pos = 0;
-  for (uint32_t i = 5u; i < 0xFFFFFFFFu; --i) {
-    uint8_t vlu = (logSize & (0xFFu << i * 7u)) >> i*7u;
-    if (vlu != 0u || pos > 0) {
-      obuf[pos++] = 0x80u | vlu; // store Big end first
-    }
+  if (sendHeader(cmd->type, EEPROM_LOG_SIZE) > 0) {
+
+    do {
+      // -4 due to last 4 bytes is logNextAddr
+      size_t len = offset + bufSz < EEPROM_LOG_SIZE ?
+                     bufSz : EEPROM_LOG_SIZE - offset;
+      // read page into buffer
+      int status = ee24m01r_read(&log_ee, offset, txbuf, len);
+      if (status != MSG_OK) {
+        break;
+      }
+      // send buffer to host
+      if (sendPayload(len) < len)
+        break;
+      offset += bufSz;
+    } while(offset < EEPROM_LOG_SIZE);
+
   }
-  // set type and reqId and send header to host
-  obuf[pos++] = cmd->type;
-  obuf[pos++] = cmd->reqId;
-  if (obqWriteTimeout(&SDU1.obqueue, obuf, pos, sendTimeout) < pos)
-    return;
 
-  do {
-    // -4 due to last 4 bytes is logNextAddr
-    size_t len = offset + bufSz < EEPROM_LOG_SIZE - 4 ?
-                   bufSz : EEPROM_LOG_SIZE - offset - 4;
-    // read page into buffer
-    ee24m01r_read(&log_ee, offset, obuf, len);
-    // send buffer to host
-    if (obqWriteTimeout(&SDU1.obqueue, obuf, len, sendTimeout) < len)
-      break;
-    offset += bufSz;
-  } while(offset < EEPROM_LOG_SIZE -4);
-
-  chThdResume(&logthdp, MSG_OK);
+  //chThdResume(&logthdp, MSG_OK);
+  logTimeout =  TIME_MS2I(settings.logPeriodicity);
 }
 
-void loggerNextAddr(uint8_t obuf[], CommsCmd_t *cmd, systime_t sendTimeout)
+void loggerNextAddr(uint8_t txbuf[], CommsCmd_t *cmd)
 {
-  obuf[0] = 3 + sizeof(offsetNext);
-  obuf[1] = cmd->type;
-  obuf[2] = cmd->reqId;
-  // little endian should be default for cortex ?
-  obuf[3] = offsetNext & 0xFF;
-  obuf[4] = (offsetNext & 0xFF00) >> 8;
-  obuf[5] = (offsetNext & 0xFF0000) >> 16;
-  obuf[6] = (offsetNext & 0xFF000000) >> 24;
-
-  obqWriteTimeout(&SDU1.obqueue, obuf, 7, sendTimeout);
+  sendHeader(cmd->type, sizeof(offsetNext));
+  // big endian
+  txbuf[3] = offsetNext & 0xFF;
+  txbuf[2] = (offsetNext & 0xFF00) >> 8;
+  txbuf[1] = (offsetNext & 0xFF0000) >> 16;
+  txbuf[0] = (offsetNext & 0xFF000000) >> 24;
+  sendPayload(4);
 }
 
 

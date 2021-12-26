@@ -47,7 +47,7 @@ int main(void) {
   inputsInit();
   loggerInit();
   brakeLogicInit();
-  accelInit();
+  //accelInit();
   commsInit();
   // done last of the initializations as main(void) now becomes idle thread
   chSysInit();
@@ -59,14 +59,13 @@ int main(void) {
   brakeLogicStart();
   commsStart();
 
-
-  volatile uint32_t mk = 0;
   /* This is now the idle thread loop, you may perform here a low priority
      task but you must never try to sleep or wait in this loop. Note that
      this tasks runs at the lowest priority level so any instruction added
      here will be executed after all other tasks have been started.*/
+  volatile uint32_t idleCnt = 0;
   while (1) {
-    ++mk;
+    ++idleCnt;
   }
 
   return 0;
