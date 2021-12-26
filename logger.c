@@ -39,7 +39,7 @@
 
 // ---------------------------------------------------------------
 // private stuff for this file
-static systime_t logTimeout = 0;
+static systime_t logTimeout = 20;
 
 static LogBuf_t log;
 static LogItem_t itm;
@@ -61,6 +61,13 @@ void logItem(uint8_t *pos[], uint32_t *thing, size_t sz,
   ++(*cnt);
 
 }*/
+
+static systime_t logPeriodicityMS() {
+  uint16_t factor = 2;
+  for(uint8_t i = 0; i < settings.logPeriodicity; ++i)
+    factor *= 2;
+  return TIME_MS2I(10 * factor);
+}
 
 static void buildLog(void) {
   uint8_t *pos = ((uint8_t*)&log)+2;
@@ -136,9 +143,10 @@ THD_FUNCTION(LoggerThd, arg) {
   }
   offsetNext += log.size;
 
+
   // start thread loop
   while (true) {
-    chThdSleepMilliseconds(logTimeout);
+    chThdSleep(logTimeout);
     if (serusbcfg.usbp->state == USB_ACTIVE)
       continue; // don't log when USB is plugged in
 
@@ -154,12 +162,20 @@ THD_FUNCTION(LoggerThd, arg) {
       return;
     }
 
-    // update nextOffset in memory
-    res = ee24m01r_write(&log_ee, EEPROM_LOG_NEXT_ADDR_LOC,
-                         (uint8_t*)&offsetNext, sizeof(offsetNext));
-    if (res != MSG_OK) {
-      chThdExit(res);
-      return;
+    // don't wear ot EEPROM, only save the nextadresspointer each 5s.
+    static systime_t nextWrite = 0, curTime;
+    chSysLock();
+    curTime = chVTGetSystemTimeX();
+    chSysUnlock();
+    if (nextWrite < curTime) {
+      nextWrite = curTime + TIME_MS2I(5000);
+      // update nextOffset in memory
+      res = ee24m01r_write(&log_ee, EEPROM_LOG_NEXT_ADDR_LOC,
+                           (uint8_t*)&offsetNext, sizeof(offsetNext));
+      if (res != MSG_OK) {
+        chThdExit(res);
+        return;
+      }
     }
   }
 }
@@ -179,7 +195,7 @@ static thread_descriptor_t loggerThdDesc = {
 thread_t *logthdp = 0;
 
 void loggerInit(void) {
-  logTimeout =  TIME_MS2I(settings.logPeriodicity);
+  logTimeout = logPeriodicityMS();
 }
 
 void loggerStart(void) {
@@ -187,12 +203,12 @@ void loggerStart(void) {
 }
 
 void loggerSettingsChanged(void) {
-  logTimeout =  TIME_MS2I(settings.logPeriodicity);
+  logTimeout = logPeriodicityMS();
 }
 
 void loggerClearAll(uint8_t obuf[], const size_t bufSz) {
   //chThdSuspendTimeoutS(&logthdp, TIME_INFINITE);
-  logTimeout =  TIME_MS2I(TIME_INFINITE); // when USB is attached we stop logging
+  logTimeout = logPeriodicityMS(); // when USB is attached we stop logging
 
   size_t offset = 0;
   for(size_t i = 0; i < bufSz; ++i)
@@ -206,8 +222,7 @@ void loggerClearAll(uint8_t obuf[], const size_t bufSz) {
   } while(offset < EEPROM_LOG_SIZE);
 
   //chThdResume(&logthdp, MSG_OK);
-  logTimeout =  TIME_MS2I(settings.logPeriodicity);
-
+  logTimeout = logPeriodicityMS();
 }
 
 void loggerReadAll(uint8_t txbuf[], CommsCmd_t *cmd,
@@ -238,7 +253,7 @@ void loggerReadAll(uint8_t txbuf[], CommsCmd_t *cmd,
   }
 
   //chThdResume(&logthdp, MSG_OK);
-  logTimeout =  TIME_MS2I(settings.logPeriodicity);
+  logTimeout = logPeriodicityMS();
 }
 
 void loggerNextAddr(uint8_t txbuf[], CommsCmd_t *cmd)
