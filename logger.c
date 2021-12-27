@@ -62,7 +62,7 @@ void logItem(uint8_t *pos[], uint32_t *thing, size_t sz,
 
 }*/
 
-static systime_t logPeriodicityMS() {
+static systime_t logPeriodicityMS(void) {
   uint16_t factor = 2;
   for(uint8_t i = 0; i < settings.logPeriodicity; ++i)
     factor *= 2;
