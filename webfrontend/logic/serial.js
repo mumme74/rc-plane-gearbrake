@@ -279,6 +279,7 @@ class SerialBase {
             (id === -1 || id === header.id) &&
             (cmd === -1 || cmd === header.cmd))
         {
+            console.log("rcv cmd", cmd, "data", msg)
             return includeHeader ? msg : msg.subarray(header.payloadStart);
         }
         this._responseMsgs.push(msg);
@@ -374,7 +375,7 @@ class Serial_v1 extends SerialBase {
 
         try {
             let id = await this.write({byteArr, cmd});
-            let resp = await this.read({id, includeHeader: true});
+            let resp = await this.read({id, cmd, includeHeader: true});
             return resp && SerialBase._readResponseHeader(resp).cmd === SerialBase.Cmds.OK;
 
         } catch (err) {
