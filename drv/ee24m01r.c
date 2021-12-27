@@ -168,8 +168,8 @@ msg_t ee24m01r_write(ee24partition_t *eep,
 
   // write to memory
   status = i2cMasterTransmitTimeout(eep->i2cp, sad,
-                                    bufp, _len, 0, 0,
-                                    calc_timeout(_len) +
+                                    bufp, _len+2, NULL, 0,
+                                    calc_timeout(_len+2) +
                                     TIME_MS2I(EE24M01R_WRITE_TIME));
 
 
@@ -178,6 +178,10 @@ msg_t ee24m01r_write(ee24partition_t *eep,
 #if I2C_USE_MUTUAL_EXCLUSION
   i2cReleaseBus(eep->i2cp);
 #endif
+
+
+  // wait for eeprom to finish writing data
+  chThdSleep(TIME_MS2I(EE24M01R_WRITE_TIME));
 
   return status;
 }
