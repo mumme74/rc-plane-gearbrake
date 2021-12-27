@@ -85,12 +85,12 @@ const appSettingsHtmlObj = {
       await appSettingsHtmlObj._dfuUtil[connected ? "disconnect" : "connect"]();
 
     },
-    html: (lang) => {
+    html: (parentNode, lang) => {
       let lngOptions = Object.keys(appSettingsHtmlObj.lang).map(lng=>{
         const selected = (lng === lang) ?  "selected" : "";
         return `<option value="${lng}" ${selected}>${lng}</option>`
       });
-      return `
+      parentNode.innerHTML = `
       <div class="w3-row-padding w3-padding-64 w3-container">
         <div class="w3-content">
           <div class="w3-twothird">

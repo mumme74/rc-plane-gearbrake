@@ -15,13 +15,13 @@ const welcomeHtmlObj = {
             btn: "Börja nu!",
         },
     },
-    html: (lang) => {
-        return `
-    <header class="w3-container w3-red w3-center" id="introInfo" style="padding:128px 16px">
-      <h1 class="w3-margin w3-jumbo">RC-plane gearbrake</h1>
-      <p class="w3-xlarge">${welcomeHtmlObj.lang[lang].header}</p>
-      <p>${welcomeHtmlObj.lang[lang].p1}</p>
-      <button class="w3-button w3-black w3-padding-large w3-large w3-margin-top" onclick="location.hash='conf'">${welcomeHtmlObj.lang[lang].btn}</button>
-    </header>`
+    html: (parentNode, lang) => {
+        parentNode.innerHTML = `
+            <header class="w3-container w3-red w3-center" id="introInfo" style="padding:128px 16px">
+            <h1 class="w3-margin w3-jumbo">RC-plane gearbrake</h1>
+            <p class="w3-xlarge">${welcomeHtmlObj.lang[lang].header}</p>
+            <p>${welcomeHtmlObj.lang[lang].p1}</p>
+            <button class="w3-button w3-black w3-padding-large w3-large w3-margin-top" onclick="location.hash='conf'">${welcomeHtmlObj.lang[lang].btn}</button>
+            </header>`;
     }
 };

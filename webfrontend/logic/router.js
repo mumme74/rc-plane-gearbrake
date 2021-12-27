@@ -21,7 +21,7 @@ function routeMainContent() {
         htmlFunctor = welcomeHtmlObj.html;
     }
 
-    document.getElementById("content").innerHTML = htmlFunctor(lang);
+    htmlFunctor(document.getElementById("content"), lang);
 }
 
 document.addEventListener('DOMContentLoaded', routeMainContent);
