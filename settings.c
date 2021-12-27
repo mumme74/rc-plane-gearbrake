@@ -25,40 +25,12 @@
 
 // private stuff to this module
 static thread_t *settingsp = 0;
-
-/**
- * @brief ensures values are within allowed window (before save)
- */
-static void validateValues(void) {
-  if (settings.lower_threshold > 100)
-    settings.lower_threshold = 100;
-  if (settings.upper_threshold > 100)
-    settings.upper_threshold = 100;
-  if (settings.max_brake_force > 100)
-    settings.max_brake_force = 100;
-  if (settings.ws_steering_brake_authority > 100)
-    settings.ws_steering_brake_authority = 25;
-  if (settings.acc_steering_brake_authority > 100)
-    settings.acc_steering_brake_authority = 20;
-  if (settings.PwmFreq > freqHighest)
-    settings.PwmFreq = freq10Hz;
-  if (settings.Brake0_dir > 2)
-    settings.Brake0_dir = 0;
-  if (settings.Brake1_dir > 2)
-    settings.Brake2_dir = 0;
-  if (settings.Brake2_dir > 2)
-    settings.Brake2_dir = 0;
-  if (settings.accelerometer_axis > 2) {
-    // error, turn off
-    settings.accelerometer_axis = 0;
-    settings.accelerometer_active = 0;
-  }
-}
+thread_reference_t saveThdRef;
 
 /**
  * @brief notify other modules about the changes
  */
-void notify(void) {
+static void notify(void) {
   pwmoutSettingsChanged();
   //accelSettingsChanged();
   inputsSettingsChanged();
@@ -73,26 +45,29 @@ void notify(void) {
 static msg_t settingsLoad(void) {
   uint8_t *buf = (uint8_t*)&settings;
   const size_t hdrSz = sizeof(Settings_header_t);
+  Settings_header_t header;
 
-  msg_t res = ee24m01r_read(&settings_ee, 0, buf, hdrSz);
-  if (res != MSG_OK) return res;
+  msg_t res;
+  do {
+    res = ee24m01r_read(&settings_ee, 0, (uint8_t*)&header, hdrSz);
 
-   // ensure header version match with STORAGE_VERSION
-  // if not bail out
-  if (settings.header.size != SETTINGS_SIZE ||
-      settings.header.storageVersion != STORAGE_VERSION)
-  {
-    return MSG_RESET;
-  }
+    if (res != MSG_OK) break;
 
-  res = ee24m01r_read(&settings_ee, hdrSz, buf+hdrSz,
-                      sizeof(settings) - hdrSz );
-  if (res != MSG_OK) return res;
+     // ensure header version match with STORAGE_VERSION
+    // if not bail out
+    if (!settingsValidateHeader(header)) {
+      res = MSG_RESET;
+      break;
+    }
+
+    res = ee24m01r_read(&settings_ee, hdrSz, buf+hdrSz,
+                        sizeof(settings) - hdrSz );
+  } while(false);
 
 
   // notify subscribers that settings has loaded
   notify();
-  return MSG_OK;
+  return res;
 }
 
 static THD_WORKING_AREA(waSettingsThd, 128);
@@ -100,19 +75,17 @@ static THD_FUNCTION(SettingsThd, arg) {
   (void)arg;
 
   // load values from EEPROM
-  bool loopCnt = MSG_OK == settingsLoad();
+  settingsLoad();
 
-  while(loopCnt) {
-    thread_t *tp = chMsgWait();
+  while(true) {
+    chThdSuspendTimeoutS(&saveThdRef, TIME_INFINITE);
 
-    // save values to EEPROM
-    validateValues();
+    // save values to EEPROM when we wakeup
+    settingsValidateValues();
     const uint8_t *buf = (uint8_t*)&settings;
-    msg_t res = ee24m01r_write(&settings_ee, 0, buf, sizeof(settings));
-    if (res == MSG_OK)
-      notify();
-
-    chMsgRelease(tp, res);
+    ee24m01r_write(&settings_ee, 0, buf, sizeof(settings));
+    //if (res == MSG_OK)
+      //notify();
   }
 }
 
@@ -190,8 +163,9 @@ void settingsDefault(void) {
   settings.accelerometer_axis_invert = 0;
 }
 
-msg_t settingsSave(void) {
-  return chMsgSend(settingsp, MSG_OK);
+void settingsSave(void) {
+  if (saveThdRef)
+    chThdResume(&saveThdRef, MSG_OK);
 }
 
 void settingsGetAll(uint8_t obuf[], CommsCmd_t *cmd,
@@ -201,8 +175,47 @@ void settingsGetAll(uint8_t obuf[], CommsCmd_t *cmd,
 
   osalDbgAssert(obuf[0] <= bufSz, "buffer bounds overflow");
 
-  for (size_t i = 0; i < sizeof(settings); ++i)
+  obuf[0] = (settings.header.storageVersion & 0xFF00) >> 8;
+  obuf[1] = (settings.header.storageVersion & 0xFF);
+  obuf[2] = (settings.header.size & 0xFF00) >> 8;
+  obuf[3] = (settings.header.size & 0xFF);
+
+  for (size_t i = 4; i < sizeof(settings); ++i)
     obuf[i] = ((uint8_t *)&settings)[i];
 
   sendPayload(sizeof(settings));
+}
+
+bool settingsValidateHeader(Settings_header_t header) {
+  return header.size == SETTINGS_SIZE &&
+         header.storageVersion == STORAGE_VERSION;
+}
+
+/**
+ * @brief ensures values are within allowed window (before save)
+ */
+void settingsValidateValues(void) {
+  if (settings.lower_threshold > 100)
+    settings.lower_threshold = 100;
+  if (settings.upper_threshold > 100)
+    settings.upper_threshold = 100;
+  if (settings.max_brake_force > 100)
+    settings.max_brake_force = 100;
+  if (settings.ws_steering_brake_authority > 100)
+    settings.ws_steering_brake_authority = 25;
+  if (settings.acc_steering_brake_authority > 100)
+    settings.acc_steering_brake_authority = 20;
+  if (settings.PwmFreq > freqHighest)
+    settings.PwmFreq = freq10Hz;
+  if (settings.Brake0_dir > 2)
+    settings.Brake0_dir = 0;
+  if (settings.Brake1_dir > 2)
+    settings.Brake2_dir = 0;
+  if (settings.Brake2_dir > 2)
+    settings.Brake2_dir = 0;
+  if (settings.accelerometer_axis > 2) {
+    // error, turn off
+    settings.accelerometer_axis = 0;
+    settings.accelerometer_active = 0;
+  }
 }

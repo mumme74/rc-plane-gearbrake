@@ -85,7 +85,7 @@ const configureHtmlObj = {
     try {
       const byteArr = DeviceConfigBase.instance().serialize();
       console.log(byteArr)
-      const res = SerialBase.instance().setAllSettings(byteArr);
+      const res = SerialBase.instance().saveAllSettings(byteArr);
       if (!res) throw "Could not save settings to device";
     } catch (err) {
       console.error(err);
@@ -377,7 +377,7 @@ const configureHtmlObj = {
           curSettings: "Inställningar:"
       },
   },
-  html: (lang) => {
+  html: (parentNode, lang) => {
     function renderFormItem(frmItem) {
       if (frmItem.children) {
         // its a form group
@@ -408,7 +408,7 @@ const configureHtmlObj = {
       }
     }
 
-    return `
+    parentNode.innerHTML = `
       <div class="w3-row-padding w3-padding-64 w3-container">
       <div class="w3-content">
         <div class="w3-twothird">
@@ -420,11 +420,11 @@ const configureHtmlObj = {
           <button class="w3-button w3-blue w3-padding-large w3-large w3-margin-top" onclick="configureHtmlObj.pushSettings()">
             ${configureHtmlObj.lang[lang].pushConfigureBtn}
           </button>
-          <button class="w3-button w3-gray w3-padding-large w3-large w3-margin-top" onclick="configureHtmlObj.saveSettingsToFile()">
-            ${configureHtmlObj.lang[lang].saveConfigureToFileBtn}
-          </button>
           <button class="w3-button w3-gray w3-padding-large w3-large w3-margin-top" onclick="configureHtmlObj.openSettingsFromFile()">
             ${configureHtmlObj.lang[lang].openConfigureFromFileBtn}
+          </button>
+          <button class="w3-button w3-gray w3-padding-large w3-large w3-margin-top" onclick="configureHtmlObj.saveSettingsToFile()">
+            ${configureHtmlObj.lang[lang].saveConfigureToFileBtn}
           </button>
           <h5 class="w3-padding-8">${configureHtmlObj.lang[lang].curSettings}</h5>
           <form id="config">

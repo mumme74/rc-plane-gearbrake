@@ -118,11 +118,17 @@ void settingsDefault(void);
 
 /**
  * @brief save settings into EEPROM memory
- *  also notifies recievers that settings has changed
  */
-msg_t settingsSave(void);
+void settingsSave(void);
 
 void settingsGetAll(uint8_t obuf[], CommsCmd_t *cmd,
                     const size_t bufSz);
+
+bool settingsValidateHeader(Settings_header_t header);
+
+/**
+ * @brief ensures values are within allowed window (before save)
+ */
+void settingsValidateValues(void);
 
 #endif /* SETTINGS_H_ */

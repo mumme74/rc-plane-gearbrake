@@ -18,13 +18,13 @@ typedef enum {
   commsCmd_Pong = 0x02u,
   commsCmd_Reset = 0x03u,
   commsCmd_SettingsSetDefault = 0x07u,
-  commsCmd_SettingsSetAll = 0x08u,
+  commsCmd_SettingsSaveAll = 0x08u,
   commsCmd_SettingsGetAll  = 0x09u,
   commsCmd_LogGetAll = 0x10u,
   commsCmd_LogNextAddr = 0x11u,
   commsCmd_LogClearAll = 0x12u,
   commsCmd_version = 0x20u,
-  commsCmd_OK = 0xFF,
+  commsCmd_OK = 0x7F,
 } CommsCmdType_e;
 
 typedef struct {

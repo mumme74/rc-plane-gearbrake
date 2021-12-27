@@ -89,9 +89,12 @@ class DeviceConfigBase {
     if (version > DeviceConfigBase.DeviceConfigVersions.length)
       throw new Error("Can't deserialize, device has a unsupported config version:" + version);
 
-    const inst = DeviceConfigBase.DeviceConfigVersions.find(v=>v.header.storageVersion===version);
-    if (!inst) throw new Error(`Can't deserialize version ${version}, not supported`);
-    let instance = new inst();
+    const cls = DeviceConfigBase.DeviceConfigVersions.find(v=>{
+      if ((new v()).header.storageVersion===version)
+        return v;
+    });
+    if (!cls) throw new Error(`Can't deserialize version ${version}, not supported`);
+    let instance = new cls();
     // read header
     instance.header.storageVersion = version;
     instance.header.size = (byteArr[2] << 8) | byteArr[3];
@@ -103,7 +106,7 @@ class DeviceConfigBase {
 }
 
 class DeviceConfig_v1 extends DeviceConfigBase {
-  static header = {
+  header = {
     storageVersion: 0x01,
     size: 16 - 4
   }

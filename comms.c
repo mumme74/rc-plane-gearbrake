@@ -36,7 +36,6 @@ static void readSettings(void) {
   // -3 due to header bytes
   const size_t sz = cmd.size -3;
 
-  static uint8_t *pbuf = obuf;
   static size_t nRead = 0;
   static systime_t tmo;
   tmo = chVTGetSystemTimeX() + TIME_MS2I(100);
@@ -44,28 +43,37 @@ static void readSettings(void) {
   // first read in all settings from serial buffer
   while (serusbcfg.usbp->state == USB_ACTIVE &&
          chVTGetSystemTimeX() < tmo &&
-         pbuf < obuf + sz)
+         nRead < sz)
   {
-    nRead = ibqReadTimeout(&SDU1.ibqueue, pbuf, sz, TIME_US2I(750));
-    pbuf += nRead;
+    nRead += ibqReadTimeout(&SDU1.ibqueue, obuf + nRead, sz - nRead, TIME_US2I(750));
   }
 
-  if (sz != (size_t)(pbuf - obuf)) {
+  CommsCmdType_e res = commsCmd_Error;
+  do {
     // incomplete or mismatched
-    sendHeader(commsCmd_Error, 0);
-    return;
-  }
+    if (sz != nRead) break;
 
-  // set settings
-  uint8_t *setMem = (uint8_t*)&settings;
-  for (size_t i = 0; i < sz; ++i)
-    setMem[i] = obuf[i];
+    Settings_header_t header;
+    header.storageVersion = obuf[0] << 8 | obuf[1];
+    header.size = obuf[2] << 8 | obuf[3];
 
-  // save settings
-  if (settingsSave() == MSG_OK)
-    sendHeader(commsCmd_OK, 0);
-  else
-    sendHeader(commsCmd_Error, 0);
+    if (!settingsValidateHeader(header)) break;
+
+    // set settings
+    for (size_t i = 4; i < sz; ++i)
+      ((uint8_t*)&settings)[i] = obuf[i];
+
+    settingsValidateValues();
+
+    // save settings
+    settingsSave();
+
+    // all ok
+    res = commsCmd_OK;
+
+  } while(false);
+
+  sendHeader(res, 0);
 }
 
 
@@ -80,12 +88,9 @@ static void routeCmd(void) {
     break;
   case commsCmd_SettingsSetDefault:
     settingsDefault();
-    if (settingsSave() == MSG_OK)
-      sendHeader(commsCmd_OK, 0);
-    else
-      sendHeader(commsCmd_Error, 0);
+    sendHeader(commsCmd_OK, 0);
     break;
-  case commsCmd_SettingsSetAll:
+  case commsCmd_SettingsSaveAll:
     readSettings();
     break;
   case commsCmd_SettingsGetAll:
@@ -149,7 +154,7 @@ THD_FUNCTION(CommsThd, arg) {
   while(true) {
     tmo = serusbcfg.usbp->state == USB_ACTIVE ?
               TIME_US2I(750) : TIME_MS2I(500);
-    nRead = ibqReadTimeout(&SDU1.ibqueue, pbuf, 3, tmo);
+    nRead += ibqReadTimeout(&SDU1.ibqueue, pbuf, 3, tmo);
     if (nRead >= 1 && pbuf == &buf[0]) {
       cmd.size = buf[0];
       ++pbuf;
@@ -161,6 +166,7 @@ THD_FUNCTION(CommsThd, arg) {
     if (nRead >=3 && pbuf == &buf[2]) {
       cmd.reqId = buf[2];
       pbuf = &buf[0];
+      nRead = 0;
       routeCmd();
     }
   }

@@ -105,13 +105,14 @@ class SerialBase {
         Ping: 0x01,
         Pong:0x02,
         Reset: 0x03,
-        SettingsSetAll: 0x08,
+        SettingsSetDefault: 0x07,
+        SettingsSaveAll: 0x08,
         SettingsGetAll: 0x09,
         LogGetAll: 0x10,
         LogNextAddr: 0x11,
         LogClearAll: 0x12,
         Version: 0x20,
-        OK: 0xFF,
+        OK: 0x7F,
     }
     static IDError = 0xFF;
 
@@ -244,8 +245,9 @@ class SerialBase {
         data[i++] = data.length;
         data[i++] = cmd;
         data[i++] = id;
-        for (let j = 0; i < data.length -3; ++i, ++j)
+        for (let j = 0; i < data.length; ++i, ++j)
            data[i] = byteArr[j];
+        console.log("write cmd", cmd, "data", data);
 
         await this._writer.write(data);
 
@@ -338,7 +340,7 @@ class Serial_v1 extends SerialBase {
      * @returns true/false depending on success
      */
     async setSettingsDefault() {
-        const cmd = SerialBase.Cmds.SettingsSetAll;
+        const cmd = SerialBase.Cmds.SettingsSetDefault;
         try {
             let id = await this.write({cmd});
             let resp = await this.read({id, includeHeader: true});
@@ -367,8 +369,8 @@ class Serial_v1 extends SerialBase {
      * @param byteArr Uint8Array, must be aligned as the struct in device
      * @returns true/false depending on success
      */
-    async setAllSettings(byteArr) {
-        const cmd = SerialBase.Cmds.SettingsSetAll;
+    async saveAllSettings(byteArr) {
+        const cmd = SerialBase.Cmds.SettingsSaveAll;
 
         try {
             let id = await this.write({byteArr, cmd});
