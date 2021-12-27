@@ -18,7 +18,8 @@ const appSettingsHtmlObj = {
             backupFirmware: "Backup device",
             downloadFirmware: "Download new firmware",
             connectButton: "Connect",
-            disconnectButton: "Disconnect"
+            disconnectButton: "Disconnect",
+            resetButton: "Reset device"
         },
         sv: {
             header: "App inställningar",
@@ -36,7 +37,8 @@ const appSettingsHtmlObj = {
             backupFirmware: "Backup enhet",
             downloadFirmware: "Ladda ned ny firmware",
             connectButton: "Koppla ihop",
-            disconnectButton: "Koppa isär"
+            disconnectButton: "Koppa isär",
+            resetButton: "Reset enhet"
         },
     },
     backupPushed: ()=>{
@@ -85,6 +87,9 @@ const appSettingsHtmlObj = {
       await appSettingsHtmlObj._dfuUtil[connected ? "disconnect" : "connect"]();
 
     },
+    resetDevice: async()=>{
+      SerialBase.instance().sendReset();
+    },
     html: (parentNode, lang) => {
       let lngOptions = Object.keys(appSettingsHtmlObj.lang).map(lng=>{
         const selected = (lng === lang) ?  "selected" : "";
@@ -128,6 +133,9 @@ const appSettingsHtmlObj = {
               />
               <div id="firmwareLog" class="w3-margin"><div>
             </div>
+            <button class="w3-button w3-blue w3-padding-large w3-large w3-margin-top" onclick="appSettingsHtmlObj.resetDevice();">
+              ${appSettingsHtmlObj.lang[lang].resetButton}
+            </button>
           </div>
 
           <div class="w3-third w3-center">
