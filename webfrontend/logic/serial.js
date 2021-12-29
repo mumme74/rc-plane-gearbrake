@@ -350,7 +350,7 @@ class Serial_v1 extends SerialBase {
         const cmd = SerialBase.Cmds.SettingsSetDefault;
         try {
             let id = await this.write({cmd});
-            let resp = await this.read({id, includeHeader: true});
+            let resp = await this.read({id, cmd, includeHeader: true});
             return resp && SerialBase._readResponseHeader(resp).cmd === SerialBase.Cmds.OK;
         } catch(err) {
             console.error(err);
@@ -411,7 +411,7 @@ class Serial_v1 extends SerialBase {
         const cmd = SerialBase.Cmds.LogClearAll;
         try {
             let id = await this.write({cmd});
-            let resp = await this.read({id, includeHeader: true});
+            let resp = await this.read({id, cmd, includeHeader: true});
             return resp && SerialBase._readResponseHeader(resp).cmd === SerialBase.Cmds.OK;
         } catch(err) {
             console.error(err);
