@@ -28,10 +28,10 @@ typedef enum {
 } CommsCmdType_e;
 
 typedef struct {
-  uint8_t        size; /* how many bytes in this request, including this byte*/
   CommsCmdType_e type; /* what type of cmd to use */
-  uint8_t        reqId; /* A reqId used to differentiate  */
-} CommsCmd_t;
+  uint8_t       size; /* how many bytes in this request, including this byte*/
+  uint8_t       reqId; /* A reqId used to differentiate  */
+} CommsReq_t;
 
 void commsInit(void);
 

@@ -21,59 +21,13 @@
 // ------------------------------------------------------------------
 // module private stuff
 static thread_t *commsThdp = 0;
-static CommsCmd_t cmd;
+static CommsReq_t cmd;
 static uint8_t obuf[256];
 
 static systime_t calc_timeout(uint16_t bytes) {
   uint32_t tmo = (bytes * 10 * //8n1 startbit + payload + stopbit
                  10000000U) / SERIAL_DEFAULT_BITRATE;
   return TIME_US2I(tmo);
-}
-
-
-
-static void readSettings(void) {
-  // -3 due to header bytes
-  const size_t sz = cmd.size -3;
-
-  static size_t nRead = 0;
-  static systime_t tmo;
-  tmo = chVTGetSystemTimeX() + TIME_MS2I(100);
-
-  // first read in all settings from serial buffer
-  while (serusbcfg.usbp->state == USB_ACTIVE &&
-         chVTGetSystemTimeX() < tmo &&
-         nRead < sz)
-  {
-    nRead += ibqReadTimeout(&SDU1.ibqueue, obuf + nRead, sz - nRead, TIME_US2I(750));
-  }
-
-  CommsCmdType_e res = commsCmd_Error;
-  do {
-    // incomplete or mismatched
-    if (sz != nRead) break;
-
-    Settings_header_t header;
-    header.storageVersion = obuf[0] << 8 | obuf[1];
-    header.size = obuf[2] << 8 | obuf[3];
-
-    if (!settingsValidateHeader(header)) break;
-
-    // set settings
-    for (size_t i = 4; i < sz; ++i)
-      ((uint8_t*)&settings)[i] = obuf[i];
-
-    settingsValidateValues();
-
-    // save settings
-    settingsSave();
-
-    // all ok
-    res = commsCmd_OK;
-
-  } while(false);
-
-  sendHeader(res, 0);
 }
 
 
@@ -91,10 +45,10 @@ static void routeCmd(void) {
     sendHeader(commsCmd_OK, 0);
     break;
   case commsCmd_SettingsSaveAll:
-    readSettings();
+    settingsSetAll(obuf, &cmd);
     break;
   case commsCmd_SettingsGetAll:
-    settingsGetAll(obuf, &cmd, sizeof(obuf) / sizeof(obuf[0]));
+    settingsGetAll(obuf, &cmd);
     break;
   case commsCmd_LogGetAll:
     loggerReadAll(obuf, &cmd, sizeof(obuf) / sizeof(obuf[0]));
@@ -237,7 +191,7 @@ size_t sendHeader(CommsCmdType_e type, uint32_t len) {
   // store len BIG endian in headers first bits
   for (i = pos -1; i < 0xFFu; --i) {
     uint8_t vlu = (len & (0x7Fu << i * 7u)) >> i*7u;
-    obuf[pos - 1 - i] = 0x80u | vlu; // store Big end first
+    obuf[pos - 1 - i] = pos > 1 ? 0x80u | vlu : vlu; // store Big end first
   }
   // type and reqId
   obuf[pos++] = type;

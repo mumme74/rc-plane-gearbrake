@@ -40,7 +40,7 @@ const transformContent = {
     if (controller._msglen < 0) {
         controller._msglen = SerialBase._readResponseHeader(chunk).len;
     }
-    console.log("recieved",controller._bufferRcvd, "of", controller._msglen);
+    console.log("recieved",controller._bufferRcvd, "of", controller._msglen, "chunk", chunk);
 
     // notify progress bar
     SerialBase.progress.updatePos(controller._bufferRcvd, controller._msglen);
@@ -154,9 +154,21 @@ class SerialBase {
     static _readResponseHeader(byteArr) {
         // a bit in 8th pos means length occupies next byte too
         let nthByte = 0, len = 0;
-        while((byteArr[nthByte] & 0x80)) { // count how many bytes that are the length
-            if (byteArr.length === ++nthByte)
-             return -1; // not recieved all bytes yet
+        let returnObj = () => {
+            return {
+                len /* response complete length */,
+                lenNBytes: nthByte, /* response length nr of bytes */
+                payloadStart: nthByte + 2, /* where the repsonse payload starts */
+                cmd: byteArr.length >= nthByte ? byteArr[nthByte] : SerialBase.Cmds.Error,
+                id: byteArr.length >= nthByte +1 ? byteArr[nthByte+1] : SerialBase.IDError,
+            }
+        };
+
+        while((byteArr[nthByte] & 0x80) || nthByte === 0) { // count how many bytes that are the length
+            if (byteArr.length === ++nthByte) {
+              len = -1
+             return returnObj(); // not recieved all bytes yet
+            }
         }
 
         // set the length
@@ -165,13 +177,7 @@ class SerialBase {
             len |= bits << ((nthByte -1 - i) * 7);
         }
 
-        return {
-            len /* response complete length */,
-            lenNBytes: nthByte, /* response length nr of bytes */
-            payloadStart: nthByte + 2, /* where the repsonse payload starts */
-            cmd: byteArr.length >= nthByte ? byteArr[nthByte] : SerialBase.Cmds.Error,
-            id: byteArr.length >= nthByte +1 ? byteArr[nthByte+1] : SerialBase.IDError,
-        };
+        return returnObj();
     }
 
     onConnect(callback) {

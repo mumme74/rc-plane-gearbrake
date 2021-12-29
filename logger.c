@@ -225,7 +225,7 @@ void loggerClearAll(uint8_t obuf[], const size_t bufSz) {
   logTimeout = logPeriodicityMS();
 }
 
-void loggerReadAll(uint8_t txbuf[], CommsCmd_t *cmd,
+void loggerReadAll(uint8_t txbuf[], CommsReq_t *cmd,
                    const size_t bufSz)
 {
   //chThdSuspendTimeoutS(&logthdp, TIME_INFINITE);
@@ -256,7 +256,7 @@ void loggerReadAll(uint8_t txbuf[], CommsCmd_t *cmd,
   logTimeout = logPeriodicityMS();
 }
 
-void loggerNextAddr(uint8_t txbuf[], CommsCmd_t *cmd)
+void loggerNextAddr(uint8_t txbuf[], CommsReq_t *cmd)
 {
   sendHeader(cmd->type, sizeof(offsetNext));
   // big endian

@@ -73,10 +73,10 @@ void loggerSettingsChanged(void);
 
 void loggerClearAll(uint8_t buf[], const size_t bufSz);
 
-void loggerReadAll(uint8_t obuf[], CommsCmd_t *cmd,
+void loggerReadAll(uint8_t obuf[], CommsReq_t *cmd,
                    const size_t bufSz);
 
-void loggerNextAddr(uint8_t obuf[], CommsCmd_t *cmd);
+void loggerNextAddr(uint8_t obuf[], CommsReq_t *cmd);
 
 
 extern thread_t *logthdp;

@@ -168,12 +168,9 @@ void settingsSave(void) {
     chThdResume(&saveThdRef, MSG_OK);
 }
 
-void settingsGetAll(uint8_t obuf[], CommsCmd_t *cmd,
-                    const size_t bufSz)
+void settingsGetAll(uint8_t obuf[], CommsReq_t *cmd)
 {
   sendHeader(cmd->type, sizeof(settings));
-
-  osalDbgAssert(obuf[0] <= bufSz, "buffer bounds overflow");
 
   obuf[0] = (settings.header.storageVersion & 0xFF00) >> 8;
   obuf[1] = (settings.header.storageVersion & 0xFF);
@@ -184,6 +181,52 @@ void settingsGetAll(uint8_t obuf[], CommsCmd_t *cmd,
     obuf[i] = ((uint8_t *)&settings)[i];
 
   sendPayload(sizeof(settings));
+}
+
+
+
+void settingsSetAll(uint8_t obuf[], CommsReq_t *cmd) {
+  // -3 due to header bytes
+  const size_t sz = cmd->size -3;
+
+  static size_t nRead = 0;
+  static systime_t tmo;
+  tmo = chVTGetSystemTimeX() + TIME_MS2I(100);
+
+  // first read in all settings from serial buffer
+  while (serusbcfg.usbp->state == USB_ACTIVE &&
+         chVTGetSystemTimeX() < tmo &&
+         nRead < sz)
+  {
+    nRead += ibqReadTimeout(&SDU1.ibqueue, obuf + nRead, sz - nRead, TIME_US2I(750));
+  }
+
+  CommsCmdType_e res = commsCmd_Error;
+  do {
+    // incomplete or mismatched
+    if (sz != nRead) break;
+
+    Settings_header_t header;
+    header.storageVersion = obuf[0] << 8 | obuf[1];
+    header.size = obuf[2] << 8 | obuf[3];
+
+    if (!settingsValidateHeader(header)) break;
+
+    // set settings
+    for (size_t i = 4; i < settings.header.size; ++i)
+      ((uint8_t*)&settings)[i] = obuf[i];
+
+    settingsValidateValues();
+
+    // save settings
+    settingsSave();
+
+    // all ok
+    res = commsCmd_OK;
+
+  } while(false);
+
+  sendHeader(res, 0);
 }
 
 bool settingsValidateHeader(Settings_header_t header) {

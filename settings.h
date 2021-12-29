@@ -121,8 +121,8 @@ void settingsDefault(void);
  */
 void settingsSave(void);
 
-void settingsGetAll(uint8_t obuf[], CommsCmd_t *cmd,
-                    const size_t bufSz);
+void settingsGetAll(uint8_t obuf[], CommsReq_t *cmd);
+void settingsSetAll(uint8_t obuf[], CommsReq_t *cmd);
 
 bool settingsValidateHeader(Settings_header_t header);
 
