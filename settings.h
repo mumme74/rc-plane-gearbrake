@@ -107,7 +107,7 @@ extern Settings_t settings;
 void settingsInit(void);
 
 /**
- * @brief start trhread to load from EEPROM
+ * @brief start thread to load from EEPROM
  */
 void settingsStart(void);
 
@@ -121,8 +121,8 @@ void settingsDefault(void);
  */
 void settingsSave(void);
 
-void settingsGetAll(uint8_t obuf[], CommsReq_t *cmd);
-void settingsSetAll(uint8_t obuf[], CommsReq_t *cmd);
+void settingsGetAll(uint8_t buf[], CommsReq_t *cmd);
+void settingsSetAll(uint8_t buf[], CommsReq_t *cmd);
 
 bool settingsValidateHeader(Settings_header_t header);
 

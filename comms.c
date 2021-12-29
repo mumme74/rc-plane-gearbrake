@@ -16,13 +16,13 @@
 
 // this file handle all serial IO
 
-#define COM_VERSION 0x01u // bumb on every API change i serial communication
+#define COM_VERSION 0x01u // bump on every API change i serial communication
 
 // ------------------------------------------------------------------
 // module private stuff
 static thread_t *commsThdp = 0;
 static CommsReq_t cmd;
-static uint8_t obuf[256];
+static uint8_t obuf[COMMS_BUFF_SZ];
 
 static systime_t calc_timeout(uint16_t bytes) {
   uint32_t tmo = (bytes * 10 * //8n1 startbit + payload + stopbit
@@ -34,15 +34,15 @@ static systime_t calc_timeout(uint16_t bytes) {
 static void routeCmd(void) {
   switch(cmd.type) {
   case commsCmd_Ping:
-    sendHeader(commsCmd_Pong, 0);
+    commsSendHeader(commsCmd_Pong, 0);
     break;
   case commsCmd_Reset:
-    if (sendHeader(commsCmd_OK, 0) == 3)
+    if (commsSendHeader(commsCmd_OK, 0) == 3)
       NVIC_SystemReset();
     break;
   case commsCmd_SettingsSetDefault:
     settingsDefault();
-    sendHeader(commsCmd_OK, 0);
+    commsSendHeader(commsCmd_OK, 0);
     break;
   case commsCmd_SettingsSaveAll:
     settingsSetAll(obuf, &cmd);
@@ -51,19 +51,19 @@ static void routeCmd(void) {
     settingsGetAll(obuf, &cmd);
     break;
   case commsCmd_LogGetAll:
-    loggerReadAll(obuf, &cmd, sizeof(obuf) / sizeof(obuf[0]));
+    loggerReadAll(obuf, &cmd);
     break;
   case commsCmd_LogNextAddr:
     loggerNextAddr(obuf, &cmd);
     break;
   case commsCmd_LogClearAll:
-    loggerClearAll(obuf, sizeof(obuf) / sizeof(obuf[0]));
-    sendHeader(commsCmd_OK, 0);
+    loggerClearAll(obuf);
+    commsSendHeader(commsCmd_OK, 0);
     break;
   case commsCmd_version:
-    sendHeader(commsCmd_version, 1);
+    commsSendHeader(commsCmd_version, 1);
     obuf[0] = COM_VERSION;
-    sendPayload(1);
+    commsSendPayload(1);
     break;
   default:
     return; // do nothing
@@ -90,8 +90,6 @@ static void reInitializeUsb(void) {
   usbStart(serusbcfg.usbp, &usbcfg);
   usbConnectBus(serusbcfg.usbp);
 }
-
-
 
 THD_WORKING_AREA(waCommsThd, 128);
 THD_FUNCTION(CommsThd, arg) {
@@ -179,12 +177,12 @@ void commsStart(void) {
  *  Size is sort of like how utf8 works
  */
 
-size_t sendHeader(CommsCmdType_e type, uint32_t len) {
+size_t commsSendHeader(CommsCmdType_e type, uint32_t len) {
   len += 2; // include header length
-  // first find ut how many baytes length must be
+  // first find out how many bytes length must be
   uint8_t pos = 0, i;
   for (i = 5u; i < 0xFFu; --i) {
-    if (len & (0x7Fu << i *7u) || i == 0) {
+    if ((len & (0x7Fu << i *7u)) || i == 0) {
       ++len; ++pos;
     }
   }
@@ -196,9 +194,10 @@ size_t sendHeader(CommsCmdType_e type, uint32_t len) {
   // type and reqId
   obuf[pos++] = type;
   obuf[pos++] = cmd.reqId;
-  return sendPayload(pos);
+  return commsSendPayload(pos);
 }
 
-size_t sendPayload(uint16_t len) {
-  return obqWriteTimeout(&SDU1.obqueue, obuf, len, calc_timeout(len));
+size_t commsSendPayload(size_t len) {
+  return obqWriteTimeout(&SDU1.obqueue, obuf,
+                         len, calc_timeout(len));
 }

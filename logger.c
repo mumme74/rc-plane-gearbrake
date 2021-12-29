@@ -206,48 +206,47 @@ void loggerSettingsChanged(void) {
   logTimeout = logPeriodicityMS();
 }
 
-void loggerClearAll(uint8_t obuf[], const size_t bufSz) {
+void loggerClearAll(uint8_t buf[]) {
   //chThdSuspendTimeoutS(&logthdp, TIME_INFINITE);
   logTimeout = logPeriodicityMS(); // when USB is attached we stop logging
 
   size_t offset = 0;
-  for(size_t i = 0; i < bufSz; ++i)
-    obuf[i] = 0xFF;
+  for(size_t i = 0; i < COMMS_BUFF_SZ; ++i)
+    buf[i] = 0xFF;
 
   do {
-    size_t len =  offset + bufSz < EEPROM_LOG_SIZE ?
-                    bufSz : EEPROM_LOG_SIZE - offset;
-    ee24m01r_write(&log_ee, offset, obuf, len);
-    offset += bufSz;
+    size_t len =  offset + COMMS_BUFF_SZ < EEPROM_LOG_SIZE ?
+                    COMMS_BUFF_SZ : EEPROM_LOG_SIZE - offset;
+    ee24m01r_write(&log_ee, offset, buf, len);
+    offset += COMMS_BUFF_SZ;
   } while(offset < EEPROM_LOG_SIZE);
 
   //chThdResume(&logthdp, MSG_OK);
   logTimeout = logPeriodicityMS();
 }
 
-void loggerReadAll(uint8_t txbuf[], CommsReq_t *cmd,
-                   const size_t bufSz)
+void loggerReadAll(uint8_t buf[], CommsReq_t *cmd)
 {
   //chThdSuspendTimeoutS(&logthdp, TIME_INFINITE);
   logTimeout =  TIME_MS2I(TIME_INFINITE); // when USB is attached we stop logging
   size_t offset = 0;
 
   // send header build up size bytes...
-  if (sendHeader(cmd->type, EEPROM_LOG_SIZE) > 0) {
+  if (commsSendHeader(cmd->type, EEPROM_LOG_SIZE) > 0) {
 
     do {
       // -4 due to last 4 bytes is logNextAddr
-      size_t len = offset + bufSz < EEPROM_LOG_SIZE ?
-                     bufSz : EEPROM_LOG_SIZE - offset;
+      size_t len = offset + COMMS_BUFF_SZ < EEPROM_LOG_SIZE ?
+                      COMMS_BUFF_SZ : EEPROM_LOG_SIZE - offset;
       // read page into buffer
-      int status = ee24m01r_read(&log_ee, offset, txbuf, len);
-      if (status != MSG_OK) {
+      if (ee24m01r_read(&log_ee, offset, buf, len) != MSG_OK)
         break;
-      }
+
       // send buffer to host
-      if (sendPayload(len) < len)
+      if (commsSendPayload(len) < len)
         break;
-      offset += bufSz;
+      offset += COMMS_BUFF_SZ;
+
     } while(offset < EEPROM_LOG_SIZE);
 
   }
@@ -256,15 +255,15 @@ void loggerReadAll(uint8_t txbuf[], CommsReq_t *cmd,
   logTimeout = logPeriodicityMS();
 }
 
-void loggerNextAddr(uint8_t txbuf[], CommsReq_t *cmd)
+void loggerNextAddr(uint8_t buf[], CommsReq_t *cmd)
 {
-  sendHeader(cmd->type, sizeof(offsetNext));
+  commsSendHeader(cmd->type, sizeof(offsetNext));
   // big endian
-  txbuf[3] = offsetNext & 0xFF;
-  txbuf[2] = (offsetNext & 0xFF00) >> 8;
-  txbuf[1] = (offsetNext & 0xFF0000) >> 16;
-  txbuf[0] = (offsetNext & 0xFF000000) >> 24;
-  sendPayload(4);
+  buf[3] = offsetNext & 0xFF;
+  buf[2] = (offsetNext & 0xFF00) >> 8;
+  buf[1] = (offsetNext & 0xFF0000) >> 16;
+  buf[0] = (offsetNext & 0xFF000000) >> 24;
+  commsSendPayload(4);
 }
 
 

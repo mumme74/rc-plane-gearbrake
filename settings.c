@@ -168,24 +168,23 @@ void settingsSave(void) {
     chThdResume(&saveThdRef, MSG_OK);
 }
 
-void settingsGetAll(uint8_t obuf[], CommsReq_t *cmd)
+void settingsGetAll(uint8_t buf[], CommsReq_t *cmd)
 {
-  sendHeader(cmd->type, sizeof(settings));
+  commsSendHeader(cmd->type, sizeof(settings));
 
-  obuf[0] = (settings.header.storageVersion & 0xFF00) >> 8;
-  obuf[1] = (settings.header.storageVersion & 0xFF);
-  obuf[2] = (settings.header.size & 0xFF00) >> 8;
-  obuf[3] = (settings.header.size & 0xFF);
+
+  buf[0] = (settings.header.storageVersion & 0xFF00) >> 8;
+  buf[1] = (settings.header.storageVersion & 0xFF);
+  buf[2] = (settings.header.size & 0xFF00) >> 8;
+  buf[3] = (settings.header.size & 0xFF);
 
   for (size_t i = 4; i < sizeof(settings); ++i)
-    obuf[i] = ((uint8_t *)&settings)[i];
+    buf[i] = ((uint8_t*)&settings)[i];
 
-  sendPayload(sizeof(settings));
+  commsSendPayload(sizeof(settings));
 }
 
-
-
-void settingsSetAll(uint8_t obuf[], CommsReq_t *cmd) {
+void settingsSetAll(uint8_t *buf, CommsReq_t *cmd) {
   // -3 due to header bytes
   const size_t sz = cmd->size -3;
 
@@ -198,7 +197,8 @@ void settingsSetAll(uint8_t obuf[], CommsReq_t *cmd) {
          chVTGetSystemTimeX() < tmo &&
          nRead < sz)
   {
-    nRead += ibqReadTimeout(&SDU1.ibqueue, obuf + nRead, sz - nRead, TIME_US2I(750));
+    nRead += ibqReadTimeout(&SDU1.ibqueue, &buf[nRead],
+                            sz - nRead, TIME_US2I(750));
   }
 
   CommsCmdType_e res = commsCmd_Error;
@@ -207,14 +207,14 @@ void settingsSetAll(uint8_t obuf[], CommsReq_t *cmd) {
     if (sz != nRead) break;
 
     Settings_header_t header;
-    header.storageVersion = obuf[0] << 8 | obuf[1];
-    header.size = obuf[2] << 8 | obuf[3];
+    header.storageVersion = buf[0] << 8 | buf[1];
+    header.size = buf[2] << 8 | buf[3];
 
     if (!settingsValidateHeader(header)) break;
 
     // set settings
     for (size_t i = 4; i < settings.header.size; ++i)
-      ((uint8_t*)&settings)[i] = obuf[i];
+      ((uint8_t*)&settings)[i] = buf[i];
 
     settingsValidateValues();
 
@@ -226,7 +226,7 @@ void settingsSetAll(uint8_t obuf[], CommsReq_t *cmd) {
 
   } while(false);
 
-  sendHeader(res, 0);
+  commsSendHeader(res, 0);
 }
 
 bool settingsValidateHeader(Settings_header_t header) {
