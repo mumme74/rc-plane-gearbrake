@@ -47,6 +47,16 @@ typedef struct {
   uint32_t size;   /* how many bytes in partition */
 } ee24partition_t;
 
+// a argument struct
+typedef struct {
+  const ee24partition_t *eep; /* @eep pointer to a ee24partition_t */
+  size_t  offset;        /* offset read from this addr, offset=0 is from start*/
+  uint8_t *buf;         /* buf read data gets put here, must be at least of size len */
+  i2caddr_t sad;         /* slave adress i2c*/
+  uint16_t len;          /* len number of bytes read, start at offset and move forward until len*/
+  uint8_t memAddrBuf[2]; /* memory adress in EEPROM*/
+} ee24_arg_t;
+
 /**
  * @brief read from eeprom in chunks of up to 256 bytes
  * @description reads len bytes from partition from addr and forward
@@ -56,10 +66,7 @@ typedef struct {
  * @len number of bytes read, start at offset and move forward until len
  * @returns MSG_OK if ok
  */
-msg_t ee24m01r_read(const ee24partition_t *eep,
-                    const size_t offset,
-                    uint8_t buf[],
-                    const uint16_t len);
+msg_t ee24m01r_read(ee24_arg_t *arg);
 
 /**
  * @brief read from eeprom in chunks of up to 256 bytes
@@ -70,9 +77,6 @@ msg_t ee24m01r_read(const ee24partition_t *eep,
  * @len number of bytes to write from wrbuf, start at offset and move forward until len
  * @returns MSG_OK if ok
  */
-msg_t ee24m01r_write(ee24partition_t *eep,
-                     size_t offset,
-                     const uint8_t wrbuf[],
-                     uint16_t len);
+msg_t ee24m01r_write(ee24_arg_t *arg);
 
 #endif /* DRV_EE24M01R_H_ */

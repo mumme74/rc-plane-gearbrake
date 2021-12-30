@@ -27,6 +27,10 @@
 static thread_t *settingsp = 0;
 thread_reference_t saveThdRef;
 
+static ee24_arg_t eeArg = {
+  &settings_ee, 0, 0, 0, 0, 0
+};
+
 /**
  * @brief notify other modules about the changes
  */
@@ -43,13 +47,14 @@ static void notify(void) {
  * @brief load settings from EEPROM memory
  */
 static msg_t settingsLoad(void) {
-  uint8_t *buf = (uint8_t*)&settings;
-  const size_t hdrSz = sizeof(Settings_header_t);
   Settings_header_t header;
-
   msg_t res;
+
   do {
-    res = ee24m01r_read(&settings_ee, 0, (uint8_t*)&header, hdrSz);
+    eeArg.offset = 0;
+    eeArg.buf = (uint8_t*)&header;
+    eeArg.len = sizeof(Settings_header_t);
+    res = ee24m01r_read(&eeArg);
 
     if (res != MSG_OK) break;
 
@@ -60,8 +65,9 @@ static msg_t settingsLoad(void) {
       break;
     }
 
-    res = ee24m01r_read(&settings_ee, hdrSz, buf+hdrSz,
-                        sizeof(settings) - hdrSz );
+    eeArg.buf = (uint8_t*)&settings;
+    eeArg.len = sizeof(settings);
+    res = ee24m01r_read(&eeArg);
   } while(false);
 
 
@@ -82,8 +88,10 @@ static THD_FUNCTION(SettingsThd, arg) {
 
     // save values to EEPROM when we wakeup
     settingsValidateValues();
-    const uint8_t *buf = (uint8_t*)&settings;
-    ee24m01r_write(&settings_ee, 0, buf, sizeof(settings));
+    eeArg.offset = 0;
+    eeArg.len = sizeof(settings);
+    eeArg.buf = (uint8_t*)&settings;
+    ee24m01r_write(&eeArg);
     //if (res == MSG_OK)
       //notify();
   }
@@ -112,10 +120,10 @@ Settings_t settings = {
   100,
   100,
   25,
-  50,
+  50, /*acc_steering_authority*/
+  0x03 << 6 | freq1kHz << 2,
   0,
   0,
-  freq1kHz,
   1,
   1,
   0,
@@ -125,11 +133,10 @@ Settings_t settings = {
   0,
   0,
   0,
+  SETTINGS_LOG_2560MS << 3,
   0,
   0,
   0,
-  0,
-  SETTINGS_LOG_20MS,
 };
 
 void settingsInit(void) {
@@ -161,6 +168,7 @@ void settingsDefault(void) {
   settings.accelerometer_active = 0;
   settings.accelerometer_axis = 0;
   settings.accelerometer_axis_invert = 0;
+  settings.logPeriodicity = SETTINGS_LOG_2560MS;
 }
 
 void settingsSave(void) {
@@ -184,7 +192,7 @@ void settingsGetAll(uint8_t buf[], CommsReq_t *cmd)
   commsSendPayload(sizeof(settings));
 }
 
-void settingsSetAll(uint8_t *buf, CommsReq_t *cmd) {
+void settingsSetAll(uint8_t buf[], CommsReq_t *cmd) {
   // -3 due to header bytes
   const size_t sz = cmd->size -3;
 
@@ -198,7 +206,7 @@ void settingsSetAll(uint8_t *buf, CommsReq_t *cmd) {
          nRead < sz)
   {
     nRead += ibqReadTimeout(&SDU1.ibqueue, &buf[nRead],
-                            sz - nRead, TIME_US2I(750));
+                            sz - nRead, TIME_MS2I(5));
   }
 
   CommsCmdType_e res = commsCmd_Error;
@@ -213,7 +221,7 @@ void settingsSetAll(uint8_t *buf, CommsReq_t *cmd) {
     if (!settingsValidateHeader(header)) break;
 
     // set settings
-    for (size_t i = 4; i < settings.header.size; ++i)
+    for (size_t i = 4; i < sizeof(settings); ++i)
       ((uint8_t*)&settings)[i] = buf[i];
 
     settingsValidateValues();
