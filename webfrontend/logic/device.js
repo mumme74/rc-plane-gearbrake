@@ -159,7 +159,7 @@ class DeviceConfig_v1 extends DeviceConfigBase {
   // stop Log when wheel speed0
   dontLogWhenStill = true /* uint8_t : 1;*/
   // how often we should log
-  logPeriodicity /*uint8_t : 3;*/
+  logPeriodicity = 7 /*uint8_t : 3;*/
 
   _serialize(byteArr) {
     let byteVlu = 0;
@@ -222,9 +222,9 @@ class DeviceConfig_v1 extends DeviceConfigBase {
     // bit field byte 3
     byteVlu = byteArr[idx++];
     this.accelerometer_active = Boolean(byteVlu & 0x01);
-    this.accelerometer_axis_invert = Boolean(byteVlu & 0x01);
-    this.dontLogWhenStill = Boolean(byteVlu & 0x01);
-    this.LogPeriodicity = (byteVlu & 0xE0) >> 5;
+    this.accelerometer_axis_invert = Boolean(byteVlu & 0x02);
+    this.dontLogWhenStill = Boolean(byteVlu & 0x04);
+    this.logPeriodicity = (byteVlu & 0x38) >> 3;
     // wheelsensors
     this.WheelSensor0_pulses_per_rev = byteArr[idx++];
     this.WheelSensor1_pulses_per_rev = byteArr[idx++];

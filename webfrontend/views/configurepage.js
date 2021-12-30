@@ -49,12 +49,13 @@ function renderSelect({key, vlu, txt, title, rdonly = false,
   const options = Object.keys(selections).map(sel=>{
     const str = (!lang || !lang[sel]) ? sel :
                   typeof lang[sel] === 'string' ? lang[sel]: lang[sel][lan];
-    const selected = vlu === selections[key] ? "selected" : "";
+    const selected = vlu === selections[sel] ? "selected" : "";
     return `<option value="${selections[sel]}" ${selected}
-              onchange="DeviceConfigBase.changeVlu('${key}', event.target.value)"
             >${str}</option>`;
   });
-  return `${lbl}\n${part}>${options}</select>`;
+  return `${lbl}\n${part}
+    onchange="DeviceConfigBase.changeVlu('${key}', event.target.value)"
+    >${options}</select>`;
 }
 
 const configureHtmlObj = {
@@ -63,7 +64,7 @@ const configureHtmlObj = {
     try {
       if (!await SerialBase.instance().setSettingsDefault())
         throw "Could not set settings to default";
-      await configureHtmlObj.getSettings();
+      await configureHtmlObj.fetchSettings();
     } catch (err) {
       console.error(err);
       notifyUser({msg: err?.message || err, type: notifyTypes.Warn});
@@ -84,7 +85,6 @@ const configureHtmlObj = {
     console.log("save settings")
     try {
       const byteArr = DeviceConfigBase.instance().serialize();
-      console.log(byteArr)
       const res = SerialBase.instance().saveAllSettings(byteArr);
       if (!res) throw "Could not save settings to device";
     } catch (err) {
@@ -341,7 +341,7 @@ const configureHtmlObj = {
             render: renderCheckbox
           },
           {
-            key: "logPerodicity",
+            key: "logPeriodicity",
             txt: {en: "Log each", sv: "Logga varje"},
             title: {en: "How often we should log", sv: "Hur ofta en den skall logga"},
             render: renderSelect,

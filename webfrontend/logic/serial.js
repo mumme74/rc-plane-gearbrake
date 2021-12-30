@@ -38,7 +38,11 @@ const transformContent = {
 
     // it can be a new response, check the length of the response (first byte in msg should be response length 1-256)
     if (controller._msglen < 0) {
-        controller._msglen = SerialBase._readResponseHeader(chunk).len;
+        let header = SerialBase._readResponseHeader(chunk);
+        controller._msglen = header.len;
+        if (header.cmd === SerialBase.Cmds.Error) {
+            controller._bufferRcvd = header.len; // bailout as we have an error
+        }
     }
     console.log("recieved",controller._bufferRcvd, "of", controller._msglen, "chunk", chunk);
 
@@ -281,12 +285,16 @@ class SerialBase {
 
         const {value: msg, done: exit} = await this._reader.read();
         const header = SerialBase._readResponseHeader(msg);
-        if (header.len > -1 &&
-            (id === -1 || id === header.id) &&
-            (cmd === -1 || cmd === header.cmd))
-        {
-            console.log("rcv cmd", cmd, "data", msg)
-            return includeHeader ? msg : msg.subarray(header.payloadStart);
+        if (header.len > -1) {
+            if (header.cmd === SerialBase.Cmds.Error) {
+                this._responseMsgs = [];
+                throw new Error(`cmd ${header.cmd} with ${id} failed`);
+            } else if ((id === -1 || id === header.id) &&
+                       (cmd === -1 || cmd === header.cmd))
+            {
+                console.log("rcv cmd", cmd, "data", msg)
+                return includeHeader ? msg : msg.subarray(header.payloadStart);
+            }
         }
         this._responseMsgs.push(msg);
       }
@@ -350,8 +358,8 @@ class Serial_v1 extends SerialBase {
         const cmd = SerialBase.Cmds.SettingsSetDefault;
         try {
             let id = await this.write({cmd});
-            let resp = await this.read({id, cmd, includeHeader: true});
-            return resp && SerialBase._readResponseHeader(resp).cmd === SerialBase.Cmds.OK;
+            let resp = await this.read({id, cmd:SerialBase.Cmds.OK, includeHeader: true});
+            return resp; // && SerialBase._readResponseHeader(resp).cmd === SerialBase.Cmds.OK;
         } catch(err) {
             console.error(err);
         }
@@ -381,8 +389,8 @@ class Serial_v1 extends SerialBase {
 
         try {
             let id = await this.write({byteArr, cmd});
-            let resp = await this.read({id, cmd, includeHeader: true});
-            return resp && SerialBase._readResponseHeader(resp).cmd === SerialBase.Cmds.OK;
+            let resp = await this.read({id, cmd:SerialBase.Cmds.OK, includeHeader: true});
+            return resp; // && SerialBase._readResponseHeader(resp).cmd === SerialBase.Cmds.OK;
 
         } catch (err) {
             console.error(err);
@@ -411,8 +419,8 @@ class Serial_v1 extends SerialBase {
         const cmd = SerialBase.Cmds.LogClearAll;
         try {
             let id = await this.write({cmd});
-            let resp = await this.read({id, cmd, includeHeader: true});
-            return resp && SerialBase._readResponseHeader(resp).cmd === SerialBase.Cmds.OK;
+            let resp = await this.read({id, cmd:SerialBase.Cmds.OK, includeHeader: true});
+            return resp; // && SerialBase._readResponseHeader(resp).cmd === SerialBase.Cmds.OK;
         } catch(err) {
             console.error(err);
         }
