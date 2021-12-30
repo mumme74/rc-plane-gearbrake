@@ -91,6 +91,9 @@ const PwmFrequencies_t pwmoutFrequencies = {
  * @duty in percents
  */
 void pwmoutSetDuty(OutputCh_e ch, uint8_t duty) {
+  if (PWMD3.state != PWM_READY)
+    pwmStart(&PWMD3, &pwmcfg);
+
   pwmEnableChannel(&PWMD3, ch, PWM_PERCENTAGE_TO_WIDTH(&PWMD3, duty * 100));
 }
 
@@ -100,9 +103,8 @@ void pwmoutSetDuty(OutputCh_e ch, uint8_t duty) {
  */
 void pwmoutSettingsChanged(void) {
   if (PWMD3.state == PWM_READY) {
-    for(OutputCh_e ch = breakChStart; ch < brakeChEnd; ++ch) {
+    for(OutputCh_e ch = breakChStart; ch < brakeChEnd; ++ch)
       pwmDisableChannel(&PWMD3, ch);
-    }
   }
 
   pwmoutSetFrequency(settings.PwmFreq);
