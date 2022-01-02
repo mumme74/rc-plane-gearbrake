@@ -1,6 +1,5 @@
 #!/usr/bin/env python
 
-### read data from a Peaktech 1337 Oscilloscope (OWON)
 import usb.core
 import usb.util
 import readline

@@ -54,7 +54,7 @@ int main(void) {
 
   // chSysInit must be invoked before any threads are created
   settingsStart();
-  //accelStart();
+  accelStart();
   loggerStart();
   brakeLogicStart();
   commsStart();

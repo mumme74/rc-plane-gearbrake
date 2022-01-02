@@ -299,10 +299,6 @@ static const USBDescriptor *get_descriptor(USBDriver *usbp,
     break;
   case USB_DESCRIPTOR_INTERFACE:
     return (USBDescriptor*)&usb_configuration_descriptor_data[usb_configuration_descriptor_data[0]];
-  default:
-  {volatile int i;
-  i++;}
-    return NULL;
   }
   return NULL;
 }
