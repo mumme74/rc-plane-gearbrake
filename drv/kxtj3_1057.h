@@ -8,11 +8,26 @@
 #ifndef KXTJ3_1057_DRV_H_
 #define KXTJ3_1057_DRV_H_
 
+// compile switches for this module
+//#define KXTJ3_1057_EXTENDED_INTERFACE TRUE
+//#define KXTJ3_1057_USE_ADVANCED TRUE
+
 #include <stdint.h>
 
 // this module implements a driver for the accelerometer KXTJ3_1057
 
-#if defined(EX_ACCELEROMETER_INTERFACE) || defined(__DOXYGEN__)
+/**
+ * @brief   Extended interface configurations switch.
+ * @details If set to @p TRUE it has interface from hal EX.
+ * @note    The default is @p FALSE.
+ */
+#if !defined(KXTJ3_1057_EXTENDED_INTERFACE) || defined(__DOXYGEN__)
+#define KXTJ3_1057_EXTENDED_INTERFACE             FALSE
+#endif
+/** @} */
+
+
+#if KXTJ3_1057_EXTENDED_INTERFACE || defined(__DOXYGEN__)
 // based of driver for KXTJ3_1057 in os/ex/ST dir
 #include "ex_accelerometer.h"
 
@@ -257,7 +272,9 @@
  * @note    The default is @p FALSE.
  */
 #if !defined(KXTJ3_1057_USE_ADVANCED) || defined(__DOXYGEN__)
-#define KXTJ3_1057_USE_ADVANCED             FALSE
+# define KXTJ3_1057_USE_ADVANCED             FALSE
+#elif !KXTJ3_1057_EXTENDED_INTERFACE
+# error KXTJ3_1057_USE_ADVANCED requires KXTJ3_1057_EXTENDED_INTERFACE
 #endif
 /** @} */
 
@@ -298,10 +315,10 @@ typedef struct KXTJ3_1057Driver KXTJ3_1057Driver;
  } KXTJ3_1057_state_t;
 
  typedef enum {
-   KXTJ3_1057_gselection_2G = KXTJ3_1057_GSEL_2G,
-   KXTJ3_1057_gselection_4G = KXTJ3_1057_GSEL_4G,
-   KXTJ3_1057_gselection_8G = KXTJ3_1057_GSEL_8G,
-   KXTJ3_1057_gselection_16G= KXTJ3_1057_GSEL_16G
+   KXTJ3_1057_gselection_2G  = 2u,
+   KXTJ3_1057_gselection_4G  = 4u,
+   KXTJ3_1057_gselection_8G  = 8u,
+   KXTJ3_1057_gselection_16G = 16u
  } KXTJ3_1057_gselection_t;
 
  typedef enum {
@@ -350,6 +367,8 @@ typedef struct KXTJ3_1057Driver KXTJ3_1057Driver;
     * @brief I2C configuration associated to this KXTJ3_1057.
     */
    const I2CConfig           *i2ccfg;
+
+#if defined(KXTJ3_1057_EXTENDED_INTERFACE) || defined(__DOXYGEN__)
    /**
     * @brief KXTJ3_1057 accelerometer subsystem initial sensitivity.
     */
@@ -359,6 +378,7 @@ typedef struct KXTJ3_1057Driver KXTJ3_1057Driver;
     * @brief KXTJ3_1057 accelerometer subsystem initial bias.
     */
    float                     *accbias;
+#endif
 
    /**
     * @brief KXTJ3_1057 accelerometer subsystem output data rate.
@@ -368,7 +388,7 @@ typedef struct KXTJ3_1057Driver KXTJ3_1057Driver;
    /**
     * @brief KXTJ3_1057 accelerometer G-Selection
     */
-   KXTJ3_1057_gselection_t      accfullscale;
+   KXTJ3_1057_gselection_t      gselection;
 
    /*
     * Wakeup only generates interrupts on a physical pin
@@ -441,7 +461,7 @@ typedef struct KXTJ3_1057Driver KXTJ3_1057Driver;
    _KXTJ3_1057_methods
  };
 
-#if defined(EX_ACCELEROMETER_INTERFACE) || defined(__DOXYGEN__)
+#if KXTJ3_1057_EXTENDED_INTERFACE || defined(__DOXYGEN__)
 # define _BASE_SENSOR_DATA _base_sensor_data
 #else
 # define _BASE_SENSOR_DATA
@@ -451,31 +471,39 @@ typedef struct KXTJ3_1057Driver KXTJ3_1057Driver;
  /**
   * @brief @p KXTJ3_1057Driver specific data.
   */
+
+#define _KXTJ3_1057_base_data                                               \
+  _BASE_SENSOR_DATA                                                         \
+  /* Driver state.*/                                                        \
+  KXTJ3_1057_state_t        state;                                          \
+  /* Current configuration data.*/                                          \
+  const KXTJ3_1057Config    *config;                                        \
+  /* Accelerometer subsystem axes number.*/                                 \
+  size_t                    accaxes;                                        \
+  /* Slave address */                                                       \
+  uint8_t                   sad;                                            \
+  /* lowpower mode */                                                       \
+  bool                      lowpower;
+
+#if defined(KXTJ3_1057_EXTENDED_INTERFACE) || defined(__DOXYGEN__)
  #define _KXTJ3_1057_data                                                    \
-   _BASE_SENSOR_DATA                                                         \
-   /* Driver state.*/                                                        \
-   KXTJ3_1057_state_t        state;                                          \
-   /* Current configuration data.*/                                          \
-   const KXTJ3_1057Config    *config;                                        \
-   /* Accelerometer subsystem axes number.*/                                 \
-   size_t                    accaxes;                                        \
-   /* Accelerometer subsystem current sensitivity.*/                         \
+   _KXTJ3_1057_base_data                                                     \
    float                     accsensitivity[KXTJ3_1057_ACC_NUMBER_OF_AXES];  \
    /* Accelerometer subsystem current bias .*/                               \
    float                     accbias[KXTJ3_1057_ACC_NUMBER_OF_AXES];         \
    /* Accelerometer subsystem current full scale value.*/                    \
-   float                     accfullscale;                                   \
-   /* Slave address */                                                       \
-   uint8_t                   sad;                                            \
-   /* lowpower mode */                                                       \
-   bool                      lowpower;
+   float                     accfullscale;
+#else
+ #define _KXTJ3_1057_data                                                    \
+   _KXTJ3_1057_base_data
+#endif
 
  /**
   * @brief KXTJ3_1057 6-axis accelerometer/compass class.
   */
  struct KXTJ3_1057Driver {
    /** @brief Virtual Methods Table.*/
-#if defined(EX_ACCELEROMETER_INTERFACE) || defined(__DOXYGEN__)
+#if KXTJ3_1057_EXTENDED_INTERFACE || defined(__DOXYGEN__)
    const struct KXTJ3_1057VMT  *vmt;
    /** @brief Base accelerometer interface.*/
    BaseAccelerometer           acc_if;
@@ -489,7 +517,7 @@ typedef struct KXTJ3_1057Driver KXTJ3_1057Driver;
  /* Driver macros.                                                            */
  /*===========================================================================*/
 
-#if defined(EX_ACCELEROMETER_INTERFACE) || defined(__DOXYGEN__)
+#if KXTJ3_1057_EXTENDED_INTERFACE || defined(__DOXYGEN__)
 
 /**
   * @brief   Return the number of axes of the BaseAccelerometer.

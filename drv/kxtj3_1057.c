@@ -23,8 +23,8 @@
 
 #define IS_12BIT_MODE(devp)                                 \
   (!devp->lowpower &&                                       \
-    devp->accfullscale != KXTJ3_1057_gselection_8G &&       \
-    devp->accfullscale != KXTJ3_1057_gselection_16G)
+    devp->config->gselection != KXTJ3_1057_gselection_8G &&       \
+    devp->config->gselection != KXTJ3_1057_gselection_16G)
 
 #define IS_14BIT_MODE(devp)                                 \
   (!devp->lowpower && !IS_12BIT_MODE(devp))
@@ -74,7 +74,7 @@ void KXTJ3_1057BuildReg1(KXTJ3_1057Driver *devp,
   cr[1] = on ? KXTJ3_1057_CTRL_REG1_PC1 : 0;
   cr[1] |= KXTJ3_1057_CTRL_REG1_GSEL(
              KXTJ3_1057GSelbits(devp->lowpower,
-                                devp->config->accfullscale));
+                                devp->config->gselection));
   if (!devp->lowpower)
     cr[1] |= KXTJ3_1057_CTRL_REG1_RES;
   if (HAS_INTERRUPT(devp->config))
@@ -123,7 +123,7 @@ static msg_t KXTJ3_1057I2CWriteRegister(I2CDriver *i2cp, uint8_t sad,
 }
 
 
-#if defined(EX_ACCELEROMETER_INTERFACE) || defined(__DOXYGEN__)
+#if KXTJ3_1057_EXTENDED_INTERFACE || defined(__DOXYGEN__)
 
 /**
  * @brief   Return the number of axes of the BaseAccelerometer.
@@ -157,7 +157,7 @@ static size_t acc_get_axes_number(void *ip) {
  * @retval MSG_TIMEOUT  if a timeout occurred before operation end.
  */
 
-#if defined(EX_ACCELEROMETER_INTERFACE) || defined(__DOXYGEN__)
+#if KXTJ3_1057_EXTENDED_INTERFACE || defined(__DOXYGEN__)
  static msg_t acc_read_raw(void *ip, int32_t axes[]) {
   KXTJ3_1057Driver* devp;
   osalDbgCheck((ip != NULL) && (axes != NULL));
@@ -202,7 +202,25 @@ static size_t acc_get_axes_number(void *ip) {
   return msg;
 }
 
-#if defined(EX_ACCELEROMETER_INTERFACE) || defined(__DOXYGEN__)
+#if KXTJ3_1057_EXTENDED_INTERFACE || defined(__DOXYGEN__)
+
+static msg_t get_full_scale(float *fullscale, KXTJ3_1057_gselection_t gsel) {
+  /* Computing new fullscale value.*/
+  switch (gsel) {
+  case KXTJ3_1057_gselection_2G:
+    *fullscale = KXTJ3_1057_ACC_2G; break;
+  case KXTJ3_1057_gselection_4G:
+    *fullscale = KXTJ3_1057_ACC_4G; break;
+  case KXTJ3_1057_gselection_8G:
+    *fullscale = KXTJ3_1057_ACC_8G; break;
+  case KXTJ3_1057_gselection_16G:
+    *fullscale = KXTJ3_1057_ACC_16G; break;
+  default:
+    return MSG_RESET;
+  }
+  return MSG_OK;
+}
+
 
 /**
  * @brief   Retrieves cooked data from the BaseAccelerometer.
@@ -356,7 +374,7 @@ static msg_t acc_reset_sensivity(void *ip) {
 
   float sensitivity;
 
-  switch (devp->config->accfullscale) {
+  switch (devp->config->gselection) {
   case KXTJ3_1057_gselection_2G:
     sensitivity = KXTJ3_1057_ACC_SENS_2G; break;
   case KXTJ3_1057_gselection_4G:
@@ -405,19 +423,9 @@ static msg_t acc_set_full_scale(KXTJ3_1057Driver *devp,
                 "acc_set_full_scale(), channel not ready");
 
   /* Computing new fullscale value.*/
-  switch (gsel) {
-  case KXTJ3_1057_gselection_2G:
-    newfs = KXTJ3_1057_ACC_2G; break;
-  case KXTJ3_1057_gselection_4G:
-    newfs = KXTJ3_1057_ACC_4G; break;
-  case KXTJ3_1057_gselection_8G:
-    newfs = KXTJ3_1057_ACC_8G; break;
-  case KXTJ3_1057_gselection_16G:
-    newfs = KXTJ3_1057_ACC_16G; break;
-  default:
-    msg = MSG_RESET;
+  msg = get_full_scale(&newfs, gsel);
+  if (msg != MSG_OK)
     return msg;
-  }
 
   if(newfs != devp->accfullscale) {
     /* Computing scale value.*/
@@ -542,7 +550,7 @@ static const struct BaseAccelerometerVMT vmt_accelerometer = {
  */
 void KXTJ3_1057ObjectInit(KXTJ3_1057Driver *devp) {
 
-#if defined(EX_ACCELEROMETER_INTERFACE) || defined(__DOXYGEN__)
+#if KXTJ3_1057_EXTENDED_INTERFACE || defined(__DOXYGEN__)
   devp->vmt = &vmt_device;
   devp->acc_if.vmt = &vmt_accelerometer;
 #endif
@@ -581,7 +589,7 @@ void KXTJ3_1057Start(KXTJ3_1057Driver *devp, const KXTJ3_1057Config *config) {
 
   if (config->lowpowermode) {
     devp->lowpower =
-        (config->accfullscale < KXTJ3_1057_GSEL_8G_14bit &&
+        (config->gselection < KXTJ3_1057_GSEL_8G_14bit &&
         config->dataoutfreq <= KXTJ3_1057_datarate_200Hz);
   }
 
@@ -638,13 +646,15 @@ void KXTJ3_1057Start(KXTJ3_1057Driver *devp, const KXTJ3_1057Config *config) {
   i2cReleaseBus((devp)->config->i2cp);
 #endif /* KXTJ3_1057_SHARED_I2C */
 
-   devp->accfullscale = config->accfullscale;
 
-#if defined(EX_ACCELEROMETER_INTERFACE)
+#if KXTJ3_1057_EXTENDED_INTERFACE
+
+  get_full_scale(&devp->accfullscale, config->gselection);
+
   /* Storing sensitivity according to user settings */
   float sensitivity;
 
-  switch (config->accfullscale) {
+  switch (config->gselection) {
   case KXTJ3_1057_gselection_2G:
     sensitivity = KXTJ3_1057_ACC_SENS_2G; break;
   case KXTJ3_1057_gselection_4G:
