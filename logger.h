@@ -71,11 +71,11 @@ void loggerStart(void);
 
 void loggerSettingsChanged(void);
 
-void loggerClearAll(uint8_t buf[]);
+void loggerClearAll(usbpkg_t *sndpkg);
 
-void loggerReadAll(uint8_t buf[], CommsReq_t *cmd);
+void loggerReadAll(usbpkg_t *sndpkg);
 
-void loggerNextAddr(uint8_t buf[], CommsReq_t *cmd);
+void loggerNextAddr(usbpkg_t *sndpkg);
 
 
 extern thread_t *logthdp;

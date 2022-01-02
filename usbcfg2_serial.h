@@ -18,14 +18,10 @@
 #define USBCFG_H
 
 #include <hal.h>
-#include "comms.h"
 
 extern const USBConfig usbcfg;
-
-
-msg_t usbWaitRecieve(usbpkg_t *pkg);
-
-msg_t usbWaitTransmit(usbpkg_t *pkg);
+extern SerialUSBConfig serusbcfg;
+extern SerialUSBDriver SDU1;
 
 #endif  /* USBCFG_H */
 

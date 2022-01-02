@@ -6,6 +6,7 @@
  */
 
 #include <ch.h>
+//#include <string.h>
 #include "settings.h"
 #include "pwmout.h"
 #include "eeprom.h"
@@ -28,7 +29,7 @@ static thread_t *settingsp = 0;
 thread_reference_t saveThdRef;
 
 static ee24_arg_t eeArg = {
-  &settings_ee, 0, 0, 0, 0, 0
+  &settings_ee, 0, NULL, 0, 0, {0, 0}
 };
 
 /**
@@ -36,7 +37,7 @@ static ee24_arg_t eeArg = {
  */
 static void notify(void) {
   pwmoutSettingsChanged();
-  //accelSettingsChanged();
+  accelSettingsChanged();
   inputsSettingsChanged();
   brakeLogicSettingsChanged();
   loggerSettingsChanged();
@@ -68,11 +69,10 @@ static msg_t settingsLoad(void) {
     eeArg.buf = (uint8_t*)&settings;
     eeArg.len = sizeof(settings);
     res = ee24m01r_read(&eeArg);
+
   } while(false);
 
 
-  // notify subscribers that settings has loaded
-  notify();
   return res;
 }
 
@@ -82,6 +82,8 @@ static THD_FUNCTION(SettingsThd, arg) {
 
   // load values from EEPROM
   settingsLoad();
+  // notify subscribers that settings has loaded
+  notify();
 
   while(true) {
     chThdSuspendTimeoutS(&saveThdRef, TIME_INFINITE);
@@ -92,8 +94,7 @@ static THD_FUNCTION(SettingsThd, arg) {
     eeArg.len = sizeof(settings);
     eeArg.buf = (uint8_t*)&settings;
     ee24m01r_write(&eeArg);
-    //if (res == MSG_OK)
-      //notify();
+    notify();
   }
 }
 
@@ -121,22 +122,23 @@ Settings_t settings = {
   100,
   25,
   50, /*acc_steering_authority*/
-  0x03 << 6 | freq1kHz << 2,
   0,
   0,
+  freq1kHz,
   1,
   1,
   0,
+  1,
+  0,
+  2,
+  0, // accelerometer axis
   0,
   0,
   0,
+  SETTINGS_LOG_2560MS,
   0,
   0,
-  0,
-  SETTINGS_LOG_2560MS << 3,
-  0,
-  0,
-  0,
+  0, // WheelSensor2_pulses_per_rev
 };
 
 void settingsInit(void) {
@@ -176,65 +178,46 @@ void settingsSave(void) {
     chThdResume(&saveThdRef, MSG_OK);
 }
 
-void settingsGetAll(uint8_t buf[], CommsReq_t *cmd)
+void settingsGetAll(usbpkg_t *sndpkg)
 {
-  commsSendHeader(cmd->type, sizeof(settings));
-
-
-  buf[0] = (settings.header.storageVersion & 0xFF00) >> 8;
-  buf[1] = (settings.header.storageVersion & 0xFF);
-  buf[2] = (settings.header.size & 0xFF00) >> 8;
-  buf[3] = (settings.header.size & 0xFF);
+  PKG_PUSH_16(*sndpkg, settings.header.storageVersion);
+  PKG_PUSH_16(*sndpkg, settings.header.size);
 
   for (size_t i = 4; i < sizeof(settings); ++i)
-    buf[i] = ((uint8_t*)&settings)[i];
+    PKG_PUSH(*sndpkg, ((uint8_t*)&settings)[i]);
 
-  commsSendPayload(sizeof(settings));
+  usbWaitTransmit(sndpkg);
 }
 
-void settingsSetAll(uint8_t buf[], CommsReq_t *cmd) {
-  // -3 due to header bytes
-  const size_t sz = cmd->size -3;
-
-  static size_t nRead = 0;
-  static systime_t tmo;
-  tmo = chVTGetSystemTimeX() + TIME_MS2I(100);
-
-  // first read in all settings from serial buffer
-  while (serusbcfg.usbp->state == USB_ACTIVE &&
-         chVTGetSystemTimeX() < tmo &&
-         nRead < sz)
-  {
-    nRead += ibqReadTimeout(&SDU1.ibqueue, &buf[nRead],
-                            sz - nRead, TIME_MS2I(5));
-  }
+void settingsSetAll(usbpkg_t *sndpkg, usbpkg_t *rcvpkg) {
 
   CommsCmdType_e res = commsCmd_Error;
   do {
-    // incomplete or mismatched
-    if (sz != nRead) break;
 
     Settings_header_t header;
-    header.storageVersion = buf[0] << 8 | buf[1];
-    header.size = buf[2] << 8 | buf[3];
+
+    header.storageVersion = FROM_BIG_ENDIAN_16(&rcvpkg->onefrm.data[0]);
+    header.size =           FROM_BIG_ENDIAN_16(&rcvpkg->onefrm.data[2]);
 
     if (!settingsValidateHeader(header)) break;
 
     // set settings
     for (size_t i = 4; i < sizeof(settings); ++i)
-      ((uint8_t*)&settings)[i] = buf[i];
+      ((uint8_t*)&settings)[i] = rcvpkg->onefrm.data[i];
 
     settingsValidateValues();
 
     // save settings
     settingsSave();
 
+    notify();
+
     // all ok
     res = commsCmd_OK;
 
   } while(false);
 
-  commsSendHeader(res, 0);
+  commsSendWithCmd(sndpkg, res);
 }
 
 bool settingsValidateHeader(Settings_header_t header) {

@@ -70,12 +70,14 @@ class ViewLogCls {
     this.setLogOrigin("Device");
   }
 
-  async clearLog() {
+  async clearLog(evt) {
     console.log("Clear log in device");
+    evt.target.disabled = true;
     const res = await SerialBase.instance().clearLogEntries();
     if (res) {
       LogRoot.instance().clear();
     }
+    evt.target.disabled = false;
   }
 
   async saveLog(){
@@ -181,16 +183,16 @@ class ViewLogCls {
         <div>
           <h1>${tr.header}</h1>
 
-          <button class="w3-button w3-blue w3-padding-large w3-large w3-margin-top" onclick="viewlogHtmlObj.fetchLog()">
+          <button class="w3-button w3-blue w3-padding-large w3-large w3-margin-top" onclick="viewlogHtmlObj.fetchLog(event)">
             ${tr.fetchLogBtn}
           </button>
-          <button class="w3-button w3-orange w3-padding-large w3-large w3-margin-top" onclick="viewlogHtmlObj.clearLog()">
+          <button class="w3-button w3-orange w3-padding-large w3-large w3-margin-top" onclick="viewlogHtmlObj.clearLog(event)">
             ${tr.clearLogBtn}
           </button>
-          <button class="w3-button w3-gray w3-padding-large w3-large w3-margin-top" onclick="viewlogHtmlObj.saveLog()">
+          <button class="w3-button w3-gray w3-padding-large w3-large w3-margin-top" onclick="viewlogHtmlObj.saveLog(event)">
             ${tr.saveLogBtn}
           </button>
-          <button class="w3-button w3-gray w3-padding-large w3-large w3-margin-top" onclick="viewlogHtmlObj.readLog()">
+          <button class="w3-button w3-gray w3-padding-large w3-large w3-margin-top" onclick="viewlogHtmlObj.readLog(event)">
             ${tr.readLogBtn}
           </button>
           <h5 class="w3-padding-8">${tr.fetchedLogPoints} <span id="logOrigin" style="font-weight:bold;">${logOrigin}</span></h5>

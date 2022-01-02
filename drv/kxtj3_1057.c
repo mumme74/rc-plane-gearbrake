@@ -168,20 +168,21 @@ static size_t acc_get_axes_number(void *ip) {
  msg_t KXTJ3_1057AccelerometerReadRaw(KXTJ3_1057Driver *devp, int32_t axes[]) {
 #endif
 
-  uint8_t buff [KXTJ3_1057_ACC_NUMBER_OF_AXES * 2], i;
+  uint8_t buff[KXTJ3_1057_ACC_NUMBER_OF_AXES * 2];
   int16_t tmp;
   msg_t msg;
 
   osalDbgAssert((devp->state == KXTJ3_1057_READY),
                 "acc_read_raw(), invalid state");
-  osalDbgAssert((devp->config->i2cp->state == I2C_READY),
-                "acc_read_raw(), channel not ready");
 
 #if KXTJ3_1057_SHARED_I2C
   i2cAcquireBus(devp->config->i2cp);
-  i2cStart(devp->config->i2cp,
-           devp->config->i2ccfg);
+  //i2cStart(devp->config->i2cp,
+  //         devp->config->i2ccfg);
 #endif /* KXTJ3_1057_SHARED_I2C */
+
+  osalDbgAssert((devp->config->i2cp->state == I2C_READY),
+                "acc_read_raw(), channel not ready");
 
   msg = KXTJ3_1057I2CReadRegister(devp->config->i2cp, devp->sad,
                                   KXTJ3_1057_XOUT_L, buff,
@@ -193,8 +194,8 @@ static size_t acc_get_axes_number(void *ip) {
 
   if(msg == MSG_OK) {
     uint32_t shft = VLU_BIT_SHIFT_CNT(devp);
-    for(i = 0; i < KXTJ3_1057_ACC_NUMBER_OF_AXES; i++) {
-      tmp = buff[2 * i] + (buff[2 * i + 1] << 8);
+    for(size_t i = 0; i < KXTJ3_1057_ACC_NUMBER_OF_AXES; i++) {
+      tmp = (buff[(2 * i) + 1] << 8) | buff[2 * i];
       axes[i] = (int32_t)(tmp >> shft);
     }
   }
@@ -566,7 +567,6 @@ void KXTJ3_1057ObjectInit(KXTJ3_1057Driver *devp) {
  * @api
  */
 void KXTJ3_1057Start(KXTJ3_1057Driver *devp, const KXTJ3_1057Config *config) {
-  uint32_t i;
   uint8_t cr[6];
 
   osalDbgCheck((devp != NULL) && (config != NULL));
@@ -638,6 +638,9 @@ void KXTJ3_1057Start(KXTJ3_1057Driver *devp, const KXTJ3_1057Config *config) {
   i2cReleaseBus((devp)->config->i2cp);
 #endif /* KXTJ3_1057_SHARED_I2C */
 
+   devp->accfullscale = config->accfullscale;
+
+#if defined(EX_ACCELEROMETER_INTERFACE)
   /* Storing sensitivity according to user settings */
   float sensitivity;
 
@@ -651,12 +654,10 @@ void KXTJ3_1057Start(KXTJ3_1057Driver *devp, const KXTJ3_1057Config *config) {
   case KXTJ3_1057_gselection_16G:
     sensitivity = KXTJ3_1057_ACC_SENS_16G; break;
   default:
-    osalDbgAssert(FALSE, "lsm303dlhcStart(), accelerometer full scale issue");
+    osalDbgAssert(FALSE, "KXTJ3_1057Start(), accelerometer full scale issue");
   }
 
-   devp->accfullscale = config->accfullscale;
-
-   for(i = 0; i < KXTJ3_1057_ACC_NUMBER_OF_AXES; ++i) {
+   for(size_t i = 0; i < KXTJ3_1057_ACC_NUMBER_OF_AXES; ++i) {
      if(devp->config->accsensitivity == NULL)
        devp->accsensitivity[i] = sensitivity;
      else
@@ -665,12 +666,12 @@ void KXTJ3_1057Start(KXTJ3_1057Driver *devp, const KXTJ3_1057Config *config) {
 
    /* Storing bias information */
    if(devp->config->accbias != NULL)
-     for(i = 0; i < KXTJ3_1057_ACC_NUMBER_OF_AXES; i++)
+     for(size_t i = 0; i < KXTJ3_1057_ACC_NUMBER_OF_AXES; i++)
        devp->accbias[i] = devp->config->accbias[i];
    else
-     for(i = 0; i < KXTJ3_1057_ACC_NUMBER_OF_AXES; i++)
+     for(size_t i = 0; i < KXTJ3_1057_ACC_NUMBER_OF_AXES; i++)
        devp->accbias[i] = KXTJ3_1057_ACC_BIAS;
-
+#endif
 
 
   /* This is the MEMS transient recovery time */

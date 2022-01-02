@@ -47,7 +47,7 @@ int main(void) {
   inputsInit();
   loggerInit();
   brakeLogicInit();
-  //accelInit();
+  accelInit();
   commsInit();
   // done last of the initializations as main(void) now becomes idle thread
   chSysInit();

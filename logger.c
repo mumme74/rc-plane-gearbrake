@@ -15,6 +15,13 @@
 #include "comms.h"
 #include <ch.h>
 
+#define ADDRS_IN_LOG(addr) \
+  ((addr) > EEPROM_SETTINGS_END_ADDR && \
+   (addr) < EEPROM_LOG_NEXT_ADDR_LOC)
+
+#define OFFSET_NEXT(addr) \
+  ADDRS_IN_LOG(addr) ? (addr) : EEPROM_LOG_START_ADDR
+
 /*
  * Memory structure for Logger:
  * log .. many Log_Items
@@ -43,7 +50,8 @@ static systime_t logTimeout = 20;
 
 static LogBuf_t log;
 static LogItem_t itm;
-static uint32_t offsetNext = 0;
+static uint32_t offsetNext;
+static uint8_t buf[EEPROM_PAGE_SIZE];
 
 /*
 void logItem(uint8_t *pos[], uint32_t *thing, size_t sz,
@@ -124,13 +132,13 @@ THD_FUNCTION(LoggerThd, arg) {
 
   static ee24_arg_t eeArg = {
     &log_ee, EEPROM_LOG_NEXT_ADDR_LOC, (uint8_t*)&offsetNext,
-    sizeof(offsetNext), 0, 0
+    0, sizeof(offsetNext), {0, 0}
   };
 
   // read start pos of low address
   msg_t res = ee24m01r_read(&eeArg);
   if (res != MSG_OK) {
-    chThdExit(res);
+    chThdSleep(TIME_INFINITE);
     return;
   }
 
@@ -142,28 +150,26 @@ THD_FUNCTION(LoggerThd, arg) {
   log.items[0].data[0] = 0x5A; // bit twiddle to easily find during debug
 
   // update in eeprom
-  eeArg.offset = offsetNext;
+  eeArg.offset = OFFSET_NEXT(offsetNext);
   eeArg.buf = (uint8_t*)&log;
   eeArg.len = log.size;
   res = ee24m01r_write(&eeArg);
   if (res != MSG_OK) {
-    chThdExit(res);
+    chThdSleep(TIME_INFINITE);
     return;
   }
-  offsetNext += log.size;
 
+  eeArg.offset = OFFSET_NEXT(offsetNext + log.size);
 
   // start thread loop
   while (true) {
     chThdSleep(logTimeout);
-    if (serusbcfg.usbp->state == USB_ACTIVE)
+    if (usbGetDriverStateI(&USBD1) == USB_ACTIVE)
       continue; // don't log when USB is plugged in
 
     buildLog();
 
-    // at end, flip around
-    if (offsetNext >= EEPROM_LOG_NEXT_ADDR_LOC)
-      offsetNext = 0;
+    offsetNext = OFFSET_NEXT(offsetNext + log.size);
 
     // store it
     eeArg.offset = offsetNext;
@@ -171,7 +177,7 @@ THD_FUNCTION(LoggerThd, arg) {
     eeArg.buf = (uint8_t*)&log;
     res = ee24m01r_write(&eeArg);
     if (res != MSG_OK) {
-      chThdExit(res);
+      chThdSleep(TIME_INFINITE);
       return;
     }
 
@@ -188,7 +194,7 @@ THD_FUNCTION(LoggerThd, arg) {
       eeArg.buf = (uint8_t*)&offsetNext;
       res = ee24m01r_write(&eeArg);
       if (res != MSG_OK) {
-        chThdExit(res);
+        chThdSleep(TIME_INFINITE);
         return;
       }
     }
@@ -221,67 +227,72 @@ void loggerSettingsChanged(void) {
   logTimeout = logPeriodicityMS();
 }
 
-void loggerClearAll(uint8_t buf[]) {
-  //chThdSuspendTimeoutS(&logthdp, TIME_INFINITE);
+void loggerClearAll(usbpkg_t *sndpkg) {
   logTimeout = logPeriodicityMS(); // when USB is attached we stop logging
 
-  for(size_t i = 0; i < COMMS_BUFF_SZ; ++i)
+  for(size_t i = 0; i < EEPROM_PAGE_SIZE; ++i)
     buf[i] = 0xFF;
 
-  ee24_arg_t eeArg = {&log_ee, 0, buf, 0, 0, 0};
+  ee24_arg_t eeArg = {&log_ee, 0, buf, 0, 0, {0, 0}};
+  msg_t msg;
 
   do {
-    eeArg.len = eeArg.offset + COMMS_BUFF_SZ < EEPROM_LOG_SIZE ?
-                    COMMS_BUFF_SZ : EEPROM_LOG_SIZE - eeArg.offset;
-    ee24m01r_write(&eeArg);
+    eeArg.len = eeArg.offset + EEPROM_PAGE_SIZE < EEPROM_LOG_SIZE ?
+                  EEPROM_PAGE_SIZE : EEPROM_LOG_SIZE - eeArg.offset;
+    msg = ee24m01r_write(&eeArg);
 
-    eeArg.offset += COMMS_BUFF_SZ;
-  } while(eeArg.offset < EEPROM_LOG_SIZE);
+    eeArg.offset += EEPROM_PAGE_SIZE;
+  } while(msg == MSG_OK && eeArg.offset < EEPROM_LOG_SIZE);
 
-  //chThdResume(&logthdp, MSG_OK);
   logTimeout = logPeriodicityMS();
+
+  commsSendWithCmd(sndpkg, msg == MSG_OK ? commsCmd_OK : commsCmd_Error);
 }
 
-void loggerReadAll(uint8_t buf[], CommsReq_t *cmd)
+void loggerReadAll(usbpkg_t *sndpkg)
 {
-  //chThdSuspendTimeoutS(&logthdp, TIME_INFINITE);
   logTimeout =  TIME_MS2I(TIME_INFINITE); // when USB is attached we stop logging
 
-  // send header build up size bytes...
-  if (commsSendHeader(cmd->type, EEPROM_LOG_SIZE) > 0) {
+  // send header with total size about to be transmitted
+  INIT_PKG_HEADER_FRM(*sndpkg, EEPROM_LOG_SIZE - sizeof(offsetNext));
+  usbWaitTransmit(sndpkg);
 
-    ee24_arg_t eeArg = {&log_ee, 0, buf, 0, 0, 0};
+  ee24_arg_t eeArg = {&log_ee, 0, sndpkg->datafrm.data, 0, 0, {0, 0}};
+  msg_t msg;
+  uint32_t pkgId = 0;
 
-    do {
-      // -4 due to last 4 bytes is logNextAddr
-      eeArg.len = eeArg.offset + COMMS_BUFF_SZ < EEPROM_LOG_SIZE ?
-                      COMMS_BUFF_SZ : EEPROM_LOG_SIZE - eeArg.offset;
-      // read page into buffer
-      if (ee24m01r_read(&eeArg) != MSG_OK)
-        break;
+  do {
+    // -4 due to last 4 bytes is logNextAddr
+    // -5 is for the header bytes in a data package
+    static const size_t hdrSz = sizeof(sndpkg->datafrm) - sizeof(sndpkg->datafrm.data);
+    eeArg.len = (eeArg.offset + wMaxPacketSize -hdrSz < EEPROM_LOG_SIZE -4 ?
+                  wMaxPacketSize -hdrSz : EEPROM_LOG_SIZE -4 - eeArg.offset);
 
-      // send buffer to host
-      if (commsSendPayload(eeArg.len) < eeArg.len)
-        break;
-      eeArg.offset += COMMS_BUFF_SZ;
+    // read page into buffer
+    msg = ee24m01r_read(&eeArg);
+    if (msg != MSG_OK) break;
 
-    } while(eeArg.offset < EEPROM_LOG_SIZE);
+    // send buffer to host
+    INIT_PKG_DATA_FRM(*sndpkg, pkgId++);
+    sndpkg->datafrm.len += eeArg.len;
+    usbWaitTransmit(sndpkg);
 
-  }
+    eeArg.offset += sizeof(sndpkg->datafrm.data);
 
-  //chThdResume(&logthdp, MSG_OK);
+  } while(msg == MSG_OK && eeArg.offset < EEPROM_LOG_SIZE);
+
+  INIT_PKG(*sndpkg,
+           msg == MSG_OK ? commsCmd_OK : commsCmd_Error,
+           sndpkg->onefrm.reqId);
+  usbWaitTransmit(sndpkg);
+
   logTimeout = logPeriodicityMS();
 }
 
-void loggerNextAddr(uint8_t buf[], CommsReq_t *cmd)
+void loggerNextAddr(usbpkg_t *sndpkg)
 {
-  commsSendHeader(cmd->type, sizeof(offsetNext));
-  // big endian
-  buf[3] = offsetNext & 0xFF;
-  buf[2] = (offsetNext & 0xFF00) >> 8;
-  buf[1] = (offsetNext & 0xFF0000) >> 16;
-  buf[0] = (offsetNext & 0xFF000000) >> 24;
-  commsSendPayload(4);
+  PKG_PUSH_32(*sndpkg, offsetNext);
+  usbWaitTransmit(sndpkg);
 }
 
 

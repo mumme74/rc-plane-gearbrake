@@ -41,15 +41,13 @@ THD_WORKING_AREA(waAccelThd, 128);
 THD_FUNCTION(AccelThd, arg) {
   (void)arg;
 
+  KXTJ3_1057Start(&accd, &acccfg);
+
   // block first startup, wait for msg
-  sysinterval_t timeout = TIME_INFINITE;
 
   while (true) {
-    thread_t *tp = chMsgWaitTimeout(timeout);
-    if (tp) {
-      timeout = settings.accelerometer_active ? TIME_MS2I(25) : TIME_INFINITE;
-      chMsgRelease(tp, MSG_OK);
-    } else
+    chThdSleep(TIME_MS2I(25));
+    if (settings.accelerometer_active)
       KXTJ3_1057AccelerometerReadRaw(&accd, (int32_t*)accel.axis);
   }
 }
@@ -74,14 +72,8 @@ void accelInit(void) {
 }
 
 void accelStart(void) {
+  // create a thread
   accelThd = chThdCreate(&accelThdDesc);
 }
 
-void accelSettingsChanged(void) {
-  chMsgSend(accelThd, MSG_OK);
-  if (settings.accelerometer_active) {
-    KXTJ3_1057Start(&accd, &acccfg);
-  } else {
-    KXTJ3_1057Stop(&accd);
-  }
-}
+void accelSettingsChanged(void) { }

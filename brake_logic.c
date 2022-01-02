@@ -220,7 +220,7 @@ void brakeLogicStart(void) {
 }
 
 void brakeLogicSettingsChanged(void) {
-  // which brake are at the left position of center line
+ // which brake are at the left position of center line
   if (settings.Brake0_dir == SETTINGS_BRAKE_POS_LEFT)
     leftPosBrake = 0;
   else if (settings.Brake1_dir == SETTINGS_BRAKE_POS_LEFT)
@@ -238,5 +238,5 @@ void brakeLogicSettingsChanged(void) {
   else if (settings.Brake2_dir == SETTINGS_BRAKE_POS_RIGHT)
     rightPosBrake = 2;
   else
-    leftPosBrake = -1;
+    rightPosBrake = -1;
 }

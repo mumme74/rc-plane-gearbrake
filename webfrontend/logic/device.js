@@ -169,7 +169,7 @@ class DeviceConfig_v1 extends DeviceConfigBase {
     byteArr[idx++] = this.max_brake_force;
     byteArr[idx++] = this.ws_steering_brake_authority;
     byteArr[idx++] = this.acc_steering_brake_authority;
-    // bit field for 1 byte
+    // bit field for 10th byte
     byteVlu  = (this.reverse_input ? 1 : 0) << 0;
     byteVlu |= (this.ABS_active ? 1 : 0) << 1;
     byteVlu |= (this.PwmFreq & 0x07) << 2;
@@ -177,13 +177,13 @@ class DeviceConfig_v1 extends DeviceConfigBase {
     byteVlu |= (this.Brake1_active ? 1 : 0) << 6;
     byteVlu |= (this.Brake2_active ? 1 : 0) << 7;
     byteArr[idx++] = byteVlu
-    // bit field for next byte
+    // bit field for 11th
     byteVlu  = (this.Brake0_dir & 0x03) << 0;
     byteVlu |= (this.Brake1_dir & 0x03) << 2;
     byteVlu |= (this.Brake2_dir & 0x03) << 4;
     byteVlu |= (this.accelerometer_axis & 0x03) << 6;
     byteArr[idx++] = byteVlu;
-    // bit field byte 3
+    // bit field byte 12th
     byteVlu  = (this.accelerometer_active ? 1 : 0) << 0;
     byteVlu |= (this.accelerometer_axis_invert ? 1 : 0) << 1;
     byteVlu |= (this.dontLogWhenStill ? 1 : 0) << 2;

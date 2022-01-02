@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>Test navigator.usb</title>
+        <script>
+"use strict";
+
+class LandingGear {
+    device = null;
+    iep = null;
+    oep = null;
+    rcvCallback = () => {}
+    constructor(rcvCallback, usbFilters = [{ vendorId: 0x0483 }]) {
+        this.rcvCallback = rcvCallback;
+        this.usbFilters = usbFilters;
+    }
+
+    async open() {
+        try {
+            this.device = await navigator.usb.requestDevice({ filters:this.usbFilters});
+        } catch (error) {
+            console.error(error);
+            return false;
+        }
+
+        await this.device.open();
+        if (this.device.configuration === null)
+            await this.device.selectConfiguration(1); // Select configuration #1 for the device.
+
+        for(let intf of this.device.configuration.interfaces) {
+            for (let ep of intf.alternates[0].endpoints) {
+                if (ep.type === 'bulk') {
+                    switch (ep.direction) {
+                    case 'out': this.oep = ep; break;
+                    case 'in': this.iep = ep; break;
+                    default: break;
+                    }
+                }
+            }
+        }
+
+        return true;
+    }
+
+    async close() {
+        if (this.device.opened)
+            this.device.close();
+    }
+
+    _checkTransfer(res) {
+        if (res.status !== 'ok') {
+            this.rcvCallback("Error in transfer");
+            throw new Error("Error in usb transfer " +
+                        (res instanceof USBInTransferResult ? " from" : "to") +
+                        " device");
+        }
+        return res;
+    }
+
+    async send(data) {
+        if (!Array.isArray(data)) throw new Error("Not valid data");
+
+        if (!this.device?.opened || !this.oep || !this.iep) {
+            if (!await this.open())
+                return;
+        }
+
+
+        if (data.length > this.oep.packetSize) {
+            throw new Error(`data more then ${this.oep.packetSize} bytes`);
+        }
+
+        await this.device.reset();
+        await this.device.claimInterface(0); // Request exclusive control over interface #1.
+
+        let res = await this.device.transferOut(
+                          this.oep.endpointNumber, new Uint8Array(data))
+        this._checkTransfer(res);
+
+        let buf, rcvd = [];
+        do {
+            // handle single and multiframe
+            res = this._checkTransfer(await this.device.transferIn(
+                        this.iep.endpointNumber, this.iep.packetSize*20));
+            buf = new Uint8Array(res.data.buffer);
+            this.rcvCallback(buf, false);
+            if (buf[1] & 0x80)
+                rcvd = rcvd.concat(Array.from(buf));
+
+        } while (buf[1] & 0x80);
+
+        await this.device.releaseInterface(0)
+
+        if (rcvd.length < 1)
+            rcvd = rcvd.concat(Array.from(buf));
+
+        await this.device.releaseInterface(0)
+
+        return rcvd;
+    }
+}
+
+    let devCls = new LandingGear(setResult);
+
+    function setResult(res, clear = true) {
+        if (res instanceof ArrayBuffer || Array.isArray(res))
+            res = new Uint8Array(res).join(',');
+        if (clear)
+            document.getElementById('resultData').value = res;
+        else
+            document.getElementById('resultData').value += res;
+    }
+
+    function fetchUserData() {
+        let strData = document.getElementById("sendData").value.replace(/\s+/g, ',');
+        if (strData.length < 3) {
+            setResult("not enough data");
+            return;
+        }
+
+        let data = strData.split(',').map(d=>parseInt(d.trim()));
+        if (data[0] !== data.length) {
+            setResult(`length ${data[0]} byte does not match num bytes to send (${data.length})`);
+            return;
+        }
+        return data;
+    }
+
+
+    document.addEventListener("DOMContentLoaded", () => {
+        let button = document.getElementsByTagName('button')[0];
+        button.addEventListener('click', async ()=>{
+            setResult("");
+            let rcvData = await devCls.send(fetchUserData());
+            setResult(`\nRecieved ${rcvData.length} bytes`, false);
+        });
+    });
+
+
+        </script>
+    </head>
+    <body>
+        senddata<br/>
+        <textarea id="sendData" cols="30" rows="10">3 1 0</textarea><br/>
+        <button>send</button><br/><br/>
+        recievedata<br/>
+        <textarea id="resultData" readonly cols="30" rows="10"></textarea>
+    </body>
+</html>

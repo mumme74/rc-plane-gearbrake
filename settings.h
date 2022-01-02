@@ -121,8 +121,8 @@ void settingsDefault(void);
  */
 void settingsSave(void);
 
-void settingsGetAll(uint8_t buf[], CommsReq_t *cmd);
-void settingsSetAll(uint8_t buf[], CommsReq_t *cmd);
+void settingsGetAll(usbpkg_t *sndpkg);
+void settingsSetAll(usbpkg_t *sndpkg, usbpkg_t *rcvpkg);
 
 bool settingsValidateHeader(Settings_header_t header);
 

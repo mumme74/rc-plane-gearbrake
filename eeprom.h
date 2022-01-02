@@ -19,8 +19,9 @@
             (EEPROM_SETTINGS_START_ADDR + EEPROM_SETTINGS_SIZE)
 #define EEPROM_LOG_START_ADDR  (EEPROM_SETTINGS_END_ADDR + 1)
 #define EEPROM_LOG_SIZE        ((EE24M01R_BANK1_END_ADDR - EEPROM_LOG_START_ADDR)+ \
-                                EE24M01R_BANK2_CAPACITY - 4 /*-4 due to next address is stored last in sector 2*/)
-#define EEPROM_LOG_NEXT_ADDR_LOC (EE24M01R_BANK2_END_ADDR - 4)
+                                EE24M01R_BANK2_CAPACITY /*- 4 -4 due to next address is stored last in sector 2*/)
+#define EEPROM_LOG_NEXT_ADDR_LOC \
+  (EE24M01R_BANK1_END_ADDR + EE24M01R_BANK2_END_ADDR - 4 - EEPROM_SETTINGS_SIZE)
 void eepromInit(void);
 
 //extern EepromFileStream *settings_fs, *log_bank1_fs, *log_bank2_fs;
