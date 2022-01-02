@@ -35,6 +35,9 @@
 #define MIN_TIME_BETWEEN_PULSE_DEC_MS 12
 #define SLIP_RELESE_FACTOR 2.0
 
+// un-const values
+#define VALUES ((Values_t*)&values)
+
 // -----------------------------------------------------------------
 // public
 const Values_t values;
@@ -42,7 +45,6 @@ const Values_t values;
 // ------------------------------------------------------------------
 // private stuff to this module
 static thread_t *brklogicp = 0;
-static Values_t *vlup = (Values_t*)&values; // un-const
 
 static systime_t sleepTime = TIME_MS2I(20),
                  timeAtLastSpeedDecrement = 0;
@@ -58,36 +60,36 @@ static THD_FUNCTION(BrakeLogicThd, arg) {
   while (true) {
     chThdSleep(sleepTime);
 
-    vlup->brakeForce = (settings.reverse_input) ?
+    VALUES->brakeForce = (settings.reverse_input) ?
               100 - inputs.brakeForce : inputs.brakeForce;
-    if (vlup->brakeForce < settings.lower_threshold) {
+    if (VALUES->brakeForce < settings.lower_threshold) {
       sleepTime = TIME_MS2I(20); // wait for next pulse from reciver
       timeAtLastSpeedDecrement = 0;
-      vlup->brakeForce_out[0] = 0;
-      vlup->brakeForce_out[1] = 0;
-      vlup->brakeForce_out[2] = 0;
+      VALUES->brakeForce_out[0] = 0;
+      VALUES->brakeForce_out[1] = 0;
+      VALUES->brakeForce_out[2] = 0;
       continue; // next loop, no brake wanted
     }
 
     sleepTime = TIME_MS2I(5); // recalculate every 5ms now (200 times a sec)
 
-    if (vlup->brakeForce > settings.max_brake_force)
-      vlup->brakeForce = settings.max_brake_force;
+    if (VALUES->brakeForce > settings.max_brake_force)
+      VALUES->brakeForce = settings.max_brake_force;
 
     // do accelerometer
     if (settings.accelerometer_active) {
       switch (settings.accelerometer_axis) {
       default: // fallthrough
       case SETTINGS_ACCEL_USE_X:
-        vlup->acceleration = (int16_t)(settings.accelerometer_axis_invert ?
+        VALUES->acceleration = (int16_t)(settings.accelerometer_axis_invert ?
                                 -accel.axis[0] : accel.axis[0]);
         break;
       case SETTINGS_ACCEL_USE_Y:
-        vlup->acceleration = (int16_t)(settings.accelerometer_axis_invert ?
+        VALUES->acceleration = (int16_t)(settings.accelerometer_axis_invert ?
                                 -accel.axis[1] : accel.axis[1]);
         break;
       case SETTINGS_ACCEL_USE_Z:
-        vlup->acceleration = (int16_t)(settings.accelerometer_axis_invert ?
+        VALUES->acceleration = (int16_t)(settings.accelerometer_axis_invert ?
                                 -accel.axis[2] : accel.axis[2]);
         break;
       }
@@ -106,7 +108,7 @@ static THD_FUNCTION(BrakeLogicThd, arg) {
 
       if (speed > lastspeed) {
         // wheels spin up ie touch down
-        vlup->speedOnGround = speed;
+        VALUES->speedOnGround = speed;
         lastspeed = speed;
         timeAtLastSpeedDecrement = chVTGetSystemTimeX();
       } else if (speed < lastspeed) {
@@ -116,83 +118,83 @@ static THD_FUNCTION(BrakeLogicThd, arg) {
         {
           // valid decrement
           timeAtLastSpeedDecrement = chVTGetSystemTimeX();
-          if (vlup->speedOnGround > 0)
+          if (VALUES->speedOnGround > 0)
             // we use decrement here as we can't really rely
             // on wheel speed sensor as those might have locked up
-            --vlup->speedOnGround;
+            --VALUES->speedOnGround;
         }
       }
     }
 
     // the ABS logic
-    if (settings.ABS_active && vlup->speedOnGround > 0) {
-      if (inputs.wheelRPS[0] < vlup->speedOnGround) {
-        vlup->slip[0] =
-            (vlup->speedOnGround - inputs.wheelRPS[0]) / vlup->speedOnGround;
-        vlup->brakeForce_out[0] =
-            vlup->brakeForce * vlup->slip[0] * SLIP_RELESE_FACTOR;
+    if (settings.ABS_active && VALUES->speedOnGround > 0) {
+      if (inputs.wheelRPS[0] < VALUES->speedOnGround) {
+        VALUES->slip[0] =
+            (VALUES->speedOnGround - inputs.wheelRPS[0]) / VALUES->speedOnGround;
+        VALUES->brakeForce_out[0] =
+            VALUES->brakeForce * VALUES->slip[0] * SLIP_RELESE_FACTOR;
       }
-      if (inputs.wheelRPS[1] < vlup->speedOnGround) {
-        vlup->slip[1] =
-            (vlup->speedOnGround - inputs.wheelRPS[1]) / vlup->speedOnGround;
-        vlup->brakeForce_out[1] =
-            vlup->brakeForce * vlup->slip[1] * SLIP_RELESE_FACTOR;
+      if (inputs.wheelRPS[1] < VALUES->speedOnGround) {
+        VALUES->slip[1] =
+            (VALUES->speedOnGround - inputs.wheelRPS[1]) / VALUES->speedOnGround;
+        VALUES->brakeForce_out[1] =
+            VALUES->brakeForce * VALUES->slip[1] * SLIP_RELESE_FACTOR;
       }
-      if (inputs.wheelRPS[2] < vlup->speedOnGround) {
-        vlup->slip[2] =
-            (vlup->speedOnGround - inputs.wheelRPS[2]) / vlup->speedOnGround;
-        vlup->brakeForce_out[2] =
-            vlup->brakeForce * vlup->slip[2] * SLIP_RELESE_FACTOR;
+      if (inputs.wheelRPS[2] < VALUES->speedOnGround) {
+        VALUES->slip[2] =
+            (VALUES->speedOnGround - inputs.wheelRPS[2]) / VALUES->speedOnGround;
+        VALUES->brakeForce_out[2] =
+            VALUES->brakeForce * VALUES->slip[2] * SLIP_RELESE_FACTOR;
       }
     } else {
-      vlup->brakeForce_out[0] =
-          vlup->brakeForce_out[1] =
-              vlup->brakeForce_out[2] = vlup->brakeForce;
+      VALUES->brakeForce_out[0] =
+          VALUES->brakeForce_out[1] =
+              VALUES->brakeForce_out[2] = VALUES->brakeForce;
     }
 
     // steering brakes accelerometer
-    if (settings.accelerometer_active && vlup->acceleration != 0 &&
+    if (settings.accelerometer_active && VALUES->acceleration != 0 &&
         leftPosBrake > -1 && rightPosBrake > -1)
     {
-      int32_t vlu = vlup->acceleration * settings.acc_steering_brake_authority;
-      vlup->accelSteering = vlu / (64 * 100); // 14bit -> 8bit and 100%
+      int32_t vlu = VALUES->acceleration * settings.acc_steering_brake_authority;
+      VALUES->accelSteering = vlu / (64 * 100); // 14bit -> 8bit and 100%
 
-      if (vlup->accelSteering < 0) {
-        if (vlup->brakeForce_out[leftPosBrake] > (uint8_t)(-vlup->accelSteering))
-          vlup->brakeForce_out[leftPosBrake] = (uint8_t)(-vlup->accelSteering);
-      } else if (vlup->accelSteering > 0) {
-        if (vlup->brakeForce_out[rightPosBrake] > (uint8_t)vlup->accelSteering)
-          vlup->brakeForce_out[rightPosBrake] = (uint8_t)vlup->accelSteering;
+      if (VALUES->accelSteering < 0) {
+        if (VALUES->brakeForce_out[leftPosBrake] > (uint8_t)(-VALUES->accelSteering))
+          VALUES->brakeForce_out[leftPosBrake] = (uint8_t)(-VALUES->accelSteering);
+      } else if (VALUES->accelSteering > 0) {
+        if (VALUES->brakeForce_out[rightPosBrake] > (uint8_t)VALUES->accelSteering)
+          VALUES->brakeForce_out[rightPosBrake] = (uint8_t)VALUES->accelSteering;
       }
     }
 
     // steering brakes speed sensors
     if (settings.ws_steering_brake_authority > 0 &&
-        vlup->speedOnGround > 0 &&
+        VALUES->speedOnGround > 0 &&
         leftPosBrake > -1 && rightPosBrake > -1)
     {
       uint8_t leftSpeed = inputs.wheelRPS[leftPosBrake],
               rightSpeed = inputs.wheelRPS[rightPosBrake];
 
       int32_t vlu = (leftSpeed - rightSpeed) * settings.ws_steering_brake_authority;
-      vlup->wsSteering = vlu / 100; // remove 100% from authority
+      VALUES->wsSteering = vlu / 100; // remove 100% from authority
 
-      if (vlup->wsSteering < 0) {
-        if (vlup->brakeForce_out[leftPosBrake] > (uint8_t)(-vlup->wsSteering))
-          vlup->brakeForce_out[leftPosBrake] = (uint8_t)(-vlup->wsSteering);
-      } else if (vlup->wsSteering > 0) {
-        if (vlup->brakeForce_out[rightPosBrake] > (uint8_t)vlup->wsSteering)
-          vlup->brakeForce_out[rightPosBrake] = (uint8_t)vlup->wsSteering;
+      if (VALUES->wsSteering < 0) {
+        if (VALUES->brakeForce_out[leftPosBrake] > (uint8_t)(-VALUES->wsSteering))
+          VALUES->brakeForce_out[leftPosBrake] = (uint8_t)(-VALUES->wsSteering);
+      } else if (VALUES->wsSteering > 0) {
+        if (VALUES->brakeForce_out[rightPosBrake] > (uint8_t)VALUES->wsSteering)
+          VALUES->brakeForce_out[rightPosBrake] = (uint8_t)VALUES->wsSteering;
       }
     }
 
     // set PWM value to outputs
     if (settings.Brake0_active)
-      pwmoutSetDuty(brake0, vlup->brakeForce_out[0]);
+      pwmoutSetDuty(brake0, VALUES->brakeForce_out[0]);
     if (settings.Brake1_active)
-      pwmoutSetDuty(brake1, vlup->brakeForce_out[1]);
+      pwmoutSetDuty(brake1, VALUES->brakeForce_out[1]);
     if (settings.Brake2_active)
-      pwmoutSetDuty(brake2, vlup->brakeForce_out[2]);
+      pwmoutSetDuty(brake2, VALUES->brakeForce_out[2]);
 
   } // while loop
 }
