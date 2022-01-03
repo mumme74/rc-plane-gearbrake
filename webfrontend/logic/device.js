@@ -93,11 +93,14 @@ class DeviceConfigBase {
       if ((new v()).header.storageVersion===version)
         return v;
     });
+
+    const size = (byteArr[2] << 8) | byteArr[3];
     if (!cls) throw new Error(`Can't deserialize version ${version}, not supported`);
     let instance = new cls();
     // read header
-    instance.header.storageVersion = version;
-    instance.header.size = (byteArr[2] << 8) | byteArr[3];
+    if (instance.header.size !== size)
+      throw new Error(`Can't deserialize, size differes expected ${instance.header.size} got ${size} from device`);
+
     // read in values for selected version
     instance._deserialize(byteArr);
 

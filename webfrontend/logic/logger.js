@@ -552,7 +552,9 @@ class LogRoot {
         readLogEntries(startAddr, byteArray.length);
 
         // read in the entries from 0 upt to startAddr
-        readLogEntries(0, this.startPos);
+        let pos = 0;
+        while (pos < startAddr && byteArray[pos] === 0) ++pos;
+        readLogEntries(pos, this.startPos);
     }
 }
 

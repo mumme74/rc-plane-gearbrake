@@ -6,11 +6,9 @@
     var testing = location.hash.indexOf("testingGui") > -1;
 
     // select language
-    let lang;
+    let lang = navigator.language.substring(0, 2); // only use "en" not "en-US"
     if (localStorage.getItem("lang")) {
       lang = localStorage.getItem("lang");
-    } else {
-      lang = navigator.language.substr(0, 2); // only use "en" not "en-US"
     }
-    document.querySelector("html").lang = lang;
+    document.documentElement.lang = lang;
 }
