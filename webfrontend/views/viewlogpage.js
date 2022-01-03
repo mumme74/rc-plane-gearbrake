@@ -57,23 +57,26 @@ class ViewLogCls {
     })
   }
 
-  async fetchLog() {
+  async fetchLog(evt) {
+    evt.target.disabled = true;
     console.log("Fetch log from device");
-    let startAddr = await SerialBase.instance().getLogNextAddr();
-    let log = await SerialBase.instance().readLog();
+    let startAddr = await CommunicationBase.instance().getLogNextAddr();
+    let log = await CommunicationBase.instance().readLog();
+    evt.target.disabled = false;
     if (isNaN(startAddr) || (!Array.isArray(log) && !(log instanceof Uint8Array)))
       return;
 
     const logRoot = LogRoot.instance();
     logRoot.clear();
     logRoot.parseLog(log, startAddr);
+    routeMainContent();
     this.setLogOrigin("Device");
   }
 
   async clearLog(evt) {
     console.log("Clear log in device");
     evt.target.disabled = true;
-    const res = await SerialBase.instance().clearLogEntries();
+    const res = await CommunicationBase.instance().clearLogEntries();
     if (res) {
       LogRoot.instance().clear();
     }
@@ -92,10 +95,10 @@ class ViewLogCls {
     let endPos = logRoot.byteArray.byteLength;
     const logWithStartAddr = new Uint8Array(endPos + 4);
     logWithStartAddr.set(logRoot.byteArray);
-    logWithStartAddr[endPos++] = (logRoot.startPos & 0x000000FF)>>0;
-    logWithStartAddr[endPos++] = (logRoot.startPos & 0x0000FF00)>>8;
-    logWithStartAddr[endPos++] = (logRoot.startPos & 0x00FF0000)>>16;
     logWithStartAddr[endPos++] = (logRoot.startPos & 0xFF000000)>>24;
+    logWithStartAddr[endPos++] = (logRoot.startPos & 0x00FF0000)>>16;
+    logWithStartAddr[endPos++] = (logRoot.startPos & 0x0000FF00)>>8;
+    logWithStartAddr[endPos++] = (logRoot.startPos & 0x000000FF)>>0;
     await fileStream.write(new Blob([logWithStartAddr],
                 {type: "application/octet-stream"}));
     await fileStream.close();

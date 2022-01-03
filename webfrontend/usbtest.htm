@@ -89,8 +89,6 @@ class LandingGear {
 
         } while (buf[1] & 0x80);
 
-        await this.device.releaseInterface(0)
-
         if (rcvd.length < 1)
             rcvd = rcvd.concat(Array.from(buf));
 

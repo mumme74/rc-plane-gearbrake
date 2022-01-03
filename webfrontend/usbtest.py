@@ -46,7 +46,7 @@ class LandingBrake():
         # write the data
         self.dev.reset()
         self.oep.write(bytes(data))
-        res = self.iep.read(10000,10000)
+        res = self.iep.read(self.iep.wMaxPacketSize, 10000)
         cb(res)
 
         if res and res[1] & 0x80:
@@ -54,7 +54,7 @@ class LandingBrake():
             rcvd = bytes()
 
             while (res):
-                res = self.iep.read(100000,1000)
+                res = self.iep.read(self.iep.wMaxPacketSize, 10000)
                 cb(res)
                 if (res and res[1] & 0x80):
                     rcvd += res
@@ -72,7 +72,7 @@ def send(usbCls, data):
     data.insert(0, len(data)+1)
     if len(data) < 3:
         data.append(1) # default reqId
-    res = usbCls.send(data, lambda r: print(r, '\n'))
+    res = usbCls.send(data, lambda r: print(r))
     print("bytes recieved:" + str(len(res)))
 
 

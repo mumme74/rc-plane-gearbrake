@@ -62,7 +62,7 @@ const configureHtmlObj = {
   setDefault: async () => {
     console.log("defaultValues")
     try {
-      if (!await SerialBase.instance().setSettingsDefault())
+      if (!await CommunicationBase.instance().setSettingsDefault())
         throw "Could not set settings to default";
       await configureHtmlObj.fetchSettings();
     } catch (err) {
@@ -72,7 +72,7 @@ const configureHtmlObj = {
   },
   fetchSettings: async () => {
     try {
-      const byteArr = await SerialBase.instance().getAllSettings();
+      const byteArr = await CommunicationBase.instance().getAllSettings();
       if (!byteArr) throw "Could't get settings from device";
       DeviceConfigBase.deserialize(byteArr);
       routeMainContent(); // for refresh values
@@ -85,7 +85,7 @@ const configureHtmlObj = {
     console.log("save settings")
     try {
       const byteArr = DeviceConfigBase.instance().serialize();
-      const res = SerialBase.instance().saveAllSettings(byteArr);
+      const res = CommunicationBase.instance().saveAllSettings(byteArr);
       if (!res) throw "Could not save settings to device";
     } catch (err) {
       console.error(err);

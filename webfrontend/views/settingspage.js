@@ -88,7 +88,7 @@ const appSettingsHtmlObj = {
 
     },
     resetDevice: async()=>{
-      SerialBase.instance().sendReset();
+      CommunicationBase.instance().sendReset();
     },
     html: (parentNode, lang) => {
       let lngOptions = Object.keys(appSettingsHtmlObj.lang).map(lng=>{

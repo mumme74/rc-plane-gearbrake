@@ -25,7 +25,7 @@ document.addEventListener('DOMContentLoaded', () =>{
         {txt: {en: "View log", sv: "Visa log"}, hash: "viewlog"},
         {txt: {en: "Settings", sv: "Inställningar"}, hash: "settings"},
         {id: "connectBtn", action: async (event)=>{
-            let res = await SerialBase.instance().togglePort();
+            let res = await CommunicationBase.instance().toggleDevice();
             event.target.classList[res ? 'add' : 'remove']("connected")
         }, txt: "&#x1F517;",
             tip: {en: "Toggle connection to device",
@@ -68,13 +68,13 @@ document.addEventListener('DOMContentLoaded', () =>{
     let progress = document.createElement("progress");
     progress.value = 0;
     menuBar.appendChild(progress);
-    SerialBase.progress.registerCallback((value)=>{
+    CommunicationBase.progress.registerCallback((value)=>{
       progress.value = value;
     });
-    SerialBase.instance().onConnect(()=>{
+    CommunicationBase.instance().onConnect(()=>{
         document.querySelector(".connectBtn").classList.add("connected");
     });
-    SerialBase.instance().onDisconnect(()=>{
+    CommunicationBase.instance().onDisconnect(()=>{
         document.querySelector(".connectBtn").classList.remove("connected");
     });
 });
