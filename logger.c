@@ -228,21 +228,24 @@ void loggerSettingsChanged(void) {
 }
 
 void loggerClearAll(usbpkg_t *sndpkg) {
-  logTimeout = logPeriodicityMS(); // when USB is attached we stop logging
+  logTimeout = TIME_INFINITE; // when USB is attached we stop logging
 
   for(size_t i = 0; i < EEPROM_PAGE_SIZE; ++i)
-    buf[i] = 0xFF;
+    buf[i] = i & 0xFF;
 
   ee24_arg_t eeArg = {&log_ee, 0, buf, 0, 0, {0, 0}};
-  msg_t msg;
+  msg_t msg = MSG_OK;
 
-  do {
-    eeArg.len = eeArg.offset + EEPROM_PAGE_SIZE < EEPROM_LOG_SIZE ?
-                  EEPROM_PAGE_SIZE : EEPROM_LOG_SIZE - eeArg.offset;
+  for (size_t written = 0, align = sizeof(Settings_t), len = 0;
+      written < EEPROM_LOG_SIZE - sizeof(offsetNext) && msg == MSG_OK;
+      written += len)
+  {
+    len = eeArg.len = written + EEPROM_PAGE_SIZE < EEPROM_LOG_SIZE ?
+                  EEPROM_PAGE_SIZE - 100 - align : EEPROM_LOG_SIZE - written;
     msg = ee24m01r_write(&eeArg);
-
-    eeArg.offset += EEPROM_PAGE_SIZE;
-  } while(msg == MSG_OK && eeArg.offset < EEPROM_LOG_SIZE);
+    eeArg.offset += len;
+    align = 0;
+  }
 
   logTimeout = logPeriodicityMS();
 
@@ -251,35 +254,35 @@ void loggerClearAll(usbpkg_t *sndpkg) {
 
 void loggerReadAll(usbpkg_t *sndpkg)
 {
-  logTimeout =  TIME_MS2I(TIME_INFINITE); // when USB is attached we stop logging
+  logTimeout =  TIME_INFINITE; // when USB is attached we stop logging
 
   // send header with total size about to be transmitted
   INIT_PKG_HEADER_FRM(*sndpkg, EEPROM_LOG_SIZE - sizeof(offsetNext));
   usbWaitTransmit(sndpkg);
 
   ee24_arg_t eeArg = {&log_ee, 0, sndpkg->datafrm.data, 0, 0, {0, 0}};
-  msg_t msg;
-  uint32_t pkgId = 0;
+  msg_t msg = MSG_OK;
+  static uint32_t pkgId = 0;
+  static uint32_t logSz = EEPROM_LOG_SIZE - sizeof(offsetNext);
+  static const size_t hdrSz = sizeof(sndpkg->datafrm) - sizeof(sndpkg->datafrm.data);
 
-  do {
-    // -4 due to last 4 bytes is logNextAddr
+
+  for (size_t read = 0, len; read < logSz; read += len, ++pkgId){
     // -5 is for the header bytes in a data package
-    static const size_t hdrSz = sizeof(sndpkg->datafrm) - sizeof(sndpkg->datafrm.data);
-    eeArg.len = (eeArg.offset + wMaxPacketSize -hdrSz < EEPROM_LOG_SIZE -4 ?
-                  wMaxPacketSize -hdrSz : EEPROM_LOG_SIZE -4 - eeArg.offset);
+    len = eeArg.len = (read + wMaxPacketSize -hdrSz < logSz ?
+             wMaxPacketSize - hdrSz : logSz - read);
 
     // read page into buffer
     msg = ee24m01r_read(&eeArg);
     if (msg != MSG_OK) break;
 
     // send buffer to host
-    INIT_PKG_DATA_FRM(*sndpkg, pkgId++);
-    sndpkg->datafrm.len += eeArg.len;
+    INIT_PKG_DATA_FRM(*sndpkg, pkgId);
+    sndpkg->datafrm.len += len;
     usbWaitTransmit(sndpkg);
 
-    eeArg.offset += sizeof(sndpkg->datafrm.data);
-
-  } while(msg == MSG_OK && eeArg.offset < EEPROM_LOG_SIZE);
+    eeArg.offset += len;
+  }
 
   INIT_PKG(*sndpkg,
            msg == MSG_OK ? commsCmd_OK : commsCmd_Error,

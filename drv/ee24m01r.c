@@ -68,7 +68,7 @@ static msg_t bank_selection(ee24_arg_t *arg, funcPtr_t func) {
   // read from memory
   const uint32_t memAddr = arg->eep->startAddr + arg->offset + lenPart1;
   arg->memAddrBuf[0] = (memAddr & 0xFF00) >> 8;
-  arg->memAddrBuf[1] = (memAddr & 0xFF);
+  arg->memAddrBuf[1] = (memAddr & 0x00FF) >> 0;
 
   return MSG_OK;
 }
@@ -141,29 +141,6 @@ msg_t ee24m01r_write(ee24_arg_t *arg)
 
   palClearLine(LINE_I2C_WC);
 
-  /*
-  // set address and init buffer
-  uint8_t *bufp = buf + lenPart1;
-  const uint8_t *wbuf = wrbuf + lenPart1;
-  // first 2 bytes are addr.
-  const uint32_t memAddr = eep->startAddr + offset + lenPart1;
-  *bufp++ = (uint8_t)((memAddr & 0xFF00) >> 8);
-  *bufp++ = (uint8_t)(memAddr & 0xFF);
-  // bit nr 2 in SAD represents high or low addrs so 0x0001xxxx -> sad: 0bxxxxxx1x
-  const i2caddr_t sad = eep->i2cAddrBase | (memAddr & 0x00010000) >> 16;
-
-  // for memcpy to buffer
-  while(wbuf < wrbuf+len) *bufp++ = *wbuf++;
-  // reset ptr after memcpy
-  bufp = buf + lenPart1;
-
-
-  // write to memory
-  status = i2cMasterTransmitTimeout(eep->i2cp, sad,
-                                    bufp, _len+2, NULL, 0,
-                                    calc_timeout(_len+2) +
-                                    TIME_MS2I(EE24M01R_WRITE_TIME));
-*/
   buf[0] = arg->memAddrBuf[0];
   buf[1] = arg->memAddrBuf[1];
   for(size_t i = 0; i < arg->len; ++i)
@@ -179,7 +156,6 @@ msg_t ee24m01r_write(ee24_arg_t *arg)
 #if I2C_USE_MUTUAL_EXCLUSION
   i2cReleaseBus(arg->eep->i2cp);
 #endif
-
 
   // wait for eeprom to finish writing data
   chThdSleep(TIME_MS2I(EE24M01R_WRITE_TIME));
