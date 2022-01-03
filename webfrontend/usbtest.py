@@ -52,18 +52,32 @@ class LandingBrake():
         if res and res[1] & 0x80:
             #multiframe response
             rcvd = bytes()
-
             while (res):
                 res = self.iep.read(self.iep.wMaxPacketSize, 10000)
                 cb(res)
                 if (res and res[1] & 0x80):
+                    #multibyte
                     rcvd += res
+                    self._testAlignment(res)
                 else:
                     break
         else:
             rcvd = res
 
         return rcvd
+
+    def _testAlignment(self, res):
+        #test memory alignment incremented
+        if len(res) > 14:
+            if not hasattr(self, '_cmp'):
+                self._cmp = res[5]
+            for i in res[5:]:
+                if i != self._cmp:
+                    raise ValueError('pkgs ' + str(res[3]) +', ' \
+                        + str(res[4]) + ' expect != got ' + str(i) + '!=' + str(self._cmp) \
+                        +', was not aligned')
+                self._cmp += 1 if self._cmp < 255 else -255
+
 
 def send(usbCls, data):
     # build the data
