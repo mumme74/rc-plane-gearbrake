@@ -124,8 +124,6 @@ void settingsSave(void);
 void settingsGetAll(usbpkg_t *sndpkg);
 void settingsSetAll(usbpkg_t *sndpkg, usbpkg_t *rcvpkg);
 
-bool settingsValidateHeader(Settings_header_t header);
-
 /**
  * @brief ensures values are within allowed window (before save)
  */

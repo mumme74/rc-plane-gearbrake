@@ -22,6 +22,10 @@
 
 #define SETTINGS_SIZE   (sizeof(Settings_t) - sizeof(settings.header))
 
+#define VALIDATE_HEADER(header) \
+   ((header).size == SETTINGS_SIZE && \
+    (header).storageVersion == STORAGE_VERSION)
+
 // -----------------------------------------------------------------
 
 // private stuff to this module
@@ -61,7 +65,7 @@ static msg_t settingsLoad(void) {
 
      // ensure header version match with STORAGE_VERSION
     // if not bail out
-    if (!settingsValidateHeader(header)) {
+    if (!VALIDATE_HEADER(header)) {
       res = MSG_RESET;
       break;
     }
@@ -199,7 +203,7 @@ void settingsSetAll(usbpkg_t *sndpkg, usbpkg_t *rcvpkg) {
     header.storageVersion = FROM_BIG_ENDIAN_16(&rcvpkg->onefrm.data[0]);
     header.size =           FROM_BIG_ENDIAN_16(&rcvpkg->onefrm.data[2]);
 
-    if (!settingsValidateHeader(header)) break;
+    if (!VALIDATE_HEADER(header)) break;
 
     // set settings
     for (size_t i = 4; i < sizeof(settings); ++i)
@@ -218,11 +222,6 @@ void settingsSetAll(usbpkg_t *sndpkg, usbpkg_t *rcvpkg) {
   } while(false);
 
   commsSendWithCmd(sndpkg, res);
-}
-
-bool settingsValidateHeader(Settings_header_t header) {
-  return header.size == SETTINGS_SIZE &&
-         header.storageVersion == STORAGE_VERSION;
 }
 
 /**
