@@ -42,11 +42,12 @@
  * Init sendframe as a header frame (first in a series of transmits)
  * NOTE! Assumes INIT_SNDPKG is already set
  */
-#define INIT_PKG_HEADER_FRM(pkg, totalsize) \
-  (pkg).headerfrm.len = 9; \
+#define INIT_PKG_HEADER_FRM(pkg, totalsize, logNextAddr) \
+  (pkg).headerfrm.len = 13; \
   (pkg).headerfrm.cmd |= 0x80; \
   TO_BIG_ENDIAN_16((pkg).datafrm.pkgNr, 0); \
-  TO_BIG_ENDIAN_32((pkg).headerfrm.totalSize, totalsize)
+  TO_BIG_ENDIAN_32((pkg).headerfrm.totalSize, totalsize); \
+  TO_BIG_ENDIAN_32((pkg).headerfrm.logNextAddress, logNextAddr)
 
 /**
  * Init sendframe as a header frame (first in a series of transmits)
@@ -104,6 +105,7 @@ typedef union {
     uint8_t reqId;
     uint8_t pkgNr[2]; // pkg nr 0 is a header byte for many frames
     uint8_t totalSize[4]; // size in bytes data which this multiframe sends
+    uint8_t logNextAddress[4]; // the next address to store a log in EEPROM
   } headerfrm;
   struct {
     uint8_t len; // length of data in this specific package

@@ -76,7 +76,7 @@ static void reInitializeUsb(void) {
   usbConnectBus(&USBD1);
 }
 
-THD_WORKING_AREA(waCommsThd, 128);
+THD_WORKING_AREA(waCommsThd, 196);
 THD_FUNCTION(CommsThd, arg) {
   (void)arg;
 

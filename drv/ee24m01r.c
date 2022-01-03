@@ -32,43 +32,45 @@ typedef msg_t (*funcPtr_t)(ee24_arg_t *arg) ;
 
 static msg_t bank_selection(ee24_arg_t *arg, funcPtr_t func) {
   // we can read from 2 partitions, only applicable when we read from the page in the middle
-  size_t lenPart1 = 0;
-  const size_t endAddr = arg->eep->startAddr + arg->offset + arg->len;
+
+  // 16bit address in partition
+  uint32_t beginAddr = arg->eep->startAddr + arg->offset;
+
+  const size_t endAddr = arg->eep->startAddr + arg->offset + arg->len -1u; // -1 due to len beeing 1 based
 
   if ((arg->eep->startAddr + arg->offset <= EE24M01R_BANK1_END_ADDR) &&
       (endAddr > EE24M01R_BANK1_END_ADDR))
   {
     // we should read from 2 partitions, recursive read from first part
     uint16_t remainLen = endAddr - EE24M01R_BANK1_END_ADDR;
-    lenPart1 = arg->len - remainLen;
+    arg->len -= remainLen;
 
-    osalDbgAssert(arg->eep->startAddr + arg->offset + lenPart1 <= EE24M01R_BANK1_END_ADDR,
-                  "BANK1 range exceeded, drv bug");
+    osalDbgAssert(arg->eep->startAddr + arg->offset + arg->len <= EE24M01R_BANK1_CAPACITY,
+                  "BANK1 range exceeded, driver bug");
 
-    arg->len = lenPart1;
-
+    // call our caller recursive
     msg_t status = func(arg);
     if (status != MSG_OK)
       return status;
 
     // we have now read the first part
+    arg->buf += arg->len; // advance buffer by read amount
+    beginAddr += arg->len;
     arg->len = remainLen;
-    arg->buf += lenPart1;
-    arg->offset += lenPart1;
   }
 
+  // ic slave address
   arg->sad = arg->eep->i2cAddrBase;
 
   // select bank 2 in EEPROM
-  if (arg->eep->startAddr + arg->offset > EE24M01R_BANK1_END_ADDR) {
-    arg->offset = 0;
+  if (beginAddr > EE24M01R_BANK1_END_ADDR) {
     arg->sad |= 0x010000; // bit nr 2 in SAD represents high or low addrs so 0x0001xxxx -> sad: 0bxxxxxx1x
+    beginAddr -= EE24M01R_BANK1_CAPACITY;
   }
 
   // read from memory
-  const uint32_t memAddr = arg->eep->startAddr + arg->offset + lenPart1;
-  arg->memAddrBuf[0] = (memAddr & 0xFF00) >> 8;
-  arg->memAddrBuf[1] = (memAddr & 0x00FF) >> 0;
+  arg->memAddrBuf[0] = (beginAddr & 0xFF00) >> 8;
+  arg->memAddrBuf[1] = (beginAddr & 0x00FF) >> 0;
 
   return MSG_OK;
 }
@@ -91,11 +93,12 @@ msg_t ee24m01r_read(ee24_arg_t *arg)
 {
   osalDbgAssert(arg->len <= EE24M01R_PAGE_SIZE, "Can't read more than pageSize");
 
+  uint8_t *origBuf = arg->buf;
+
   msg_t status = bank_selection(arg, &ee24m01r_read);
   if (status != MSG_OK) return status;
 
-  osalDbgAssert(((arg->len <= arg->eep->size) &&
-                ((arg->offset + arg->len) <= arg->eep->size)),
+  osalDbgAssert((arg->offset + arg->len) < arg->eep->size,
              "out of device bounds");
 
 #if I2C_USE_MUTUAL_EXCLUSION
@@ -109,13 +112,15 @@ msg_t ee24m01r_read(ee24_arg_t *arg)
   i2cReleaseBus(arg->eep->i2cp);
 #endif
 
+  arg->buf = origBuf;
+
   return status;
 }
 
 
 /**
- * @brief read from eeprom in chunks of up to 256 bytes
- * @description reads len bytes from partition from addr and forward
+ * @brief write to eeprom in chunks of up to 256 bytes
+ * @description write len bytes from partition from offset and forward
  * @eep pointer to a ee24partition_t
  * @offset read from this addr, offset=0 is from start
  * @returns MSG_OK if ok
@@ -125,9 +130,10 @@ msg_t ee24m01r_write(ee24_arg_t *arg)
   osalDbgAssert(arg->len <= EE24M01R_PAGE_SIZE, "Can't write more than pageSize");
 
   // read from memory
-  osalDbgAssert(((arg->len <= arg->eep->size) &&
-                ((arg->offset + arg->len) <= arg->eep->size)),
+  osalDbgAssert((arg->offset + arg->len) <= arg->eep->size,
              "out of device bounds");
+
+  uint8_t *origBuf = arg->buf;
 
   msg_t status = bank_selection(arg, &ee24m01r_write);
   if (status != MSG_OK) return status;
@@ -159,6 +165,8 @@ msg_t ee24m01r_write(ee24_arg_t *arg)
 
   // wait for eeprom to finish writing data
   chThdSleep(TIME_MS2I(EE24M01R_WRITE_TIME));
+
+  arg->buf = origBuf;
 
   return status;
 }

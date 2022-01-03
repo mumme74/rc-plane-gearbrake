@@ -60,17 +60,16 @@ class ViewLogCls {
   async fetchLog(evt) {
     evt.target.disabled = true;
     console.log("Fetch log from device");
-    let startAddr = await CommunicationBase.instance().getLogNextAddr();
-    let log = await CommunicationBase.instance().readLog();
+    let {ok, data, totalSize, logNextAddr} = await CommunicationBase.instance().readLog();
     evt.target.disabled = false;
-    if (isNaN(startAddr) || (!Array.isArray(log) && !(log instanceof Uint8Array)))
+
+    if (!ok)
       return;
 
     const logRoot = LogRoot.instance();
     logRoot.clear();
-    logRoot.parseLog(log, startAddr);
-    routeMainContent();
-    this.setLogOrigin("Device");
+    logRoot.parseLog(data, logNextAddr);
+    this.updateLogControls(`Device, read ${totalSize} bytes`);
   }
 
   async clearLog(evt) {
@@ -114,14 +113,19 @@ class ViewLogCls {
     logRoot.clear();
     const fileLog = new Uint8Array(await file.arrayBuffer());
     const log = new Uint8Array(fileLog.slice(0, fileLog.byteLength-4));
-    const size = fileLog.byteLength;
-    const startAddr = fileLog[size-1] << 24 | fileLog[size-2] << 16 |
-                      fileLog[size-3] << 8 | fileLog[size-4];
+    let size = fileLog.byteLength;
+    // read in big endian
+    const startAddr = fileLog[--size] << 0 | fileLog[--size] << 8 |
+                      fileLog[--size] << 16  | fileLog[--size] << 24;
     logRoot.parseLog(log, startAddr);
+    this.updateLogControls(file.name);
+  }
+
+  updateLogControls(origin) {
     const sel = document.querySelector("#selectSessionBtn > div");
     sel.innerHTML = this.buildSessions().join("\n");
-    this.selectSession((logRoot.coldStarts.length || 1) -1);
-    this.setLogOrigin(file.name);
+    this.selectSession((LogRoot.instance().coldStarts.length || 1) -1);
+    this.setLogOrigin(origin);
   }
 
   selectSession(sessionIdx) {

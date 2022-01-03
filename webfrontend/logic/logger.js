@@ -390,7 +390,7 @@ class LogEntry {
   constructor(startPos, parent) {
     this.startPos = startPos;
     this.parent = parent;
-    this.size = this.parent.byteArray[this.startPos+1];
+    this.size = this.parent.byteArray[this.startPos];
   }
 
   /**
@@ -417,7 +417,7 @@ class LogEntry {
    * @returns number of children
    */
   itemCnt() {
-    return this.parent.byteArray[this.startPos]; // first byte is number of items
+    return this.parent.byteArray[this.startPos+1]; // first byte is number of items
   }
 
   /**
@@ -570,11 +570,11 @@ if (testing) {
     let bArr = new Uint8Array([
         0,0,
         // a cold start entry
-        1, 4,
+        4, 1,
         (LogItem.Types.log_coldStart << 2) | 0, 0x5A,
 
-        // log entry with 9 items
-        10, 43,
+        // log entry with 10 items
+        43, 10,
         // first logitem uin8_t, 2 bytes long, positive 64
         (LogItem.Types.speedOnGround << 2) | 0, 0x40,
         // logitem 2 int16_t, 3bytes long, positive 0x0132 (306)
@@ -600,11 +600,11 @@ if (testing) {
 
 
         // a cold start entry
-        1, 4,
+        4, 1,
         (LogItem.Types.log_coldStart << 2) | 0, 0x5A,
 
         // log entry with 14 items
-        14, 51,
+        51, 14,
         // first logitem uin8_t, 2 bytes long, positive 64
         (LogItem.Types.speedOnGround << 2) | 0, 0x40,
         // logitem 2 int16_t, 3bytes long, positive 0x0132 (306)
@@ -635,7 +635,7 @@ if (testing) {
         (LogItem.Types.brakeForce2_out << 2) | 0, 0x14,
 
         // log entry with 14 items
-        14, 51,
+        5, 14,
         // first logitem uin8_t, 2 bytes long, positive 64
         (LogItem.Types.speedOnGround << 2) | 0, 0x40,
         // logitem 2 int16_t, 3bytes long, positive 0x0132 (306)
@@ -666,11 +666,11 @@ if (testing) {
         (LogItem.Types.brakeForce2_out << 2) | 0, 0x14,
 
         // a cold start entry
-        1, 4,
+        4, 1,
         (LogItem.Types.log_coldStart << 2) | 0, 0x5A,
 
         // log entry with 13 items
-        13, 44,
+        44, 13,
         // first logitem uin8_t, 2 bytes long, positive 64
         (LogItem.Types.speedOnGround << 2) | 0, 0x40,
         // logitem 2 int16_t, 3bytes long, positive 0x0132 (306)

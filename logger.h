@@ -56,9 +56,9 @@ typedef struct {
 } LogItem_t;
 
 typedef struct {
-  uint8_t length; // number of items
   uint8_t size;   // number of bytes
-  LogItem_t items[log_end];
+  uint8_t itemCnt; // number of items
+  uint8_t buf[log_end * sizeof(LogItem_t)];
 } LogBuf_t;
 
 #if LOGITEMS_CNT * 5 + 1 >= EEPROM_PAGE_SIZE

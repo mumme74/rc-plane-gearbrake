@@ -257,7 +257,7 @@ class CommunicationBase {
     }
 
     async closeDevice() {
-        if (this.device)
+        if (this.device?.opened)
             this.device.close();
         this.device = null;
     }
@@ -271,6 +271,7 @@ class CommunicationBase {
     }
 
     toInt(arrBuff) {
+        if (!arrBuff?.length) return 0;
         let res = 0, max = Math.min(arrBuff.length, 4);
         for(let i = 0, shft = (max - 1) * 8; i < max; ++i, shft -= 8)
             res |= arrBuff[i] << shft;
@@ -330,8 +331,10 @@ class CommunicationBase {
             }
         }
 
-        await this.device.releaseInterface(0);
-        await this.device.reset();
+        if (this.device) {
+            await this.device.releaseInterface(0);
+            await this.device.reset();
+        }
 
         return rcvd;
     }
@@ -342,7 +345,7 @@ class CommunicationBase {
      * @returns
      */
     async talkSafe({cmd, expectedResponseCmd = null, byteArr = null, includeHeader}) {
-        includeHeader = expectedResponseCmd !== null;
+        includeHeader = includeHeader || expectedResponseCmd !== null;
         try {
             const res = await this.talk({cmd, includeHeader, byteArr});
             if (res?.length && expectedResponseCmd !== null)
@@ -368,23 +371,30 @@ class CommunicationBase {
 
     async _recieve(id) {
         // recieve from device
-        let buf, rcvd = [], res;
+        let buf, rcvd = [], res, multibyte = false;
 
         try {
             do {
                 // handle single and multiframe
                 res = this._checkTransfer(await this.device.transferIn(
-                            this.iep.endpointNumber, this.iep.packetSize*20));
+                            this.iep.endpointNumber, this.iep.packetSize));
                 buf = new Uint8Array(res.data.buffer);
                 this._validateResponse(buf, id);
 
                 // multi frame response
-                if (buf[1] & 0x80)
+                if (buf[1] & 0x80) {
+                    // exclude 3 header bytes
+                    let arr = buf[3] || buf[4] ? buf.slice(5) : buf;
+                    rcvd = rcvd.concat(Array.from(arr));
+                    multibyte = true;
+                } else if (multibyte) {
+                    // store trailing ok/error msg
                     rcvd = rcvd.concat(Array.from(buf));
+                }
 
-            } while (buf[1] & 0x80);
+            } while (buf[1] & 0x80); // expects a OK or error cmd to finish response
 
-            if (rcvd.length < 1)
+            if (!multibyte) // if not multibyte, store the result
                 rcvd = rcvd.concat(Array.from(buf));
 
         } catch(e) {
@@ -394,6 +404,16 @@ class CommunicationBase {
         // finalize progress indicator
         CommunicationBase.progress.updatePos(CommunicationBase.progress.endPos);
         return rcvd;
+    }
+
+    _removeMultiframeHdrs(arr) {
+        const offset = 14;
+        // remove from backend in multiples of 64 bytes
+        for(let i = arr.length -3 -1; i >= 0; --i) {
+            if ((i - offset % this.iep.packetSize) === 0) {
+                arr.splice(i, 5);
+            }
+        }
     }
 
     _validateResponse(buf, id) {
@@ -520,6 +540,7 @@ class Communication_v1 extends CommunicationBase {
     async saveAllSettings(byteArr) {
         return await this.talkSafe({
             cmd: CommunicationBase.Cmds.SettingsSaveAll,
+            expectedResponseCmd: CommunicationBase.Cmds.OK,
             byteArr
         });
     }
@@ -552,9 +573,17 @@ class Communication_v1 extends CommunicationBase {
      * @returns the complete log
      */
     async readLog() {
-        return await this.talkSafe({
-            cmd: CommunicationBase.Cmds.LogGetAll
+        const res = await this.talkSafe({
+            cmd: CommunicationBase.Cmds.LogGetAll,
+            includeHeader: true
         });
+        const okCmd = CommunicationBase.Cmds.OK;
+        return {
+            ok: res?.length > 13 ? res[res.length -2] == okCmd : false,
+            totalSize: res?.length > 13 ? this.toInt(res.slice(5, 9)) : 0,
+            logNextAddr: res?.length > 13 ? this.toInt(res.slice(9, 13)) : 0,
+            data: res?.length > 13 ? new Uint8Array(res.slice(13, res.length -3)) : []
+        }
     }
 }
 
