@@ -5,6 +5,20 @@ import usb.util
 import readline
 import sys
 import re
+import argparse
+
+parser = argparse.ArgumentParser(description='Talk to Landiggear device.')
+parser.add_argument('bytes', metavar='bytes', type=int, nargs='?',
+                    help='The bytes to send to USB device')
+parser.add_argument('-v', "--verbosity",
+                    help="Show USB details", action='store_true')
+parser.add_argument('-i', "--interactive",
+                    help="interactive mode", action='store_true')
+parser.add_argument('-a', "--alignmentCheck",
+                    help="Test that mem is inc each byte, requires firmware to be compiled with LOG_ALIGNMENT_CHECK",
+                    action='store_true')
+
+args = parser.parse_args()
 
 def parseInt(intStr):
     try:
@@ -60,7 +74,11 @@ class LandingBrake():
                         self.bytes += (res[0] -5)
                     rcvd += res
                     res = self.iep.read(self.iep.wMaxPacketSize, 20000)
-                    self._testAlignment(res)
+                    try:
+                        self._testAlignment(res)
+                    except Exception as e:
+                        cb(res)
+                        raise e
                 else:
                     break
         else:
@@ -70,6 +88,7 @@ class LandingBrake():
         return rcvd
 
     def _testAlignment(self, res):
+        if not self.testAlignment: return
         #test memory alignment incremented
         if len(res) > 5:
             pkgNr = res[3] << 8 | res[4]
@@ -77,17 +96,16 @@ class LandingBrake():
             if pkgNr != (self._pkgNr):
                 raise ValueError('pkg: {} was not in order, last was {}', pkgNr, self._pkgNr)
             self._pkgNr += 1
-            print('bytes:{}\n'.format(self.bytes))
+            print('alignment checked bytes:{}\n'.format(self.bytes))
 
             if not hasattr(self, '_cmp'):
                 self._cmp = res[5]
             for i in res[5:]:
                 if i != self._cmp:
-                    raise ValueError('pkgs ' + str(res[3]) +', ' \
-                        + str(res[4]) + ' expect != got ' + str(i) + '!=' + str(self._cmp) \
-                        +', was not aligned')
+                    errStr = 'pkgs {}, {}, expected != gotten {} != {}, was not aligned'.format(
+                                         res[3], res[4], i, self._cmp)
+                    raise ValueError(errStr)
                 self._cmp += 1 if self._cmp < 255 else -255
-
 
 def send(usbCls, data):
     # build the data
@@ -103,18 +121,25 @@ def send(usbCls, data):
 
 if __name__ == '__main__':
     comms = LandingBrake()
-    if len(sys.argv) > 1:
-        if sys.argv[1] == '?':
+    comms.testAlignment = args.alignmentCheck
+
+    if len(sys.argv) > 1 and not args.interactive:
+        if args.verbosity:
             print(comms.dev)
-        else:
-            send(comms, ' '.join(sys.argv[1:]))
-    else:
-        olddata = None
-        while True:
-            try:
-                data = input("Bytes to send: ")
-            except KeyboardInterrupt: break
-            if not data: data = olddata
-            if data:
-                olddata = data
-                send(comms, data)
+        elif args.bytes is not None:
+            if isinstance(args.bytes, int):
+                send(comms, str(args.bytes))
+            else:
+                send(comms, ' '.join([str(b) for b in args.bytes]))
+        exit(0)
+
+    # interactive mode
+    olddata = None
+    while True:
+        try:
+            data = input("Bytes to send: ")
+        except KeyboardInterrupt: break
+        if not data: data = olddata
+        if data:
+            olddata = data
+            send(comms, data)

@@ -15,6 +15,12 @@
 #include "comms.h"
 #include <ch.h>
 
+//#define LOG_ALIGNMENT_CHECK TRUE
+
+#ifndef LOG_ALIGNMENT_CHECK
+# define LOG_ALIGNMENT_CHECK FALSE
+#endif
+
 #define OFFSET_IN_LOG(offset) \
    ((offset) < EEPROM_LOG_SIZE - 4)
 
@@ -51,23 +57,6 @@ static LogBuf_t log;
 static LogItem_t itm;
 static uint32_t offsetNext;
 static uint8_t buf[EEPROM_PAGE_SIZE];
-
-/*
-void logItem(uint8_t *pos[], uint32_t *thing, uint32_t sz,
-             LogType_e typ, uint8_t *cnt)
-{
-  uint8_t idx = 0;
-  itm.size = sz & 0x03;
-  itm.type = typ;
-  (*pos)[idx++] = (uint8_t)((uint8_t*)(&itm))[0];
-  (*pos)[idx++] = (uint8_t)((uint8_t*)(&thing))[0];
-  if (sz > 1) (*pos)[idx++] = (uint8_t)((uint8_t*)(&thing))[1];
-  if (sz > 2) (*pos)[idx++] = (uint8_t)((uint8_t*)(&thing))[2];
-  if (sz > 3) (*pos)[idx++] = (uint8_t)((uint8_t*)(&thing))[3];
-  *pos += idx;
-  ++(*cnt);
-
-}*/
 
 static systime_t logPeriodicityMS(void) {
   uint16_t factor = 2;
@@ -234,12 +223,11 @@ void loggerClearAll(usbpkg_t *sndpkg) {
   logTimeout = TIME_S2I(10); // when USB is attached we stop logging
 
   for(uint32_t i = 0; i < EEPROM_PAGE_SIZE; ++i)
-    buf[i] = 0;//i & 0xFF;
-
-  // FIXME! remove just for testing
-  static uint8_t buf2[EEPROM_PAGE_SIZE];
-  static ee24_arg_t eeArg2 = {&log_ee, 0, buf2, 0, 0, {0, 0}};
-  static msg_t msg2;
+#if LOG_ALIGNMENT_CHECK
+    buf[i] = i & 0xFF;
+#else
+    buf[i] = 0;
+#endif
 
   ee24_arg_t eeArg = {&log_ee, 0, buf, 0, 0, {0, 0}};
   msg_t msg = MSG_OK;
@@ -256,53 +244,7 @@ void loggerClearAll(usbpkg_t *sndpkg) {
     msg = ee24m01r_write(&eeArg);
     eeArg.offset = written + eeArg.len;
     eeArg.buf = buf; // might have moved
-
-    /*
-    // check
-    eeArg2.offset = written;
-    eeArg2.len = eeArg.len;
-    msg2 = ee24m01r_read(&eeArg2);
-    // check
-    volatile uint8_t c = 0;
-    for (uint32_t i = 1; i < eeArg2.len-1; ++i)
-      if (++c != eeArg2.buf[i]){
-        c = buf[i];
-        break;
-      }
-
-    // chase a bug
-    eeArg2.offset = written;
-    msg2 = ee24m01r_read(&eeArg2);
-    for (uint32_t i = 0; i < eeArg2.len; ++i)
-      if (buf2[i] != eeArg2.buf[i]){
-        buf2[i] = buf[i];
-        break;
-      }*/
-
-    osalDbgAssert(eeArg.len == (written + EEPROM_PAGE_SIZE < EEPROM_LOG_SIZE ?
-                  EEPROM_PAGE_SIZE : EEPROM_LOG_SIZE - written), " len changed");
-
   }
-
-
-  //osalDbgAssert(written == EEPROM_LOG_SIZE, "wrong size");
-
-  // FIXME! remove just for testing
-  uint32_t page = (124928) / 256;
-
-  for (uint16_t i = 0; i < 256; ++i)
-    eeArg.buf[i] = 0x61;
-  eeArg.len = 50;
-  eeArg.offset = 124928-16;
-  ee24m01r_write(&eeArg);
-
-/*
-  eeArg2.offset = page * 256;
-  eeArg2.len = eeArg2.offset + 256 < EEPROM_LOG_SIZE ? 256 : EEPROM_LOG_SIZE - eeArg2.offset;
-
-  msg = ee24m01r_read(&eeArg2);
-*/
-
 
   offsetNext = 0;
   logTimeout = logPeriodicityMS();
@@ -326,36 +268,13 @@ void loggerReadAll(usbpkg_t *sndpkg)
                                 sizeof(sndpkg->datafrm.data[0]);
   pkgId = 1;
 
-  for (uint32_t read = 0; read < logSz; ++pkgId, read += eeArg.len){
+  for (uint32_t read = /*62208+236*/0; read < /*62720*/ logSz; ++pkgId, read += eeArg.len){
     // -5 is for the header bytes in a data package
     eeArg.len = (read + dataSz < logSz ? dataSz : logSz - read);
 
     // read page into buffer
     msg = ee24m01r_read(&eeArg);
     if (msg != MSG_OK) break;
-
-
-    // check
-    volatile uint8_t c = eeArg.buf[0];
-    for (uint32_t i = 1; i < eeArg.len-1; ++i)
-      if (++c != eeArg.buf[i]){
-
-        // FIXME! remove just for testing
-        static uint8_t buf2[EEPROM_PAGE_SIZE];
-        static ee24_arg_t eeArg2 = {&log_ee, 0, buf2, 0, 0, {0, 0}};
-        static msg_t msg2;
-
-        uint32_t page = eeArg.offset / 256;
-
-        eeArg2.offset = page * 256;
-        eeArg2.len = eeArg2.offset + 256 < logSz ? 256 : logSz - read;
-
-        msg = ee24m01r_read(&eeArg2);
-        break;
-      }
-
-
-    osalDbgAssert(eeArg.len == (read + dataSz < logSz ? dataSz : logSz - read), "len changed");
 
     // send buffer to host
     INIT_PKG_DATA_FRM(*sndpkg, pkgId);
@@ -378,5 +297,3 @@ void loggerNextAddr(usbpkg_t *sndpkg)
   PKG_PUSH_32(*sndpkg, offsetNext);
   usbWaitTransmit(sndpkg);
 }
-
-

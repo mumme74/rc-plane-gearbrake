@@ -50,11 +50,11 @@ typedef struct {
 // a argument struct
 typedef struct {
   const ee24partition_t *eep; /* @eep pointer to a ee24partition_t */
-  size_t  offset;        /* offset read from this addr, offset=0 is from start*/
+  uint32_t offset;        /* offset read from this addr, offset=0 is from start*/
   uint8_t *buf;         /* buf read data gets put here, must be at least of size len */
   i2caddr_t sad;         /* slave adress i2c*/
   uint16_t len;          /* len number of bytes read, start at offset and move forward until len*/
-  uint8_t memAddrBuf[2]; /* memory adress in EEPROM*/
+  uint8_t memAddrBuf[2];   /* memory address in EEPROM*/
 } ee24_arg_t;
 
 /**
