@@ -31,7 +31,7 @@ static systime_t calc_12c_timeout(uint32_t bytes) {
 typedef msg_t (*funcPtr_t)(ee24_arg_t *arg);
 
 static msg_t page_split(ee24_arg_t *arg, funcPtr_t func) {
-  // we also must write in alignment to page size
+  // we also must write and read in alignment to page size
   msg_t msg = MSG_OK;
   uint32_t beginAddr;
 
@@ -91,14 +91,8 @@ msg_t ee24m01r_read(ee24_arg_t *arg)
 
   uint8_t *origBuf = arg->buf;
 
-  msg_t status; // = page_and_bank_selection(arg, &ee24m01r_read);
-  //if (status != MSG_OK) return status;
-  const uint32_t beginAddr = arg->eep->startAddr + arg->offset;
-  arg->sad = arg->eep->i2cAddrBase |
-             (beginAddr & 0x01000) >> 16;
-
-  arg->memAddrBuf[0] = beginAddr & 0xff00;
-  arg->memAddrBuf[1] = beginAddr & 0x00ff;
+  msg_t status = page_split(arg, &ee24m01r_read);
+  if (status != MSG_OK) return status;
 
   osalDbgAssert((arg->offset + arg->len) <= arg->eep->size,
              "out of device bounds");
