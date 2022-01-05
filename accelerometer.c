@@ -46,7 +46,7 @@ THD_FUNCTION(AccelThd, arg) {
   // block first startup, wait for msg
 
   while (true) {
-    chThdSleep(TIME_MS2I(25));
+    chThdSleep(TIME_US2I(10000));
     if (settings.accelerometer_active)
       KXTJ3_1057AccelerometerReadRaw(&accd, (int32_t*)accel.axis);
   }
