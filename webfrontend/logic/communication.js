@@ -16,72 +16,6 @@ if (!window.isSecureContext) {
   alert(tr[document.querySelector("html").lang]);
 }
 
-// /**
-//  * A class that reads a complete msg response before it forwards it down the pipe
-//  * Use as a middleware to Serial interface before device data is released to User code.
-//  * Ensures that User code sees complete msg responses and not chunks.
-//  */
-// const transformContent = {
-//   start: (controller)=> {
-//     // A container for holding stream data until a new line.
-//     controller._buffer = new Uint8Array(128*1024+256); // 128kb should be enough but add 256 to be safe (EEPROM is 128kb)
-//     controller._bufferRcvd =  0;
-//     controller._msglen  = -1;
-//   },
-
-//   transform: (chunk, controller)=> {
-//     // Copy over bytes to our buffer
-//     for (let i = 0; i < chunk.length; ++i) {
-//         controller._buffer[controller._bufferRcvd++] = chunk[i];
-//     }
-
-
-//     // it can be a new response, check the length of the response (first byte in msg should be response length 1-256)
-//     if (controller._msglen < 0) {
-//         let header = CommunicationBase._readResponseHeader(chunk);
-//         controller._msglen = header.len;
-//         if (header.cmd === CommunicationBase.Cmds.Error) {
-//             controller._bufferRcvd = header.len; // bailout as we have an error
-//         }
-//     }
-//     console.log("recieved",controller._bufferRcvd, "of", controller._msglen, "chunk", chunk);
-
-//     // notify progress bar
-//     CommunicationBase.progress.updatePos(controller._bufferRcvd, controller._msglen);
-
-//     if (controller._bufferRcvd >= controller._msglen) {
-//       controller.enqueue(controller._buffer.subarray(0, controller._msglen));
-//       // we have a trailing fraction of a response after the completed msg
-//       if (controller._bufferRcvd > controller._msglen && controller._msglen > 0) {
-//         // move to beginning
-//         for (let i = 0, j = controller._msglen; j < controller._bufferRcvd; ++i, ++j)
-//           controller._buffer[i] = controller._buffer[j];
-
-//         controller._bufferRcvd -= controller._msglen;
-//         controller._msglen = CommunicationBase._readResponseHeader(controller._buffer).len;
-//         // fraction might be a complete msg, call recursively
-//         transformContent.transform(new Uint8Array(0), controller);
-//       } else {
-//         // complete msg, with no trailing fraction
-//         controller._msglen = -1;
-//         controller._bufferRcvd = 0;
-//       }
-//     }
-
-//   },
-
-//   flush:(controller)=> {
-//     // When the stream is closed, flush any remaining chunks out.
-//     controller.enqueue(controller._buffer.subarray(0, controller._bufferIter));
-//    }
-// }
-
-// class MsgStreamReader extends TransformStream {
-//   constructor() {
-//     super({...transformContent, textencoder: new TextEncoder()});
-//   }
-// }
-
 class ProgressSend {
   endPos = 0;
   curPos = 0;
@@ -128,11 +62,7 @@ class CommunicationBase {
     device = null;
     oep = null;
     iep = null;
-    //_encoder = null;
-    //_decoder = null;
-    //_msgQueue = [];
     _reqId = 0;
-    //_responseMsgs = [];
     _onConnectCallbacks = [];
     _onDisconnectCallbacks = [];
 
@@ -166,35 +96,6 @@ class CommunicationBase {
             CommunicationBase._instance = new CommunicationBase.LatestVersionSubClass();
         return CommunicationBase._instance;
     }
-
-    // static _readResponseHeader(byteArr) {
-    //     // a bit in 8th pos means length occupies next byte too
-    //     let nthByte = 0, len = 0;
-    //     let returnObj = () => {
-    //         return {
-    //             len /* response complete length */,
-    //             lenNBytes: nthByte, /* response length nr of bytes */
-    //             payloadStart: nthByte + 2, /* where the repsonse payload starts */
-    //             cmd: byteArr.length >= nthByte ? byteArr[nthByte] : CommunicationBase.Cmds.Error,
-    //             id: byteArr.length >= nthByte +1 ? byteArr[nthByte+1] : CommunicationBase.IDError,
-    //         }
-    //     };
-
-    //     while((byteArr[nthByte] & 0x80) || nthByte === 0) { // count how many bytes that are the length
-    //         if (byteArr.length === ++nthByte) {
-    //           len = -1
-    //          return returnObj(); // not recieved all bytes yet
-    //         }
-    //     }
-
-    //     // set the length
-    //     for (let i = 0; i < nthByte; ++i) {
-    //         let bits = (byteArr[i] & 0x7F);
-    //         len |= bits << ((nthByte -1 - i) * 7);
-    //     }
-
-    //     return returnObj();
-    // }
 
     onConnect(callback) {
         this._onConnectCallbacks.push(callback);
@@ -358,6 +259,7 @@ class CommunicationBase {
 
     async _send(data) {
         // send to device
+        CommunicationBase.progress.updatePos(1, 100);
         try {
             let res = await this.device.transferOut(
                 this.oep.endpointNumber, new Uint8Array(data))
