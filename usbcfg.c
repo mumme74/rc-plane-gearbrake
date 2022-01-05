@@ -27,7 +27,9 @@
 
 // ----------------------------------------------------------------------
 // private to this file
-static usbpkg_t *rcvpkg, *sndpkg, rcvbuf;
+static usbpkg_t *rcvpkg = NULL,
+                *sndpkg = NULL,
+                rcvbuf;
 static thread_reference_t waitThdp = NULL;
 
 /**
@@ -43,10 +45,8 @@ static void dataReceived(USBDriver *usbp, usbep_t ep) {
     osalSysLockFromISR();
 
     if (waitThdp != NULL) {
-      uint32_t *rcv32buf = (uint32_t*)rcvbuf.u8buf,
-               *rcv32pkg = (uint32_t*)rcvpkg->u8buf;
-      for(size_t i = 0; i < sizeof(rcvbuf.u8buf) / sizeof(*rcv32buf); ++i)
-        rcv32pkg[i] = rcv32buf[i];
+      for(size_t i = 0; i < usbp->epc[ep]->out_state->rxcnt; ++i)
+        rcvpkg->u8buf[i] = rcvbuf.u8buf[i];
       chThdResumeI(&waitThdp, MSG_OK);
     }
 
