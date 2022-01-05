@@ -47,28 +47,38 @@ class LandingBrake():
         self.dev.reset()
         self.oep.write(bytes(data))
         res = self.iep.read(self.iep.wMaxPacketSize, 10000)
-        cb(res)
-
+        self.bytes = 0
         if res and res[1] & 0x80:
             #multiframe response
             rcvd = bytes()
+            bytRcvd = 0
             while (res):
-                res = self.iep.read(self.iep.wMaxPacketSize, 10000)
                 cb(res)
                 if (res and res[1] & 0x80):
                     #multibyte
+                    if (res[0] > 4 and (res[3] or res[4])):
+                        self.bytes += (res[0] -5)
                     rcvd += res
+                    res = self.iep.read(self.iep.wMaxPacketSize, 20000)
                     self._testAlignment(res)
                 else:
                     break
         else:
+            cb(res)
             rcvd = res
 
         return rcvd
 
     def _testAlignment(self, res):
         #test memory alignment incremented
-        if len(res) > 14:
+        if len(res) > 5:
+            pkgNr = res[3] << 8 | res[4]
+            if not hasattr(self, '_pkgNr'): self._pkgNr = pkgNr
+            if pkgNr != (self._pkgNr):
+                raise ValueError('pkg: {} was not in order, last was {}', pkgNr, self._pkgNr)
+            self._pkgNr += 1
+            print('bytes:{}\n'.format(self.bytes))
+
             if not hasattr(self, '_cmp'):
                 self._cmp = res[5]
             for i in res[5:]:
@@ -87,7 +97,8 @@ def send(usbCls, data):
     if len(data) < 3:
         data.append(1) # default reqId
     res = usbCls.send(data, lambda r: print(r))
-    print("bytes recieved:" + str(len(res)))
+    print("total bytes recieved:" + str(len(res)))
+    print("data recv:{}".format(usbCls.bytes))
 
 
 if __name__ == '__main__':

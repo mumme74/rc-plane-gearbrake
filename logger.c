@@ -53,7 +53,7 @@ static uint32_t offsetNext;
 static uint8_t buf[EEPROM_PAGE_SIZE];
 
 /*
-void logItem(uint8_t *pos[], uint32_t *thing, size_t sz,
+void logItem(uint8_t *pos[], uint32_t *thing, uint32_t sz,
              LogType_e typ, uint8_t *cnt)
 {
   uint8_t idx = 0;
@@ -233,24 +233,76 @@ void loggerSettingsChanged(void) {
 void loggerClearAll(usbpkg_t *sndpkg) {
   logTimeout = TIME_S2I(10); // when USB is attached we stop logging
 
-  for(size_t i = 0; i < EEPROM_PAGE_SIZE; ++i)
-    buf[i] = i & 0xFF;
+  for(uint32_t i = 0; i < EEPROM_PAGE_SIZE; ++i)
+    buf[i] = 0;//i & 0xFF;
+
+  // FIXME! remove just for testing
+  static uint8_t buf2[EEPROM_PAGE_SIZE];
+  static ee24_arg_t eeArg2 = {&log_ee, 0, buf2, 0, 0, {0, 0}};
+  static msg_t msg2;
 
   ee24_arg_t eeArg = {&log_ee, 0, buf, 0, 0, {0, 0}};
   msg_t msg = MSG_OK;
+  uint32_t written;
 
   // we also clear offset next in EEPROM
-  for (size_t written = 0, align = sizeof(Settings_t), len = 0;
+  for (written = 0;
       written < EEPROM_LOG_SIZE && msg == MSG_OK;
-      written += len)
+      written += eeArg.len)
   {
-    len = eeArg.len = written + EEPROM_PAGE_SIZE < EEPROM_LOG_SIZE ?
-                  EEPROM_PAGE_SIZE - align : EEPROM_LOG_SIZE - written;
+    eeArg.len = written + EEPROM_PAGE_SIZE < EEPROM_LOG_SIZE ?
+                  EEPROM_PAGE_SIZE : EEPROM_LOG_SIZE - written;
 
     msg = ee24m01r_write(&eeArg);
-    eeArg.offset = written + len;
-    align = 0;
+    eeArg.offset = written + eeArg.len;
+    eeArg.buf = buf; // might have moved
+
+    /*
+    // check
+    eeArg2.offset = written;
+    eeArg2.len = eeArg.len;
+    msg2 = ee24m01r_read(&eeArg2);
+    // check
+    volatile uint8_t c = 0;
+    for (uint32_t i = 1; i < eeArg2.len-1; ++i)
+      if (++c != eeArg2.buf[i]){
+        c = buf[i];
+        break;
+      }
+
+    // chase a bug
+    eeArg2.offset = written;
+    msg2 = ee24m01r_read(&eeArg2);
+    for (uint32_t i = 0; i < eeArg2.len; ++i)
+      if (buf2[i] != eeArg2.buf[i]){
+        buf2[i] = buf[i];
+        break;
+      }*/
+
+    osalDbgAssert(eeArg.len == (written + EEPROM_PAGE_SIZE < EEPROM_LOG_SIZE ?
+                  EEPROM_PAGE_SIZE : EEPROM_LOG_SIZE - written), " len changed");
+
   }
+
+
+  //osalDbgAssert(written == EEPROM_LOG_SIZE, "wrong size");
+
+  // FIXME! remove just for testing
+  uint32_t page = (124928) / 256;
+
+  for (uint16_t i = 0; i < 256; ++i)
+    eeArg.buf[i] = 0x61;
+  eeArg.len = 50;
+  eeArg.offset = 124928-16;
+  ee24m01r_write(&eeArg);
+
+/*
+  eeArg2.offset = page * 256;
+  eeArg2.len = eeArg2.offset + 256 < EEPROM_LOG_SIZE ? 256 : EEPROM_LOG_SIZE - eeArg2.offset;
+
+  msg = ee24m01r_read(&eeArg2);
+*/
+
 
   offsetNext = 0;
   logTimeout = logPeriodicityMS();
@@ -260,7 +312,7 @@ void loggerClearAll(usbpkg_t *sndpkg) {
 
 void loggerReadAll(usbpkg_t *sndpkg)
 {
-  logTimeout =  TIME_S2I(5); // when USB is attached we stop logging
+  logTimeout = TIME_S2I(5); // when USB is attached we stop logging
 
   // send header with total size about to be transmitted
   INIT_PKG_HEADER_FRM(*sndpkg, EEPROM_LOG_SIZE - sizeof(offsetNext), offsetNext);
@@ -269,25 +321,48 @@ void loggerReadAll(usbpkg_t *sndpkg)
   ee24_arg_t eeArg = {&log_ee, 0, sndpkg->datafrm.data, 0, 0, {0, 0}};
   msg_t msg = MSG_OK;
   static uint32_t pkgId;
-  static uint32_t logSz = EEPROM_LOG_SIZE - sizeof(offsetNext);
-  static const size_t hdrSz = sizeof(sndpkg->datafrm) - sizeof(sndpkg->datafrm.data);
+  static const uint32_t logSz = EEPROM_LOG_SIZE - sizeof(offsetNext);
+  static const uint32_t dataSz = sizeof(sndpkg->datafrm.data) /
+                                sizeof(sndpkg->datafrm.data[0]);
   pkgId = 1;
 
-  for (size_t read = 0, len; read < logSz; read += len, ++pkgId){
+  for (uint32_t read = 0; read < logSz; ++pkgId, read += eeArg.len){
     // -5 is for the header bytes in a data package
-    len = eeArg.len = (read + wMaxPacketSize -hdrSz < logSz ?
-             wMaxPacketSize - hdrSz : logSz - read);
+    eeArg.len = (read + dataSz < logSz ? dataSz : logSz - read);
 
     // read page into buffer
     msg = ee24m01r_read(&eeArg);
     if (msg != MSG_OK) break;
 
+
+    // check
+    volatile uint8_t c = eeArg.buf[0];
+    for (uint32_t i = 1; i < eeArg.len-1; ++i)
+      if (++c != eeArg.buf[i]){
+
+        // FIXME! remove just for testing
+        static uint8_t buf2[EEPROM_PAGE_SIZE];
+        static ee24_arg_t eeArg2 = {&log_ee, 0, buf2, 0, 0, {0, 0}};
+        static msg_t msg2;
+
+        uint32_t page = eeArg.offset / 256;
+
+        eeArg2.offset = page * 256;
+        eeArg2.len = eeArg2.offset + 256 < logSz ? 256 : logSz - read;
+
+        msg = ee24m01r_read(&eeArg2);
+        break;
+      }
+
+
+    osalDbgAssert(eeArg.len == (read + dataSz < logSz ? dataSz : logSz - read), "len changed");
+
     // send buffer to host
     INIT_PKG_DATA_FRM(*sndpkg, pkgId);
-    sndpkg->datafrm.len += len;
-    usbWaitTransmit(sndpkg);
+    sndpkg->datafrm.len += eeArg.len;
+    msg = usbWaitTransmit(sndpkg);
 
-    eeArg.offset = read + len;
+    eeArg.offset = read + eeArg.len;
   }
 
   INIT_PKG(*sndpkg,

@@ -19,7 +19,7 @@
  * @brief     Calculates required timeout to send.
  * @ if exceeded i2c transmit sends
  */
-static systime_t calc_12c_timeout(size_t bytes) {
+static systime_t calc_12c_timeout(uint32_t bytes) {
   uint32_t bits = 16 + 18 +  // dev.sel. and 2 address bytes with ACK bit
                   (bytes * 10); // payload bits with ACK bit
   uint32_t tmo = bits * 1000000U;
@@ -28,25 +28,44 @@ static systime_t calc_12c_timeout(size_t bytes) {
   return TIME_US2I(tmo);
 }
 
-typedef msg_t (*funcPtr_t)(ee24_arg_t *arg) ;
+typedef msg_t (*funcPtr_t)(ee24_arg_t *arg);
 
-static msg_t bank_selection(ee24_arg_t *arg, funcPtr_t func) {
+static msg_t page_and_bank_selection(ee24_arg_t *arg, funcPtr_t func) {
   // we can read from 2 partitions, only applicable when we read from the page in the middle
+  // we also must write in alignment to page size
+
+  // set ic slave address
+  arg->sad = arg->eep->i2cAddrBase;
+
+  // FIXME chasing a bug
+  static volatile uint32_t cnt = 0;
+  if (arg->offset == 124984-56)
+    cnt++;
+
+  uint16_t remainLen = 0;
 
   // 16bit address in partition
   uint32_t beginAddr = arg->eep->startAddr + arg->offset;
-
-  const size_t endAddr = arg->eep->startAddr + arg->offset + arg->len -1u; // -1 due to len beeing 1 based
-
-  if ((arg->eep->startAddr + arg->offset <= EE24M01R_BANK1_END_ADDR) &&
+  const uint32_t endAddr = arg->eep->startAddr + arg->offset + arg->len -1u; // -1 due to len beeing 1 based
+  if ((beginAddr <= EE24M01R_BANK1_END_ADDR) &&
       (endAddr > EE24M01R_BANK1_END_ADDR))
   {
     // we should read from 2 partitions, recursive read from first part
-    uint16_t remainLen = endAddr - EE24M01R_BANK1_END_ADDR;
+    remainLen = endAddr - EE24M01R_BANK1_END_ADDR;
+
+  } else if ((beginAddr & 0xff00) != (endAddr & 0xFF00)) {
+    // align to page we belong to
+    // split on pages in memory
+    const uint16_t endPage = endAddr / EE24M01R_PAGE_SIZE;
+    remainLen = endAddr +1 - (endPage * EE24M01R_PAGE_SIZE);
+
+  }
+
+  if (remainLen > 0) {
     arg->len -= remainLen;
 
-    osalDbgAssert(arg->eep->startAddr + arg->offset + arg->len <= EE24M01R_BANK1_CAPACITY,
-                  "BANK1 range exceeded, driver bug");
+    osalDbgAssert(arg->eep->startAddr + arg->offset + arg->len <= EE24M01R_TOTAL_CAPACITY,
+                  "range exceeded, driver bug");
 
     // call our caller recursive
     msg_t status = func(arg);
@@ -59,12 +78,9 @@ static msg_t bank_selection(ee24_arg_t *arg, funcPtr_t func) {
     arg->len = remainLen;
   }
 
-  // ic slave address
-  arg->sad = arg->eep->i2cAddrBase;
-
   // select bank 2 in EEPROM
   if (beginAddr > EE24M01R_BANK1_END_ADDR) {
-    arg->sad |= 0x010000; // bit nr 2 in SAD represents high or low addrs so 0x0001xxxx -> sad: 0bxxxxxx1x
+    arg->sad |= 0x01; // sad is 7 based bit nr 2 in SAD represents high or low addrs so 0x01 -> sad: 0bxxxxxx1x
     beginAddr -= EE24M01R_BANK1_CAPACITY;
   }
 
@@ -95,10 +111,10 @@ msg_t ee24m01r_read(ee24_arg_t *arg)
 
   uint8_t *origBuf = arg->buf;
 
-  msg_t status = bank_selection(arg, &ee24m01r_read);
+  msg_t status = page_and_bank_selection(arg, &ee24m01r_read);
   if (status != MSG_OK) return status;
 
-  osalDbgAssert((arg->offset + arg->len) < arg->eep->size,
+  osalDbgAssert((arg->offset + arg->len) <= arg->eep->size,
              "out of device bounds");
 
 #if I2C_USE_MUTUAL_EXCLUSION
@@ -108,10 +124,13 @@ msg_t ee24m01r_read(ee24_arg_t *arg)
                                     arg->buf, arg->len,
                                     calc_12c_timeout(arg->len));
 
+
 #if I2C_USE_MUTUAL_EXCLUSION
   i2cReleaseBus(arg->eep->i2cp);
 #endif
 
+  // restore
+  arg->len += (uint8_t)((uint32_t)arg->buf - (uint32_t)origBuf);
   arg->buf = origBuf;
 
   return status;
@@ -129,27 +148,38 @@ msg_t ee24m01r_write(ee24_arg_t *arg)
 {
   osalDbgAssert(arg->len <= EE24M01R_PAGE_SIZE, "Can't write more than pageSize");
 
-  // read from memory
+  // write to from memory
   osalDbgAssert((arg->offset + arg->len) <= arg->eep->size,
              "out of device bounds");
 
   uint8_t *origBuf = arg->buf;
 
-  msg_t status = bank_selection(arg, &ee24m01r_write);
+  msg_t status = page_and_bank_selection(arg, &ee24m01r_write);
   if (status != MSG_OK) return status;
 
   static uint8_t buf[EE24M01R_PAGE_SIZE + 2];
+
+  // FIXME remove this used for testing
+  static volatile uint16_t cmp = 0;
+  if (cmp == 0)
+    cmp = arg->memAddrBuf[0]<<8|arg->memAddrBuf[1];
+  uint16_t curMem = arg->memAddrBuf[0]<<8|arg->memAddrBuf[1];
+  if (cmp > curMem || cmp+256 < curMem)
+    cmp++;
+  cmp = curMem;
 
 // aquire bus to use as a mutex to not access writebuffer inadvertantly
 #if I2C_USE_MUTUAL_EXCLUSION
   i2cAcquireBus(arg->eep->i2cp);
 #endif
 
+  // disable write lock write pin
   palClearLine(LINE_I2C_WC);
 
+  // copy data to transmit buffer
   buf[0] = arg->memAddrBuf[0];
   buf[1] = arg->memAddrBuf[1];
-  for(size_t i = 0; i < arg->len; ++i)
+  for(uint32_t i = 0; i < arg->len; ++i)
     buf[i + 2] = arg->buf[i];
 
   // write to memory
@@ -157,6 +187,7 @@ msg_t ee24m01r_write(ee24_arg_t *arg)
                                     buf, arg->len+2, NULL, 0,
                                     calc_12c_timeout(arg->len+2) +
                                     TIME_MS2I(EE24M01R_WRITE_TIME));
+  // re-enable write lock, start write cycle
   palSetLine(LINE_I2C_WC);
 
 #if I2C_USE_MUTUAL_EXCLUSION
@@ -166,6 +197,8 @@ msg_t ee24m01r_write(ee24_arg_t *arg)
   // wait for eeprom to finish writing data
   chThdSleep(TIME_MS2I(EE24M01R_WRITE_TIME));
 
+  // restore
+  arg->len += (uint8_t)((uint32_t)arg->buf - (uint32_t)origBuf);;
   arg->buf = origBuf;
 
   return status;
