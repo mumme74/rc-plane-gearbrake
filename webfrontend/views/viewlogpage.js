@@ -78,6 +78,9 @@ class ViewLogCls {
     const res = await CommunicationBase.instance().clearLogEntries();
     if (res) {
       LogRoot.instance().clear();
+      if (!await CommunicationBase.instance().sendReset())
+        notifyUser({msg: "Culd not reset device",
+                    type: notifyTypes.Warn});
     }
     evt.target.disabled = false;
   }
