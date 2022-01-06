@@ -8,7 +8,7 @@ import re
 import argparse
 
 parser = argparse.ArgumentParser(description='Talk to Landiggear device.')
-parser.add_argument('bytes', metavar='bytes', type=int, nargs='?',
+parser.add_argument('bytes', action='append', type=int, nargs='*',
                     help='The bytes to send to USB device')
 parser.add_argument('-v', "--verbosity",
                     help="Show USB details", action='store_true')
@@ -127,10 +127,7 @@ if __name__ == '__main__':
         if args.verbosity:
             print(comms.dev)
         elif args.bytes is not None:
-            if isinstance(args.bytes, int):
-                send(comms, str(args.bytes))
-            else:
-                send(comms, ' '.join([str(b) for b in args.bytes]))
+            send(comms, ' '.join([str(b) for b in args.bytes[0]]))
         exit(0)
 
     # interactive mode
