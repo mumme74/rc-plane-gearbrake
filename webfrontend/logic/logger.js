@@ -349,12 +349,12 @@ class LogItem {
             case LogItem.Types.slip0:
             case LogItem.Types.slip1:
             case LogItem.Types.slip2:
-                return Number(this.value.toPrecision(3));
+                return Math.round(this.value*1000)/1000;
             case LogItem.Types.accel:
             case LogItem.Types.accelX:
             case LogItem.Types.accelY:
             case LogItem.Types.accelZ:
-                return Number((this.value / 512).toPrecision(2));
+                return Math.round((this.value / 512)*100)/100;
             case LogItem.Types.speedOnGround:
             case LogItem.Types.wheelRPS_0:
             case LogItem.Types.wheelRPS_1:
@@ -365,7 +365,7 @@ class LogItem {
             case LogItem.Types.brakeForce2_out:
             case LogItem.Types.accelSteering:
             case LogItem.Types.wsSteering:
-                return Number(this.value.toPrecision(2))//Math.round(this.value *100) / 100;
+                return Math.round(this.value *100) / 100;
             default:
                 return this.value;
             }

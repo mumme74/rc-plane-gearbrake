@@ -183,6 +183,7 @@ class ViewLogCls {
   html(parentNode, lang) {
     const tr = this.translationObj[lang];
     const logOrigin = location.hash.indexOf("testingGui") ? "Testing" : "";
+    this.selectMenuWgt = null;
 
     parentNode.innerHTML = `
       <div class="w3-row-padding w3-padding-64 w3-container">

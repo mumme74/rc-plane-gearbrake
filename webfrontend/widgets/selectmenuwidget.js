@@ -6,10 +6,12 @@ class SelectMenuWgtCls {
     tblWgt = null;
     typeDrpDwnWgt = null;
     buttons = [];
+    rootNode = null;
 
     translationObj = {};
     constructor(parentNode, translationObj, showLogItems, colData, data) {
       this.translationObj = translationObj;
+      this.rootNode = parentNode;
 
 
       this.typeDrpDwnWgt = new SelectTypesDropDownWgt(
