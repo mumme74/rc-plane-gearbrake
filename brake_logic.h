@@ -11,7 +11,7 @@
 #include <stdint.h>
 
 typedef struct {
-  int16_t slip[3];
+  uint16_t slip[3];
 
   /* as sway acceleration from normal line
    * negative is left, positive right*/

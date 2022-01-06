@@ -125,6 +125,7 @@ static THD_FUNCTION(BrakeLogicThd, arg) {
       for (uint8_t ch = 0; ch < 3; ++ch) {
         if (inputs.wheelRPS[ch] < VALUES->speedOnGround) {
           // calculate wheel slip
+          // this should work correctly, tested code at https://onlinegdb.com/dr5IeCe46
           VALUES->slip[ch] =
               ((VALUES->speedOnGround - inputs.wheelRPS[ch]) * 1000)
                                / VALUES->speedOnGround;
@@ -135,7 +136,7 @@ static THD_FUNCTION(BrakeLogicThd, arg) {
               release *= release; // power of 2
               release >>= 2; // divide by 4
 
-              vlu -= (release < 1000001 ? release :1000000);
+              vlu -= release < 1000001 ? release : 1000000;
               vlu = ((vlu < 1000001) ? vlu : 0);
           }
           SET_OUT(ch, vlu / 1000);
