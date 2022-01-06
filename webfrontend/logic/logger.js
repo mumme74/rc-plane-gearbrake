@@ -221,7 +221,8 @@ class LogItem {
     }
 
     static FloatTypes = [
-        LogItem.Types.slip0, LogItem.Types.slip1, LogItem.Types.slip2
+        // are uint16_t
+       // LogItem.Types.slip0, LogItem.Types.slip1, LogItem.Types.slip2
     ];
 
     static Int8Types = [];
