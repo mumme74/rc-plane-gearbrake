@@ -34,15 +34,15 @@
  * ....
  * last 4 bytes: offset to next LogItem
  */
-
+// arm is little endian, we want big endian
 #define LOG_ITEM(thing, typ) {                          \
   itm.size = (sizeof(thing) -1) & 0x03;                 \
   itm.type = typ;                                       \
   *pos++ = (uint8_t)((uint8_t*)(&itm))[0];              \
-  *pos++ = (uint8_t)(&thing)[0];                        \
-  if (sizeof(thing) > 1) *pos++ = (uint8_t)(&thing)[1]; \
-  if (sizeof(thing) > 2) *pos++ = (uint8_t)(&thing)[2]; \
-  if (sizeof(thing) > 3) *pos++ = (uint8_t)(&thing)[3]; \
+  *pos++ = (uint8_t)(&thing)[itm.size--];                        \
+  if (sizeof(thing) > 1) *pos++ = (uint8_t)(&thing)[itm.size--]; \
+  if (sizeof(thing) > 2) *pos++ = (uint8_t)(&thing)[itm.size--]; \
+  if (sizeof(thing) > 3) *pos++ = (uint8_t)(&thing)[itm.size--]; \
   ++log.itemCnt;                                         \
 }
 
