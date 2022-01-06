@@ -5,7 +5,7 @@ const appSettingsHtmlObj = {
         en: {
             header: "App settings",
             p1: `HTML frontend must be loaded by chrome version 89 or later or the latest Edge browser.
-                 This is due to the Use of Webserial to "talk" to the microcontroller via virtual com port and USB`,
+                 This is due to the Use of WebUSB to "talk" to the microcontroller via USB`,
             chooseLang: `Choose language`,
             updateFirmware: `Update device firmware`,
             nofileSelected: "You must select a firmwre file first!",
@@ -24,7 +24,7 @@ const appSettingsHtmlObj = {
         sv: {
             header: "App inställningar",
             p1: `HTML framände måste ladddas med chrome version 89 eller senare, eller senaste Edge webbläsaren.
-                 Detta beror på att WebSerial interfacet för att "prata" med mikrocontrollern via virtuel COM port och USB.`,
+                 Detta beror på att WebUSB interfacet för att "prata" med mikrocontrollern via USB.`,
             chooseLang: `Välj språk`,
             updateFirmware: `Uppdatera enhetens firmware`,
             nofileSelected: "Du måste välja en firmware fil först!",

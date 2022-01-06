@@ -16,7 +16,7 @@ class ViewLogCls {
     en: {
       header: "View log",
       p1: `HTML frontend must be loaded by chrome version 89 or later or the latest Edge browser.
-            This is due to the Use of Webserial to "talk" to the microcontroller via virtual com port and USB`,
+            This is due to the Use of WebUSB to "talk" to the microcontroller via USB`,
       fetchLogBtn: "Fetch log from device",
       clearLogBtn: "Clear log in device",
       saveLogBtn: "Save log to file",
@@ -33,7 +33,7 @@ class ViewLogCls {
     sv: {
       header: "Visa logg",
       p1: `HTML framände måste laddas med chrome version 89 eller senare, eller senaste Edge webbläsaren.
-            Detta beror på att WebSerial interfacet för att "prata" med mikrocontrollern via virtuel COM port och USB finns inte tillgänglig innan dessa`,
+            Detta beror på att WebUSB interfacet för att "prata" med mikrocontrollern via USB finns inte tillgänglig innan dessa`,
       fetchLogBtn: "Hämta logg från enhet",
       clearLogBtn: "Nollställ loggminne i enhet",
       saveLogBtn: "Spara logg till fil",
