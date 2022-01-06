@@ -45,9 +45,8 @@
   if (sizeof(thing) > 3) *pos++ = (uint8_t)(&thing)[3]; \
   ++log.itemCnt;                                         \
 }
-/*#define LOG_ITEM(thing, typ) \
-  logItem(&pos, ((uint32_t*)&thing), sizeof(thing), typ, &cnt)
-*/
+
+bool blockLog = false;
 
 // ---------------------------------------------------------------
 // private stuff for this file
@@ -150,17 +149,15 @@ THD_FUNCTION(LoggerThd, arg) {
     return;
   }
 
-  volatile uint32_t tmCnt = 0;
-
   // start thread loop
   while (true) {
     chThdSleep(logTimeout);
-    if ((usbGetDriverStateI(&USBD1) == USB_ACTIVE) ||
+    if (blockLog == true ||
+        (usbGetDriverStateI(&USBD1) == USB_ACTIVE) ||
         (settings.dontLogWhenStill && values.speedOnGround == 0))
     {
       continue; // don't log when USB is plugged in
     }
-    tmCnt++;
 
     // first align to previous log
     eeArg.offset = offsetNext = OFFSET_NEXT(offsetNext + log.size);
@@ -224,7 +221,7 @@ void loggerSettingsChanged(void) {
 }
 
 void loggerClearAll(usbpkg_t *sndpkg) {
-  logTimeout = TIME_S2I(10); // when USB is attached we stop logging
+  blockLog = true;// when USB is attached we stop logging
 
   for(uint32_t i = 0; i < EEPROM_PAGE_SIZE; ++i)
 #if LOG_ALIGNMENT_CHECK
@@ -236,26 +233,28 @@ void loggerClearAll(usbpkg_t *sndpkg) {
   ee24_arg_t arg = {&log_ee, 0, buf, 0, 0, {0, 0}};
   msg_t msg = MSG_OK;
 
+  const uint32_t lastByte = EEPROM_LOG_SIZE;
+
   // we also clear offset next in EEPROM
   for (arg.offset = 0;
-      arg.offset < EEPROM_LOG_SIZE && msg == MSG_OK;
+      arg.offset < lastByte && msg == MSG_OK;
       arg.offset += arg.len)
   {
-    arg.len = arg.offset + EEPROM_PAGE_SIZE < EEPROM_LOG_SIZE ?
-                  EEPROM_PAGE_SIZE : EEPROM_LOG_SIZE - arg.offset;
+    arg.len = arg.offset + EEPROM_PAGE_SIZE < lastByte ?
+                  EEPROM_PAGE_SIZE : lastByte - arg.offset;
 
     msg = ee24m01r_write(&arg);
   }
 
   offsetNext = 0;
-  logTimeout = logPeriodicityMS();
+  blockLog = false;
 
   commsSendWithCmd(sndpkg, msg == MSG_OK ? commsCmd_OK : commsCmd_Error);
 }
 
 void loggerReadAll(usbpkg_t *sndpkg)
 {
-  logTimeout = TIME_S2I(5); // when USB is attached we stop logging
+  blockLog = true; // when USB is attached we stop logging
 
   // send header with total size about to be transmitted
   INIT_PKG_HEADER_FRM(*sndpkg, EEPROM_LOG_SIZE - sizeof(offsetNext), offsetNext);
@@ -292,7 +291,7 @@ void loggerReadAll(usbpkg_t *sndpkg)
            sndpkg->onefrm.reqId);
   usbWaitTransmit(sndpkg);
 
-  logTimeout = logPeriodicityMS();
+  blockLog = false;
 }
 
 void loggerNextAddr(usbpkg_t *sndpkg)

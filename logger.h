@@ -79,5 +79,7 @@ void loggerNextAddr(usbpkg_t *sndpkg);
 
 
 extern thread_t *logthdp;
+// used to block logging
+extern bool blockLog;
 
 #endif /* LOGGER_H_ */
