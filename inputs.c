@@ -260,7 +260,7 @@ static void startTmr2(void) {
 
 // public stuff
 
-const Inputs_t inputs = {0};
+volatile const Inputs_t inputs = {0};
 
 void inputsInit(void) {
   startTmr2();
@@ -268,5 +268,13 @@ void inputsInit(void) {
 
 void inputsSettingsChanged(void) {
   stopTmr2();
+  startTmr2();
+}
+
+void inputsStop(void) {
+  stopTmr2();
+}
+
+void inputsStart(void) {
   startTmr2();
 }

@@ -13,6 +13,7 @@
 #include "pwmout.h"
 #include "threads.h"
 #include "inputs.h"
+#include "diag.h"
 
 /* it should only be possible to brake this much every 10ms loop
  * else its that all wheels have locked up
@@ -33,14 +34,17 @@
  * Ie allowed to decrement by 1 every 12,5ms
  */
 #define MIN_TIME_BETWEEN_PULSE_DEC_MS 12
-#define SLIP_RELESE_FACTOR 2.0
 
 // un-const values
 #define VALUES ((Values_t*)&values)
 
+#define SET_OUT(ch, vlu) \
+  if ((diagSetValues & (1 << ch)) == 0) \
+    VALUES->brakeForce_out[(ch)] = (vlu);
+
 // -----------------------------------------------------------------
 // public
-const Values_t values;
+volatile const Values_t values;
 
 // ------------------------------------------------------------------
 // private stuff to this module
@@ -78,21 +82,10 @@ static THD_FUNCTION(BrakeLogicThd, arg) {
 
     // do accelerometer
     if (settings.accelerometer_active) {
-      switch (settings.accelerometer_axis) {
-      default: // fallthrough
-      case SETTINGS_ACCEL_USE_X:
-        VALUES->acceleration = (int16_t)(settings.accelerometer_axis_invert ?
-                                -accel.axis[0] : accel.axis[0]);
-        break;
-      case SETTINGS_ACCEL_USE_Y:
-        VALUES->acceleration = (int16_t)(settings.accelerometer_axis_invert ?
-                                -accel.axis[1] : accel.axis[1]);
-        break;
-      case SETTINGS_ACCEL_USE_Z:
-        VALUES->acceleration = (int16_t)(settings.accelerometer_axis_invert ?
-                                -accel.axis[2] : accel.axis[2]);
-        break;
-      }
+      VALUES->acceleration =
+          (int16_t)(settings.accelerometer_axis_invert ?
+                              -accel.axis[settings.accelerometer_axis] :
+                              accel.axis[settings.accelerometer_axis]);
     }
 
     // calculate vehicle speed
@@ -107,49 +100,54 @@ static THD_FUNCTION(BrakeLogicThd, arg) {
         speed = inputs.wheelRPS[2];
 
       if (speed > lastspeed) {
-        // wheels spin up ie touch down
+        // wheels have spun up ie touch down
         VALUES->speedOnGround = speed;
         lastspeed = speed;
         timeAtLastSpeedDecrement = chVTGetSystemTimeX();
       } else if (speed < lastspeed) {
-        // we have lost some speed
+        // we lost some speed
         if ((timeAtLastSpeedDecrement + MIN_TIME_BETWEEN_PULSE_DEC_MS)
              < chVTGetSystemTimeX())
         {
           // valid decrement
           timeAtLastSpeedDecrement = chVTGetSystemTimeX();
           if (VALUES->speedOnGround > 0)
-            // we use decrement here as we can't really rely
+            // we use decrement here as we can't really depend
             // on wheel speed sensor as those might have locked up
             --VALUES->speedOnGround;
         }
       }
     }
 
-    // the ABS logic
+    // the ABS logic, requires wheel speed sensors
     if (settings.ABS_active && VALUES->speedOnGround > 0) {
-      if (inputs.wheelRPS[0] < VALUES->speedOnGround) {
-        VALUES->slip[0] =
-            (VALUES->speedOnGround - inputs.wheelRPS[0]) / VALUES->speedOnGround;
-        VALUES->brakeForce_out[0] =
-            VALUES->brakeForce * VALUES->slip[0] * SLIP_RELESE_FACTOR;
+      uint32_t force = VALUES->brakeForce * 1000;
+      for (uint8_t ch = 0; ch < 3; ++ch) {
+        if (inputs.wheelRPS[ch] < VALUES->speedOnGround) {
+          // calculate wheel slip
+          VALUES->slip[ch] =
+              ((VALUES->speedOnGround - inputs.wheelRPS[ch]) * 1000)
+                               / VALUES->speedOnGround;
+          uint32_t vlu = force;
+          if (VALUES->slip[ch] > 200) {
+              // only regulate when above 20% slip, like a car does
+              uint32_t release = VALUES->slip[ch] - 200;
+              release *= release; // power of 2
+              release >>= 2; // divide by 4
+
+              vlu -= (release < 1000001 ? release :1000000);
+              vlu = ((vlu < 1000001) ? vlu : 0);
+          }
+          SET_OUT(ch, vlu / 1000);
+        } else
+          VALUES->slip[ch] = 0;
       }
-      if (inputs.wheelRPS[1] < VALUES->speedOnGround) {
-        VALUES->slip[1] =
-            (VALUES->speedOnGround - inputs.wheelRPS[1]) / VALUES->speedOnGround;
-        VALUES->brakeForce_out[1] =
-            VALUES->brakeForce * VALUES->slip[1] * SLIP_RELESE_FACTOR;
-      }
-      if (inputs.wheelRPS[2] < VALUES->speedOnGround) {
-        VALUES->slip[2] =
-            (VALUES->speedOnGround - inputs.wheelRPS[2]) / VALUES->speedOnGround;
-        VALUES->brakeForce_out[2] =
-            VALUES->brakeForce * VALUES->slip[2] * SLIP_RELESE_FACTOR;
-      }
+
     } else {
-      VALUES->brakeForce_out[0] =
-          VALUES->brakeForce_out[1] =
-              VALUES->brakeForce_out[2] = VALUES->brakeForce;
+      // no ABS or no wheelspeed
+      SET_OUT(0, VALUES->brakeForce);
+      SET_OUT(1, VALUES->brakeForce);
+      SET_OUT(2, VALUES->brakeForce);
     }
 
     // steering brakes accelerometer
@@ -161,10 +159,10 @@ static THD_FUNCTION(BrakeLogicThd, arg) {
 
       if (VALUES->accelSteering < 0) {
         if (VALUES->brakeForce_out[leftPosBrake] > (uint8_t)(-VALUES->accelSteering))
-          VALUES->brakeForce_out[leftPosBrake] = (uint8_t)(-VALUES->accelSteering);
+          SET_OUT(leftPosBrake, (uint8_t)(-VALUES->accelSteering));
       } else if (VALUES->accelSteering > 0) {
         if (VALUES->brakeForce_out[rightPosBrake] > (uint8_t)VALUES->accelSteering)
-          VALUES->brakeForce_out[rightPosBrake] = (uint8_t)VALUES->accelSteering;
+          SET_OUT(rightPosBrake, (uint8_t)VALUES->accelSteering);
       }
     }
 
@@ -176,15 +174,16 @@ static THD_FUNCTION(BrakeLogicThd, arg) {
       uint8_t leftSpeed = inputs.wheelRPS[leftPosBrake],
               rightSpeed = inputs.wheelRPS[rightPosBrake];
 
-      int32_t vlu = (leftSpeed - rightSpeed) * settings.ws_steering_brake_authority;
+      int32_t vlu = (leftSpeed - rightSpeed) *
+                       settings.ws_steering_brake_authority;
       VALUES->wsSteering = vlu / 100; // remove 100% from authority
 
       if (VALUES->wsSteering < 0) {
         if (VALUES->brakeForce_out[leftPosBrake] > (uint8_t)(-VALUES->wsSteering))
-          VALUES->brakeForce_out[leftPosBrake] = (uint8_t)(-VALUES->wsSteering);
+          SET_OUT(leftPosBrake, (uint8_t)(-VALUES->wsSteering));
       } else if (VALUES->wsSteering > 0) {
         if (VALUES->brakeForce_out[rightPosBrake] > (uint8_t)VALUES->wsSteering)
-          VALUES->brakeForce_out[rightPosBrake] = (uint8_t)VALUES->wsSteering;
+          SET_OUT(rightPosBrake, (uint8_t)VALUES->wsSteering);
       }
     }
 

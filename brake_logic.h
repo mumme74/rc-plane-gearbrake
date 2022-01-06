@@ -11,14 +11,11 @@
 #include <stdint.h>
 
 typedef struct {
-  /* as wheel rotations per sec. */
-  uint8_t speedOnGround;
+  int16_t slip[3];
+
   /* as sway acceleration from normal line
    * negative is left, positive right*/
   int16_t acceleration;
-  /* wanted brake force, might differ from inputs
-   * due min/max and invert settings */
-  uint8_t brakeForce;
 
   // how much accelerometer steering
   int16_t accelSteering;
@@ -27,11 +24,15 @@ typedef struct {
 
   // how much brake force we get out
   uint8_t brakeForce_out[3];
+  /* as wheel rotations per sec. */
+  uint8_t speedOnGround;
+  /* wanted brake force, might differ from inputs
+   * due min/max and invert settings */
+  uint8_t brakeForce;
 
-  float slip[3];
 } Values_t;
 
-extern const Values_t values;
+extern volatile const Values_t values;
 
 void brakeLogicInit(void);
 void brakeLogicStart(void);

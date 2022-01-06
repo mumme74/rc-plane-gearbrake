@@ -13,6 +13,7 @@
 #include "settings.h"
 #include "i2c_bus.h"
 #include "threads.h"
+#include "diag.h"
 
 //----------------------------------------------------------------
 // private stuff for this module
@@ -47,8 +48,11 @@ THD_FUNCTION(AccelThd, arg) {
 
   while (true) {
     chThdSleep(TIME_US2I(10000));
-    if (settings.accelerometer_active)
+    if (settings.accelerometer_active &&
+        !(diagSetValues & diag_Set_InputsAccel))
+    {
       KXTJ3_1057AccelerometerReadRaw(&accd, (int32_t*)accel.axis);
+    }
   }
 }
 
@@ -65,7 +69,7 @@ static thread_descriptor_t accelThdDesc = {
 
 // public stuff
 
-const Accel_t accel;
+volatile const Accel_t accel;
 
 void accelInit(void) {
   KXTJ3_1057ObjectInit(&accd);

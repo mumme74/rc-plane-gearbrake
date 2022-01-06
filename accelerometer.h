@@ -24,7 +24,7 @@ typedef struct {
 /**
  * @brief global variable for the measured values
  */
-extern const Accel_t accel;
+extern volatile const Accel_t accel;
 
 /**
  * @brief initialize the accelerometer

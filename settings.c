@@ -221,7 +221,7 @@ void settingsSetAll(usbpkg_t *sndpkg, usbpkg_t *rcvpkg) {
 
   } while(false);
 
-  commsSendWithCmd(sndpkg, res);
+  commsSendNowWithCmd(sndpkg, res);
 }
 
 /**

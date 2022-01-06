@@ -26,6 +26,7 @@
 #include "brake_logic.h"
 #include "logger.h"
 #include "comms.h"
+#include "diag.h"
 
 
 /*
@@ -49,6 +50,7 @@ int main(void) {
   brakeLogicInit();
   accelInit();
   commsInit();
+  diagInit();
   // done last of the initializations as main(void) now becomes idle thread
   chSysInit();
 
@@ -58,6 +60,7 @@ int main(void) {
   loggerStart();
   brakeLogicStart();
   commsStart();
+  diagStart();
 
   /* This is now the idle thread loop, you may perform here a low priority
      task but you must never try to sleep or wait in this loop. Note that

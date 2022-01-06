@@ -160,7 +160,7 @@ THD_FUNCTION(LoggerThd, arg) {
     }
 
     // first align to previous log
-    eeArg.offset = offsetNext = OFFSET_NEXT(offsetNext + log.size);
+    offsetNext = OFFSET_NEXT(offsetNext + log.size);
 
     // build up log values
     buildLog();
@@ -168,6 +168,8 @@ THD_FUNCTION(LoggerThd, arg) {
     // store it
     eeArg.len = log.size;
     eeArg.buf = (uint8_t*)&log;
+    eeArg.offset = OFFSET_IN_LOG(offsetNext + log.size) ?
+                     offsetNext : 0;
     res = ee24m01r_write(&eeArg);
     if (res != MSG_OK) {
       chThdSleep(TIME_INFINITE);
@@ -249,7 +251,7 @@ void loggerClearAll(usbpkg_t *sndpkg) {
   offsetNext = 0;
   blockLog = false;
 
-  commsSendWithCmd(sndpkg, msg == MSG_OK ? commsCmd_OK : commsCmd_Error);
+  commsSendNowWithCmd(sndpkg, msg == MSG_OK ? commsCmd_OK : commsCmd_Error);
 }
 
 void loggerReadAll(usbpkg_t *sndpkg)

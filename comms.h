@@ -70,23 +70,33 @@
   TO_BIG_ENDIAN_32(&(pkg).u8buf[(pkg).onefrm.len], u32vlu); \
   (pkg).onefrm.len += 4
 
-#define commsSendWithCmd(pkgPtr, Cmd) \
-  (pkgPtr)->onefrm.cmd = Cmd; \
-  usbWaitTransmit(pkgPtr)
+#define commsSendNow(pkg) \
+   usbStartTransmitI(&USBD1, 1, (pkg)->u8buf, (pkg)->onefrm.len)
+
+#define commsSendNowWithCmd(pkg, Cmd) \
+  (pkg)->onefrm.cmd = Cmd; \
+  commsSendNow(pkg)
 
 typedef enum {
-  commsCmd_Error = 0x00u,
-  commsCmd_Ping = 0x01u,
-  commsCmd_Pong = 0x02u,
-  commsCmd_Reset = 0x03u,
-  commsCmd_SettingsSetDefault = 0x07u,
-  commsCmd_SettingsSaveAll = 0x08u,
-  commsCmd_SettingsGetAll  = 0x09u,
-  commsCmd_LogGetAll = 0x10u,
-  commsCmd_LogNextAddr = 0x11u,
-  commsCmd_LogClearAll = 0x12u,
-  commsCmd_version = 0x20u,
-  commsCmd_OK = 0x7F,
+  commsCmd_Error                 = 0x00u,
+  commsCmd_Ping                  = 0x01u,
+  commsCmd_Pong                  = 0x02u,
+  commsCmd_Reset                 = 0x03u,
+
+  commsCmd_SettingsSetDefault    = 0x07u,
+  commsCmd_SettingsSaveAll       = 0x08u,
+  commsCmd_SettingsGetAll        = 0x09u,
+
+  commsCmd_LogGetAll             = 0x10u,
+  commsCmd_LogNextAddr           = 0x11u,
+  commsCmd_LogClearAll           = 0x12u,
+
+  commsCmd_DiagReadAll           = 0x18u,
+  commsCmd_DiagSetVlu            = 0x19u,
+  commsCmd_DiagClearVlu          = 0x1Au,
+
+  commsCmd_version               = 0x20u,
+  commsCmd_OK                    = 0x7F,
 } CommsCmdType_e;
 
 // out as in USB host out, ie in to this device

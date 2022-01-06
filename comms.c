@@ -9,6 +9,7 @@
 #include "threads.h"
 #include "usbcfg.h"
 #include "logger.h"
+#include "diag.h"
 
 #include <hal.h>
 #include <halconf.h>
@@ -30,15 +31,15 @@ static void routeCmd(void) {
 
   switch(rcvpkg.onefrm.cmd) {
   case commsCmd_Ping:
-    commsSendWithCmd(&sndpkg, commsCmd_Pong);
+    commsSendNowWithCmd(&sndpkg, commsCmd_Pong);
     break;
   case commsCmd_Reset:
-    commsSendWithCmd(&sndpkg, commsCmd_OK);
+    commsSendNowWithCmd(&sndpkg, commsCmd_OK);
     NVIC_SystemReset();
     break;
   case commsCmd_SettingsSetDefault:
     settingsDefault();
-    commsSendWithCmd(&sndpkg, commsCmd_OK);
+    commsSendNowWithCmd(&sndpkg, commsCmd_OK);
     break;
   case commsCmd_SettingsSaveAll:
     settingsSetAll(&sndpkg, &rcvpkg);
@@ -55,12 +56,21 @@ static void routeCmd(void) {
   case commsCmd_LogClearAll:
     loggerClearAll(&sndpkg);
     break;
+  case commsCmd_DiagReadAll:
+    diagReadData(&sndpkg);
+    break;
+  case commsCmd_DiagSetVlu:
+    diagSetVlu(&sndpkg, &rcvpkg);
+    break;
+  case commsCmd_DiagClearVlu:
+    diagClearVlu(&sndpkg, &rcvpkg);
+    break;
   case commsCmd_version:
     PKG_PUSH(sndpkg, COMMS_VERSION);
     usbWaitTransmit(&sndpkg);
     break;
   default:
-    commsSendWithCmd(&sndpkg, commsCmd_Error);
+    commsSendNowWithCmd(&sndpkg, commsCmd_Error);
   }
 }
 
