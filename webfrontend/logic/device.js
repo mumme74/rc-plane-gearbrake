@@ -212,7 +212,7 @@ class DeviceConfig_v1 extends DeviceConfigBase {
     byteVlu = byteArr[idx++];
     this.reverse_input = Boolean(byteVlu & 0x01);
     this.ABS_active = Boolean(byteVlu & 0x02);
-    this.PwmFreq = (byteVlu & 0x1C) >> 3;
+    this.PwmFreq = (byteVlu & 0x1C) >> 2;
     this.Brake0_active = Boolean(byteVlu & 0x20);
     this.Brake1_active = Boolean(byteVlu & 0x40);
     this.Brake2_active = Boolean(byteVlu & 0x80);
