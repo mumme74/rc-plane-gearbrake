@@ -74,7 +74,7 @@ const configureHtmlObj = {
     try {
       const byteArr = await CommunicationBase.instance().getAllSettings();
       if (!byteArr) throw "Could't get settings from device";
-      DeviceConfigBase.deserialize(byteArr);
+      ConfigBase.deserialize(byteArr);
       routeMainContent(); // for refresh values
     } catch(err) {
       console.error(err);
@@ -84,7 +84,7 @@ const configureHtmlObj = {
   pushSettings: async () => {
     console.log("save settings")
     try {
-      const byteArr = DeviceConfigBase.instance().serialize();
+      const byteArr = ConfigBase.instance().serialize();
       const res = CommunicationBase.instance().saveAllSettings(byteArr);
       if (!res) throw "Could not save settings to device";
     } catch (err) {
@@ -100,7 +100,7 @@ const configureHtmlObj = {
       accept: {'application/octet-stream': ['.rcconf']},
     }]});
     const fileStream = await fileHandle.createWritable();
-    const byteArr = DeviceConfigBase.instance().serialize();
+    const byteArr = ConfigBase.instance().serialize();
     await fileStream.write(new Blob([byteArr],
                 {type: "application/octet-stream"}));
     await fileStream.close();
@@ -113,7 +113,7 @@ const configureHtmlObj = {
     }]});
     const file = await fileHandle.getFile();
     const byteArr = new Uint8Array(await file.arrayBuffer());
-    DeviceConfigBase.deserialize(byteArr);
+    ConfigBase.deserialize(byteArr);
     routeMainContent(); // for refresh values
   },
 
@@ -171,7 +171,7 @@ const configureHtmlObj = {
             title: {en: "How often it should cycle on/off", sv: "Hur ofta den cyklar av/på"},
             render: renderSelect,
             renderOptions: {
-              selections: DeviceConfigBase.PwmFreqOptions,
+              selections: ConfigBase.PwmFreqOptions,
               lang: PwmFreqOptionsTranslated
             }
           },
@@ -190,7 +190,7 @@ const configureHtmlObj = {
             },
             render: renderSelect,
             renderOptions: {
-              selections: DeviceConfigBase.WheelDir,
+              selections: ConfigBase.WheelDir,
               lang: WheelDirTranslated
             }
           },
@@ -209,7 +209,7 @@ const configureHtmlObj = {
             },
             render: renderSelect,
             renderOptions: {
-              selections: DeviceConfigBase.WheelDir,
+              selections: ConfigBase.WheelDir,
               lang: WheelDirTranslated
             }
           },
@@ -228,7 +228,7 @@ const configureHtmlObj = {
             },
             render: renderSelect,
             renderOptions: {
-              selections: DeviceConfigBase.WheelDir,
+              selections: ConfigBase.WheelDir,
               lang: WheelDirTranslated
             }
           },
@@ -306,7 +306,7 @@ const configureHtmlObj = {
               sv: "Vilken axel som är sväng. Används för styrbromsning."
             },
             render: renderSelect,
-            renderOptions: {selections: DeviceConfigBase.AccelControlAxis}
+            renderOptions: {selections: ConfigBase.AccelControlAxis}
           },
           {
             key: "accelerometer_axis_invert",
@@ -346,7 +346,7 @@ const configureHtmlObj = {
             title: {en: "How often we should log", sv: "Hur ofta en den skall logga"},
             render: renderSelect,
             renderOptions: {
-              selections: DeviceConfigBase.LogPeriodicity
+              selections: ConfigBase.LogPeriodicity
             }
           }
         ]
@@ -386,7 +386,7 @@ const configureHtmlObj = {
             return renderFormItem(child); // its a sub fieldset
 
           // map sub properties such as header.storageVersion
-          let vluRoot = DeviceConfigBase.instance();
+          let vluRoot = ConfigBase.instance();
           let keys = child.key.split('.');
           while (keys.length > 1) {
             vluRoot = vluRoot[keys.shift()];

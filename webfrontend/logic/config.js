@@ -1,7 +1,7 @@
 "use strict";
 
-class DeviceConfigBase {
-  static DeviceConfigVersions = [];
+class ConfigBase {
+  static ConfigVersions = [];
   static _instance = null;
 
   static PwmFreqOptions = {
@@ -39,11 +39,11 @@ class DeviceConfigBase {
   }
 
   static instance() {
-    if (!DeviceConfigBase._instance)
-      DeviceConfigBase._instance =
-        new DeviceConfigBase.DeviceConfigVersions[
-            DeviceConfigBase.DeviceConfigVersions.length-1]();
-    return DeviceConfigBase._instance;
+    if (!ConfigBase._instance)
+      ConfigBase._instance =
+        new ConfigBase.ConfigVersions[
+            ConfigBase.ConfigVersions.length-1]();
+    return ConfigBase._instance;
   }
 
   /**
@@ -52,7 +52,7 @@ class DeviceConfigBase {
    * @param vlu The value, is converted to correct data type implicitly
    */
   static changeVlu(key, vlu) {
-    const instance = DeviceConfigBase.instance();
+    const instance = ConfigBase.instance();
     if (typeof instance[key] === 'boolean') {
       instance[key] = Boolean(vlu);
     } else if (typeof instance[key] === 'number') {
@@ -86,10 +86,10 @@ class DeviceConfigBase {
       throw new Error("Can't deserialize, header malformed");
 
     let version = (byteArr[0] << 8) | byteArr[1];
-    if (version > DeviceConfigBase.DeviceConfigVersions.length)
+    if (version > ConfigBase.ConfigVersions.length)
       throw new Error("Can't deserialize, device has a unsupported config version:" + version);
 
-    const cls = DeviceConfigBase.DeviceConfigVersions.find(v=>{
+    const cls = ConfigBase.ConfigVersions.find(v=>{
       if ((new v()).header.storageVersion===version)
         return v;
     });
@@ -104,11 +104,11 @@ class DeviceConfigBase {
     // read in values for selected version
     instance._deserialize(byteArr);
 
-    DeviceConfigBase._instance = instance;
+    ConfigBase._instance = instance;
   }
 }
 
-class DeviceConfig_v1 extends DeviceConfigBase {
+class Config_v1 extends ConfigBase {
   header = {
     storageVersion: 0x01,
     size: 16 - 4
@@ -137,13 +137,13 @@ class DeviceConfig_v1 extends DeviceConfigBase {
   ABS_active = false /*uint8_t :1;*/
 
   // outputs
-  PwmFreq = DeviceConfigBase.PwmFreqOptions.freq10Hz;  /* uint16_t : 3; */// as in PwmFrequency_e
+  PwmFreq = ConfigBase.PwmFreqOptions.freq10Hz;  /* uint16_t : 3; */// as in PwmFrequency_e
   Brake0_active = false; /*uint16_t : 1;*/
   Brake1_active = false; /*uint16_t : 1;*/
   Brake2_active = false; /*uint16_t : 1;*/
-  Brake0_dir = DeviceConfigBase.WheelDir.center; /*uint16_t : 2; */ // if it is left, right or center used for steering brakes
-  Brake1_dir = DeviceConfigBase.WheelDir.center; /*uint16_t : 2; */ // 1 for left, 2 for right, 0 for center wheel (no steering brake)
-  Brake2_dir = DeviceConfigBase.WheelDir.center; /*uint16_t : 2; */ //
+  Brake0_dir = ConfigBase.WheelDir.center; /*uint16_t : 2; */ // if it is left, right or center used for steering brakes
+  Brake1_dir = ConfigBase.WheelDir.center; /*uint16_t : 2; */ // 1 for left, 2 for right, 0 for center wheel (no steering brake)
+  Brake2_dir = ConfigBase.WheelDir.center; /*uint16_t : 2; */ //
 
   // wheel speed inputs
   // how many pulses per revolution each wheel has, ie how many tooths
@@ -154,7 +154,7 @@ class DeviceConfig_v1 extends DeviceConfigBase {
 
   // which axis should control steering brakes
   // 0 = x, 1=y, 2=z
-  accelerometer_axis = DeviceConfigBase.AccelControlAxis.X; /* uint8_t: 2;*/ // 0 = x, 1=y, 2=z
+  accelerometer_axis = ConfigBase.AccelControlAxis.X; /* uint8_t: 2;*/ // 0 = x, 1=y, 2=z
   // accelerometer
   accelerometer_active = false/* uint8_t: 1; */
   // invert the input IE brake the other wheel
@@ -234,4 +234,4 @@ class DeviceConfig_v1 extends DeviceConfigBase {
     this.WheelSensor2_pulses_per_rev = byteArr[idx++];
   }
 }
-DeviceConfigBase.DeviceConfigVersions.push(DeviceConfig_v1);
+ConfigBase.ConfigVersions.push(Config_v1);
