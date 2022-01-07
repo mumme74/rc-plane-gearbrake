@@ -16,6 +16,31 @@ if (!window.isSecureContext) {
   alert(tr[document.querySelector("html").lang]);
 }
 
+// inspired by https://spin.atomicobject.com/2018/09/10/javascript-concurrency/
+class Mutex {
+  _mutex = Promise.resolve();
+  lock() {
+    let begin = () => {};
+    this._mutex = this._mutex.then(()=>{
+      return new Promise(begin);
+    });
+
+    return new Promise(res=>{
+      begin = res;
+      return null;
+    });
+  }
+
+  async dispatch(fn) {
+    const unlock = await this.lock();
+    try {
+      return await Promise.resolve(fn())
+    } finally {
+      unlock()
+    }
+  }
+}
+
 class ProgressSend {
   endPos = 0;
   curPos = 0;
@@ -56,18 +81,20 @@ class CommunicationBase {
         OK:                  0x7F,
     }
     static IDError = 0xFF;
+    static progress = new ProgressSend();
+    static _mutex = new Mutex();
 
     vendorId = 0x0483;
     productId = 0;
 
-    static progress = new ProgressSend();
 
     device = null;
     oep = null;
     iep = null;
+    onConnectCallbacks = [];
+    onDisconnectCallbacks = [];
+    _unlock = null;
     _reqId = 0;
-    _onConnectCallbacks = [];
-    _onDisconnectCallbacks = [];
 
     errorLog = console.error;
     infoLog = console.info;
@@ -88,8 +115,7 @@ class CommunicationBase {
                 e.device.productId === this.productId)
             {
                 this.closeDevice();
-                for (let cb of this._onDisconnectCallbacks)
-                    cb();
+                this.onDisconnectCallbacks.forEach(cb=>cb());
             }
         });
     }
@@ -98,14 +124,6 @@ class CommunicationBase {
         if (!CommunicationBase._instance)
             CommunicationBase._instance = new CommunicationBase.LatestVersionSubClass();
         return CommunicationBase._instance;
-    }
-
-    onConnect(callback) {
-        this._onConnectCallbacks.push(callback);
-    }
-
-    onDisconnect(callback) {
-        this._onDisconnectCallbacks.push(callback);
     }
 
     async _reopenPort() {
@@ -132,7 +150,7 @@ class CommunicationBase {
         }
 
         // notify that we are connected (outside of try block)
-        for (let cb of this._onConnectCallbacks) {
+        for (let cb of this.onConnectCallbacks) {
             try {
                 cb();
             } catch(e) {
@@ -162,8 +180,12 @@ class CommunicationBase {
 
     async closeDevice() {
         if (this.device?.opened)
-            this.device.close();
+          this.device.close();
+
         this.device = null;
+
+        if (this._unlock)
+          this._unlock = this._unlock();
     }
 
     async toggleDevice() {
@@ -218,9 +240,8 @@ class CommunicationBase {
            data[i] = byteArr[j];
         //console.log("write cmd", cmd, "data", data);
 
-        clearTimeout(this._resetTimeout);
-
         // Request exclusive control over interface #1.
+        const unlock = this._unlock = await CommunicationBase._mutex.lock();
         await this.device.claimInterface(0);
 
         // communicate
@@ -239,6 +260,7 @@ class CommunicationBase {
             await this.device.releaseInterface(0);
             await this.device.reset();
         }
+        this._unlock = unlock();
 
         return rcvd;
     }
@@ -338,45 +360,6 @@ class CommunicationBase {
             CommunicationBase.progress.updatePos(pkgNr);
         }
     }
-
-
-
-
-    /**
-     * @brief Read form usb interface, user code must poll to recieve
-     * @param {id} = the request id we want to recieve, or undefined for no filter
-     * @param {cmd} = the command we want the response to have, or undefined for no filter
-     * @param {includeHeader} = include header bytes in response
-     * @returns the found response matching param filters
-     */
-    /*async read({id = -1, cmd = -1, includeHeader = false}) {
-      if (!this.device)
-        if (!await this.openPort()) return;
-
-      // we might have this message in our cache
-      let msgIdx = this._responseMsgs.findIndex(m=>((id===m[2] || id < 0) && (cmd === m[1] || cmd < 0)));
-      if (msgIdx > -1) return this._responseMsgs.splice(msgIdx);
-
-      // get from device
-      let exit = false, msg;
-      while(!exit) {
-
-        const {value: msg, done: exit} = await this._reader.read();
-        const header = CommunicationBase._readResponseHeader(msg);
-        if (header.len > -1) {
-            if (header.cmd === CommunicationBase.Cmds.Error) {
-                this._responseMsgs = [];
-                throw new Error(`cmd ${header.cmd} with ${id} failed`);
-            } else if ((id === -1 || id === header.id) &&
-                       (cmd === -1 || cmd === header.cmd))
-            {
-                console.log("rcv cmd", cmd, "data", msg)
-                return includeHeader ? msg : msg.subarray(header.payloadStart);
-            }
-        }
-        this._responseMsgs.push(msg);
-      }
-    }*/
 
     _getId() {
         if (this._reqId > 0xFD) // 0xFF is a error
