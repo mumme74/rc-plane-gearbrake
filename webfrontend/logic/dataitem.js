@@ -33,7 +33,7 @@
             txt: {en: "Requested brakeforce", sv: "Begärd bromskraft"},
             title: {en: "Brakeforce from reciever", sv: "Bromskraft från mottagaren"}
         },
-        wantedBrakeForce: {
+        calcBrakeForce: {
             txt: {en: "Calculated brakeforce", sv: "Beräknad bromskraft"},
             title: {en: "Brakeforce after input filter", sv: "Bromskraft efter ingångsfilter"}
         },
@@ -272,8 +272,8 @@
     restore(byteArray, startPos) {
         let vlu = 0;
         // read in Big Endian
-        for (let i = startPos + this.size - 1; i > -1; --i)
-          vlu |= (byteArray[i] << (8 * i));
+        for (let i = this.size - 1; i > -1; --i)
+          vlu |= (byteArray[i + startPos] << (8 * i));
 
         if (ItemBase.FloatTypes.indexOf(this.type) > -1) {
           // convert to float
@@ -293,7 +293,18 @@
             // 32 bits is so big that the value implicitly goes negative on 32th bit
             //if (vlu & 0x80000000) vlu = (vlu & 0x7FFFFFFF) -1;
         }
-        this.value = vlu;
+        // set value
+        this.setValue(vlu);
+        // how many bytes we have read
+        return this.size;
+    }
+
+    /**
+     * @brief makes subclasses able to implement onChane callbacks
+     * @param {*} newValue
+     */
+    setValue(newValue) {
+      this.value = newValue;
     }
 
     /**

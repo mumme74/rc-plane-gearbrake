@@ -22,11 +22,11 @@ class LogItem extends ItemBase {
         const headerByte = parent.parent.byteArray[startPos];
         const size = (headerByte & 0x03) +1; // 0 is 1 byte, 3 is 4 bytes
         const type = (headerByte & 0xFC) >> 2;
-        const valueBytes = parent?.parent?.byteArray
+        const byteArray = parent?.parent?.byteArray
                              .slice(startPos, startPos + size) || null;
 
         // call baseclass
-        super({size, type, valueBytes})
+        super({size, type, byteArray})
 
         // after baseclass call we can use *this* keyword
         this.startPos = startPos;
