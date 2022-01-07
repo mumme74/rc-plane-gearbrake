@@ -121,13 +121,6 @@ static stm32_dma_stream_t* startDmaCh(
   return dma;
 }
 
-static void stopDmaCh(stm32_dma_stream_t *dma) {
-  if (dma) {
-    dmaStreamFree(dma);
-    dma = NULL;
-  }
-}
-
 static void stopTmr2(void) {
 
   /* Clock deactivation.*/
@@ -136,9 +129,15 @@ static void stopTmr2(void) {
   STM32_TIM2->SR   = 0;                    /* Clear eventual pending IRQs. */
   STM32_TIM2->CNT  = 0;                    /* Clear counter */
 
-  stopDmaCh(dma_tim2_ch2);
-  stopDmaCh(dma_tim2_ch3);
-  stopDmaCh(dma_tim2_ch4);
+
+  if (dma_tim2_ch2)
+    dmaStreamFree(dma_tim2_ch2);
+  if (dma_tim2_ch3)
+    dmaStreamFree(dma_tim2_ch3);
+  if (dma_tim2_ch4)
+    dmaStreamFree(dma_tim2_ch4);
+
+  dma_tim2_ch2 = dma_tim2_ch3 = dma_tim2_ch4 = NULL;
 }
 
 static void startTmr2(void) {
@@ -262,7 +261,9 @@ static void startTmr2(void) {
 
 volatile const Inputs_t inputs = {0};
 
-void inputsInit(void) {
+void inputsInit(void) { }
+
+void inputsStart(void) {
   startTmr2();
 }
 
@@ -273,8 +274,4 @@ void inputsSettingsChanged(void) {
 
 void inputsStop(void) {
   stopTmr2();
-}
-
-void inputsStart(void) {
-  startTmr2();
 }

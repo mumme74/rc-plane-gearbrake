@@ -27,6 +27,8 @@ extern volatile const Inputs_t inputs;
  */
 void inputsInit(void);
 
+void inputsStart(void);
+
 /**
  * @brief gets called whenever a setting has changed
  */
