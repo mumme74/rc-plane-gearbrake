@@ -14,267 +14,26 @@ typedef struct {
 } LogBuf_t;
 */
 /**
- * @brief LogItem is a single item, such value of accelerometer
+ * @brief LogItem is a single item, such as the value of accelerometer at single point in time
  */
-class LogItem {
-    static TypesTranslated = {
-        uninitialized: {
-            txt: {en: "Unintialized", sv: "Oinitialiserad"},
-            title: {en: "Not valid", sv: "Ej gilltig"}
-        },
+class LogItem extends ItemBase {
 
-        // speed as in wheel revs / sec
-        speedOnGround: {
-            txt: {en: "Wheel revs on ground", sv: "Hjul rotation på marken"},
-            title: {en: "Calculated speed on the ground", sv: "Beräknad hastighet på marken"}
-        },
-        wheelRPS_0: {
-            txt: {en: "Wheel sensor 0", sv: "Hjulsensor 0"},
-            title: {en: "Measured value", sv: "Uppmätt värde"}
-        },
-        wheelRPS_1: {
-            txt: {en: "Wheel sensor 1", sv: "Hjulsensor 1"},
-            title: {en: "Measured value", sv: "Uppmätt värde"}
-        },
-        wheelRPS_2: {
-            txt: {en: "Wheel sensor 2", sv: "Hjulsensor 2"},
-            title: {en: "Measured value", sv: "Uppmätt värde"}
-        },
-        // brake force
-        wantedBrakeForce: {
-            txt: {en: "Requested brakeforce", sv: "Begärd bromskraft"},
-            title: {en: "Brakeforce from reciever", sv: "Bromskraft från mottagaren"}
-        },
-        brakeForce0_out: {
-            txt: {en: "Brake 0 output force", sv: "Broms 0 utkraft"},
-            title: {
-            en: "Brake 0 force sent to wheel brake 0-100%",
-            sv: "Broms 0 kraft sänt till hjulbroms"
-            }
-        },
-        brakeForce1_out: {
-            txt: {en: "Brake 1 output force", sv: "Broms 1 utkraft"},
-            title: {
-            en: "Brake 1 force sent to wheel brake 0-100%",
-            sv: "Broms 1 kraft sänt till hjulbroms"
-            }
-        },
-        brakeForce2_out: {
-            txt: {en: "Brake 2 output force", sv: "Broms 2 utkraft"},
-            title: {
-            en: "Brake 2 force sent to wheel brake 0-100%",
-            sv: "Broms 2 kraft sänt till hjulbroms"
-            }
-        },
-        // wheel slip
-        slip0: {
-            txt: {en: "Brake 0 wheel slip", sv: "Broms 0 hjulsläpp"},
-            title: {
-            en: "Brake 0 calculated wheel slippage",
-            sv: "Broms 0 beräknat hjulsläpp"
-            }
-        },
-        slip1: {
-            txt: {en: "Brake 1 wheel slip", sv: "Broms 1 hjulsläpp"},
-            title: {
-            en: "Brake 1 calculated wheel slippage",
-            sv: "Broms 1 beräknat hjulsläpp"
-            }
-        },
-        slip2: {
-            txt: {en: "Brake 2 wheel slip", sv: "Broms 2 hjulsläpp"},
-            title: {
-            en: "Brake 2 calculated wheel slippage",
-            sv: "Broms 2 beräknad hjulsläpp"
-            }
-        },
-        // steering brakes
-        accelSteering: {
-            txt: {en: "Accelerometer steering",  sv: "Accelerometer styrning"},
-            title: {
-            en: "How much steeringbrake due to accelerometer sensing",
-            sv: "Hur mycket styrbroms från accelerometern"
-            }
-        },
-        wsSteering: {
-            txt: {en: "Wheel brake steering", sv: "Hjulbroms styrning"},
-            title: {
-            en: "Wheel brake differential steering based of different sheel speed",
-            sv: "Hjulbroms styrning baserat på olika hjulhatighet"
-            }
-        },
-        // accelerometer
-        accel: {
-            txt: {en: "Accel. control axis", sv: "Accel. kontroll axel"},
-            title: {
-            en: "Accelerometer control axis value\nThe value form the axis used to steer brake",
-            sv: "Accelerometer kontrol axel värde\nDet värde som används för att styrbromsa"
-            }
-        },
-        accelX: {
-            txt: {en: "Accelerometer X", sv: "Accelerometer X"},
-            title: {
-            en: "Accelerometer value for X-axis",
-            sv: "Accelerometer värde för X-axeln"
-            }
-        },
-        accelY: {
-            txt: {en: "Accelerometer Y", sv: "Accelerometer Y"},
-            title: {
-            en: "Accelerometer value for Y-axis",
-            sv: "Accelerometer värde för Y-axeln"
-            }
-        },
-        accelZ: {
-            txt: {en: "Accelerometer Z", sv: "Accelerometer Z"},
-            title: {
-            en: "Accelerometer value for Z-axis",
-            sv: "Accelerometer värde för Z-axeln"
-            }
-        },
+    constructor(startPos = -1, parent = null) {
+        const headerByte = parent.parent.byteArray[startPos];
+        const size = (headerByte & 0x03) +1; // 0 is 1 byte, 3 is 4 bytes
+        const type = (headerByte & 0xFC) >> 2;
+        const valueBytes = parent?.parent?.byteArray
+                             .slice(startPos, startPos + size) || null;
 
-        // must be last of items from board, indicates end of log items
-        log_end: {txt: {en: "Log end", sv: "Log slut"}},
+        // call baseclass
+        super({size, type, valueBytes})
 
-        invalid: {
-            txt:{en: "Invalid/test", sv: "Ogilltig/test"},
-            title: {en: "Invalid, can be test header", sv: "Ogilltig, kan vara test rubrik"}
-        },
-
-        logIndex: {
-            txt: {en: "index", sv: "index"},
-            title: {
-            en: "Index from session start, starts at 1 and counts upward for each logpoint",
-            sv: "Index från sessions start, börjar räkna up från 1 varje logpunkt"
-            }
-        },
-
-        // special
-        log_coldStart: {
-            txt: {en: "Start from reset", sv: "Uppstart från reset"},
-            title: {
-            en: "A special log point to mark a device restart.\nUse to find out when a new flying session started",
-            sv: "En speciell log punkt för att markera en omstart.\nAnvänd för att se när en ny flygsession börjar"
-            },
-        },
-    }
-
-    static Types = {
-        uninitialized: -1,
-
-        // speed as in wheel revs / sec
-        speedOnGround: 0,
-        wheelRPS_0: 1,
-        wheelRPS_1: 2,
-        wheelRPS_2: 3,
-        // brake force
-        wantedBrakeForce: 4,
-        brakeForce0_out: 5,
-        brakeForce1_out: 6,
-        brakeForce2_out: 7,
-        // wheel slip
-        slip0: 8,
-        slip1: 9,
-        slip2: 10,
-        // steering brakes
-        accelSteering: 11,
-        wsSteering: 12,
-        // accelerometer
-        accel: 13,
-        accelX: 14,
-        accelY: 15,
-        accelZ: 16,
-
-        // must be last, indicates end of log items
-        log_end: 17,
-        // special
-        log_coldStart: 0x3F,
-
-        // only for testing purposes
-        test_int32_1: 0x30,
-        test_int32_2: 0x31,
-
-        info: (type) => {
-            let min = 0, max = 0, mid = 0, groups = [];
-            const t = LogItem.Types;
-            if (type >= t.speedOnGround && type <= t.wheelRPS_2) {
-                max = 255;
-                groups = [t.speedOnGround,t.wheelRPS_0,
-                          t.wheelRPS_1,t.wheelRPS_2];
-            } else if (type >= t.wantedBrakeForce && type <= t.brakeForce2_out) {
-                max = 100;
-                groups = [t.wantedBrakeForce,t.brakeForce0_out,
-                          t.brakeForce1_out,t.brakeForce2_out];
-            } else if (type >= t.slip0 && type <= t.slip2) {
-                max = 100;
-                groups = [t.slip0,t.slip2,t.slip2];
-            } else if (type >= t.accelSteering && type <= t.wsSteering) {
-                min = -100; max = 100;
-                groups = [t.slip0,t.slip2,t.slip2];
-            } else if (type >= t.accel && type <= t.accelZ) {
-                max = 16.0; min = -16.0;
-                groups = [t.slip0,t.slip2,t.slip2];
-            }
-            return {min, max, mid, groups}
-        }
-
-    }
-
-    static FloatTypes = [
-        // are uint16_t
-       // LogItem.Types.slip0, LogItem.Types.slip1, LogItem.Types.slip2
-    ];
-
-    static Int8Types = [];
-
-    static Int16Types = [
-        LogItem.Types.accelSteering, LogItem.Types.wsSteering,
-        LogItem.Types.accelX, LogItem.Types.accel,
-        LogItem.Types.accelY, LogItem.Types.accelZ,
-    ];
-
-    static Int32Types = [
-        LogItem.Types.test_int32_1, LogItem.Types.test_int32_2
-    ];
-
-    startPos = -1;
-    endPos = -1;
-    parent = null;
-    type = LogItem.Types.uninitialized;
-    size = -1;
-    value = null;
-
-    constructor(startPos, parent) {
+        // after baseclass call we can use *this* keyword
         this.startPos = startPos;
         this.parent = parent;
-        let headerByte = parent.parent.byteArray[startPos];
-        this.size = (headerByte & 0x03) +1; // 0 is 1 byte, 3 is 4 bytes
-        this.type = (headerByte & 0xFC) >> 2;
+        this.size = size;
+        this.type = type;
         this.endPos = this.startPos + 1 + this.size;
-
-        let vlu = 0, pos = 0;
-        while(1 + startPos + pos < this.endPos)
-          vlu |= (this.parent.parent.byteArray[1 + startPos + pos] << (8 * pos++));
-
-        if (LogItem.FloatTypes.indexOf(this.type) > -1) {
-            // convert to float
-            // inspired by http://cstl-csm.semo.edu/xzhang/Class%20Folder/CS280/Workbook_HTML/FLOATING_tut.htm
-            // and https://en.wikipedia.org/wiki/Single-precision_floating-point_format
-            let sign = ((vlu & 0x80000000) >> 31) ? -1 : 1;
-            let exponent = ((vlu & 0x7F800000) >> 23) -127; // 0=127
-            let mantissa = (vlu & 0x007FFFFF) | 0x00800000; // the 1 from the mantissa is always excluded
-            vlu = sign * Math.pow(2, exponent) *  mantissa * Math.pow(2,-23);
-            //console.log(vlu)
-
-        } else if (LogItem.Int8Types.indexOf(this.type) > -1) {
-            if (vlu & 0x80) vlu = ((~vlu & 0xFF) +1) * -1;
-        } else if (LogItem.Int16Types.indexOf(this.type) > -1) {
-            if (vlu & 0x8000) vlu = ((~vlu & 0xFFFF) + 1) * -1;
-        } else if (LogItem.Int32Types.indexOf(this.type) > -1) {
-            // 32 bits is so big that the value implicitly goes negative on 32th bit
-            //if (vlu & 0x80000000) vlu = (vlu & 0x7FFFFFFF) -1;
-        }
-        this.value = vlu;
     }
 
     /**
@@ -290,92 +49,8 @@ class LogItem {
                          ((this.size - 1) & 0x03);
         let pos = startPos;
         byteArray[pos++] = headerByte;
-        byteArray[pos++] = this.value & 0xFF;
-        if (this.size > 1)
-            byteArray[pos++] = (this.value & 0xFF00) >> 8;
-        if (this.size > 2)
-            byteArray[pos++] = (this.value & 0xFF0000) >> 16;
-        if (this.size > 3)
-            byteArray[pos++] = (this.value & 0xFF000000) >> 24;
+        pos += super.save(byteArray, pos);
         return pos - startPos;
-    }
-
-    /**
-     * @brief Gets the unit for this type
-     * @returns string with correct postfix
-     */
-    unit() {
-        return LogItem.unitFor(this.type);
-    }
-
-    /**
-     * @brief same as unit() but static
-     * @param {Number} type
-     * @returns string with correct postfix
-     */
-    static unitFor(type) {
-        switch (type) {
-        case LogItem.Types.speedOnGround:
-        case LogItem.Types.wheelRPS_0:
-        case LogItem.Types.wheelRPS_1:
-        case LogItem.Types.wheelRPS_2:
-            return "rps";
-        case LogItem.Types.wantedBrakeForce:
-        case LogItem.Types.brakeForce0_out:
-        case LogItem.Types.brakeForce1_out:
-        case LogItem.Types.brakeForce2_out:
-        case LogItem.Types.accelSteering:
-        case LogItem.Types.wsSteering:
-        case LogItem.Types.slip0:
-        case LogItem.Types.slip1:
-        case LogItem.Types.slip2:
-            return "%";
-        case LogItem.Types.accel:
-        case LogItem.Types.accelX:
-        case LogItem.Types.accelY:
-        case LogItem.Types.accelZ:
-            return "G";
-        default:
-            return "";
-        }
-    }
-
-    /**
-     * @brief returns rounded and converted value
-     *         if applicable
-     * @returns value based based of type
-     */
-    realVlu() {
-        switch (this.type) {
-            case LogItem.Types.slip0:
-            case LogItem.Types.slip1:
-            case LogItem.Types.slip2:
-                return Math.round(this.value*1000)/1000;
-            case LogItem.Types.accel:
-            case LogItem.Types.accelX:
-            case LogItem.Types.accelY:
-            case LogItem.Types.accelZ:
-                return Math.round((this.value / 512)*100)/100;
-            case LogItem.Types.speedOnGround:
-            case LogItem.Types.wheelRPS_0:
-            case LogItem.Types.wheelRPS_1:
-            case LogItem.Types.wheelRPS_2:
-            case LogItem.Types.wantedBrakeForce:
-            case LogItem.Types.brakeForce0_out:
-            case LogItem.Types.brakeForce1_out:
-            case LogItem.Types.brakeForce2_out:
-            case LogItem.Types.accelSteering:
-            case LogItem.Types.wsSteering:
-                return Math.round(this.value *100) / 100;
-            default:
-                return this.value;
-            }
-    }
-
-    translatedType(lang = document.documentElement.lang) {
-        const keys = Object.keys(LogItem.TypesTranslated).slice(1);
-        const tr = LogItem.TypesTranslated[keys[this.type]];
-        return {txt: tr.txt[lang], title: tr.title[lang]};
     }
 }
 
@@ -506,19 +181,19 @@ class LogRoot {
    */
    getColumnTypes(coldStartIdx) {
     // iterate over each entry and check if we have a new item
-    const typeKeys = Object.keys(LogItem.Types); // is offset by 1, ie: -1 -> 0
+    const typeKeys = Object.keys(ItemBase.Types); // is offset by 1, ie: -1 -> 0
     let items = [];
     for (const entry of this.getSession(coldStartIdx).values()) {
       entry.scanChildren();
       for (const itm of entry.children.values()) {
         if (items.findIndex(item=>item.entry.type===itm.type) === -1) {
-          if (itm.type === LogItem.Types.log_coldStart)
+          if (itm.type === ItemBase.Types.log_coldStart)
             continue; // no use to have this as a column
-          else if (itm.type < LogItem.Types.log_end) {
+          else if (itm.type < ItemBase.Types.log_end) {
             // +1 due to typeKeys is offset by 1
-            items.push({entry: itm, tr: LogItem.TypesTranslated[typeKeys[itm.type +1]]});
+            items.push({entry: itm, tr: ItemBase.TypesTranslated[typeKeys[itm.type +1]]});
           } else
-            items.push({entry: itm, tr: LogItem.TypesTranslated.invalid});
+            items.push({entry: itm, tr: ItemBase.TypesTranslated.invalid});
         }
       }
     }
@@ -541,7 +216,7 @@ class LogRoot {
                 if (entry.size < 1) break;
                 this.logEntries.push(entry);
                 if (entry.itemCnt() === 1 &&
-                    entry.getChild(LogItem.Types.log_coldStart))
+                    entry.getChild(ItemBase.Types.log_coldStart))
                 {
                   this.coldStarts.push(this.logEntries.length-1);
                 }
@@ -572,171 +247,171 @@ if (testing) {
         0,0,
         // a cold start entry
         4, 1,
-        (LogItem.Types.log_coldStart << 2) | 0, 0x5A,
+        (ItemBase.Types.log_coldStart << 2) | 0, 0x5A,
 
         // log entry with 10 items
         43, 10,
         // first logitem uin8_t, 2 bytes long, positive 64
-        (LogItem.Types.speedOnGround << 2) | 0, 0x40,
+        (ItemBase.Types.speedOnGround << 2) | 0, 0x40,
         // logitem 2 int16_t, 3bytes long, positive 0x0132 (306)
-        (LogItem.Types.wsSteering << 2) | 1, 0x32, 0x01,
+        (ItemBase.Types.wsSteering << 2) | 1, 0x01, 0x32,
         // logitem 3 int16_t 3bytes long, negative 0xFEAC (-340)
-        (LogItem.Types.accelSteering << 2) | 1, 0xAC, 0xFE,
+        (ItemBase.Types.accelSteering << 2) | 1,0xFE, 0xAC,
         // logitem 4 int32_t 5bytes long positive 0x01815405 (25252869)
-        (LogItem.Types.test_int32_1 << 2) | 3, 0x05, 0x54, 0x15, 0x01,
+        (ItemBase.Types.test_int32_1 << 2) | 3, 0x01, 0x15, 0x54, 0x05,
         // logitem 5 int32_t 5 bytes long negative 0x8043210F (-4399376)
-        (LogItem.Types.test_int32_2 << 2) | 3, 0x0F, 0x21, 0x43, 0x80,
+        (ItemBase.Types.test_int32_2 << 2) | 3, 0x80, 0x43, 0x21, 0x0F,
         // logitem 6 int32_t 3 bytes long negative 0xE000 (-8192) 14bits resolution
-        (LogItem.Types.accelZ << 2) | 1, 0x00, 0xE0,
+        (ItemBase.Types.accelZ << 2) | 1, 0xE0, 0x00,
         // logitem 6 float 5 bytes long positive 0.25 (0x3E800000)
-        (LogItem.Types.slip0 << 2) | 3, 0x00, 0x00, 0x80, 0x3E,
+        (ItemBase.Types.slip0 << 2) | 3, 0x3E, 0x80, 0x00, 0x00,
         // logitem 7 float 5 bytes long negative -2.0 (0xC0000000)
-        (LogItem.Types.slip1 << 2) | 3, 0x00, 0x00, 0x00, 0xC0,
+        (ItemBase.Types.slip1 << 2) | 3, 0xC0, 0x00, 0x00, 0x00,
         // logitem 8 float 5 bytes long positive pi (0x40490FDB)
-        (LogItem.Types.slip2 << 2) | 3, 0xDB, 0x0F, 0x49, 0x40,
+        (ItemBase.Types.slip2 << 2) | 3, 0x40, 0x0F, 0x49, 0xDB,
         // logitem 9 float 5 bytes long positive smallest number 2^-126 (0x00800000)
-        (LogItem.Types.slip0 << 2) | 3, 0x00, 0x00, 0x80, 0x00,
+        (ItemBase.Types.slip0 << 2) | 3, 0x00, 0x80, 0x00, 0x00,
         // trailing stuff at end, should halt the parse
         0,0,
 
 
         // a cold start entry
         4, 1,
-        (LogItem.Types.log_coldStart << 2) | 0, 0x5A,
+        (ItemBase.Types.log_coldStart << 2) | 0, 0x5A,
 
         // log entry with 14 items
         51, 14,
         // first logitem uin8_t, 2 bytes long, positive 64
-        (LogItem.Types.speedOnGround << 2) | 0, 0x40,
+        (ItemBase.Types.speedOnGround << 2) | 0, 0x40,
         // logitem 2 int16_t, 3bytes long, positive 0x0132 (306)
-        (LogItem.Types.wsSteering << 2) | 1, 0x32, 0x01,
+        (ItemBase.Types.wsSteering << 2) | 1, 0x01, 0x32,
         // logitem 3 int16_t 3bytes long, negative 0xFEAC (-340)
-        (LogItem.Types.accelSteering << 2) | 1, 0xAC, 0xFE,
+        (ItemBase.Types.accelSteering << 2) | 1, 0xFE, 0xAC,
         // logitem 4 int32_t 5bytes long positive 0x01815405 (25252869)
-        (LogItem.Types.test_int32_1 << 2) | 3, 0x05, 0x54, 0x15, 0x01,
+        (ItemBase.Types.test_int32_1 << 2) | 3, 0x01, 0x15, 0x54, 0x05,
         // logitem 5 int32_t 5 bytes long negative 0x8043210F (-4399376)
-        (LogItem.Types.test_int32_2 << 2) | 3, 0x0F, 0x34, 0x43, 0x80,
+        (ItemBase.Types.test_int32_2 << 2) | 3, 0x80, 0x43, 0x34, 0x0F,
         // logitem 6 int32_t 3 bytes long negative 0xE000 (-8192) 14bits resolution
-        (LogItem.Types.accelZ << 2) | 1, 0x00, 0xE0,
+        (ItemBase.Types.accelZ << 2) | 1, 0xE0, 0x00,
         // logitem 7 float 5 bytes long positive 0.25 (0x3E800000)
-        (LogItem.Types.slip0 << 2) | 3, 0x00, 0x00, 0x80, 0x3E,
+        (ItemBase.Types.slip0 << 2) | 3, 0x3E, 0x80, 0x00, 0x00,
         // logitem 8 float 5 bytes long negative -2.0 (0xC0000000)
-        (LogItem.Types.slip1 << 2) | 3, 0x00, 0x00, 0x00, 0xC0,
+        (ItemBase.Types.slip1 << 2) | 3, 0xC0, 0x00, 0x00, 0x00,
         // logitem 9 float 5 bytes long positive pi (0x40430FDB)
-        (LogItem.Types.slip2 << 2) | 3, 0xDB, 0x0F, 0x43, 0x40,
+        (ItemBase.Types.slip2 << 2) | 3, 0x40, 0x43, 0x0F, 0xDB,
         // logitem 10 float 5 bytes long positive smallest number 2^-126 (0x00800000)
-        (LogItem.Types.slip0 << 2) | 3, 0x00, 0x00, 0x80, 0x00,
+        (ItemBase.Types.slip0 << 2) | 3, 0x00, 0x80, 0x00, 0x00,
         // logitem 11 uint8_t 2 bytes long positive 25
-        (LogItem.Types.wantedBrakeForce << 2) | 0, 0x19,
+        (ItemBase.Types.wantedBrakeForce << 2) | 0, 0x19,
         // logitem 12 uint8_t 2 bytes long positive 25
-        (LogItem.Types.brakeForce0_out << 2) | 0, 0x19,
+        (ItemBase.Types.brakeForce0_out << 2) | 0, 0x19,
         // logitem 13 uint8_t 2 bytes long positive 16
-        (LogItem.Types.brakeForce1_out << 2) | 0, 0x10,
+        (ItemBase.Types.brakeForce1_out << 2) | 0, 0x10,
         // logitem 14 uint8_t 2 bytes long positive 20
-        (LogItem.Types.brakeForce2_out << 2) | 0, 0x14,
+        (ItemBase.Types.brakeForce2_out << 2) | 0, 0x14,
 
         // log entry with 14 items
         5, 14,
         // first logitem uin8_t, 2 bytes long, positive 64
-        (LogItem.Types.speedOnGround << 2) | 0, 0x40,
+        (ItemBase.Types.speedOnGround << 2) | 0, 0x40,
         // logitem 2 int16_t, 3bytes long, positive 0x0132 (306)
-        (LogItem.Types.wsSteering << 2) | 1, 0x32, 0x01,
+        (ItemBase.Types.wsSteering << 2) | 1, 0x01, 0x32,
         // logitem 3 int16_t 3bytes long, negative 0xFEAC (-340)
-        (LogItem.Types.accelSteering << 2) | 1, 0xAC, 0xFE,
+        (ItemBase.Types.accelSteering << 2) | 1, 0xFE, 0xAC,
         // logitem 4 int32_t 5bytes long positive 0x01815405 (25252869)
-        (LogItem.Types.test_int32_1 << 2) | 3, 0x05, 0x54, 0x15, 0x01,
+        (ItemBase.Types.test_int32_1 << 2) | 3, 0x01, 0x15, 0x54, 0x05,
         // logitem 5 int32_t 5 bytes long negative 0x8043210F (-4399376)
-        (LogItem.Types.test_int32_2 << 2) | 3, 0x0F, 0x34, 0x43, 0x80,
+        (ItemBase.Types.test_int32_2 << 2) | 3, 0x80, 0x43, 0x34, 0x0F,
         // logitem 6 int32_t 3 bytes long positive 0x6000 (8191) 14bits resolution
-        (LogItem.Types.accelZ << 2) | 1, 0xFF, 0x1F,
+        (ItemBase.Types.accelZ << 2) | 1, 0x1F, 0xFF,
         // logitem 6 float 5 bytes long positive 0.25 (0x3E800000)
-        (LogItem.Types.slip0 << 2) | 3, 0x00, 0x00, 0x80, 0x3E,
+        (ItemBase.Types.slip0 << 2) | 3, 0x3E, 0x80, 0x00, 0x00,
         // logitem 6 float 5 bytes long negative -2.0 (0xC0000000)
-        (LogItem.Types.slip1 << 2) | 3, 0x00, 0x00, 0x00, 0xC0,
+        (ItemBase.Types.slip1 << 2) | 3, 0xC0, 0x00, 0x00, 0x00,
         // logitem 6 float 5 bytes long positive pi (0x40430FDB)
-        (LogItem.Types.slip2 << 2) | 3, 0xDB, 0x0F, 0x43, 0x40,
+        (ItemBase.Types.slip2 << 2) | 3, 0x40, 0x43, 0x0F, 0xDB,
         // logitem 6 float 5 bytes long positive smallest number 2^-126 (0x00800000)
-        (LogItem.Types.slip0 << 2) | 3, 0x00, 0x00, 0x80, 0x00,
+        (ItemBase.Types.slip0 << 2) | 3, 0x00, 0x80, 0x00, 0x00,
         // logitem uint8_t 2 bytes long positive 75
-        (LogItem.Types.wantedBrakeForce << 2) | 0, 0x4B,
+        (ItemBase.Types.wantedBrakeForce << 2) | 0, 0x4B,
         // logitem uint8_t 2 bytes long positive 75
-        (LogItem.Types.brakeForce0_out << 2) | 0, 0x4B,
+        (ItemBase.Types.brakeForce0_out << 2) | 0, 0x4B,
         // logitem uint8_t 2 bytes long positive 16
-        (LogItem.Types.brakeForce1_out << 2) | 0, 0x10,
+        (ItemBase.Types.brakeForce1_out << 2) | 0, 0x10,
         // logitem uint8_t 2 bytes long positive 20
-        (LogItem.Types.brakeForce2_out << 2) | 0, 0x14,
+        (ItemBase.Types.brakeForce2_out << 2) | 0, 0x14,
 
         // a cold start entry
         4, 1,
-        (LogItem.Types.log_coldStart << 2) | 0, 0x5A,
+        (ItemBase.Types.log_coldStart << 2) | 0, 0x5A,
 
         // log entry with 13 items
         44, 13,
         // first logitem uin8_t, 2 bytes long, positive 64
-        (LogItem.Types.speedOnGround << 2) | 0, 0x40,
+        (ItemBase.Types.speedOnGround << 2) | 0, 0x40,
         // logitem 2 int16_t, 3bytes long, positive 0x0132 (306)
-        (LogItem.Types.wsSteering << 2) | 1, 0x32, 0x00,
+        (ItemBase.Types.wsSteering << 2) | 1, 0x00, 0x32,
         // logitem 3 int16_t 3bytes long, negative 0xFEAD (-341)
-        (LogItem.Types.accelSteering << 2) | 1, 0xAD, 0xFF,
+        (ItemBase.Types.accelSteering << 2) | 1, 0xFF, 0xAD,
         // logitem 4 int16_t 3bytes long positive 0x03F0 (1008)
-        (LogItem.Types.accel << 2) | 1, 0x03, 0xF0,
+        (ItemBase.Types.accel << 2) | 1, 0xF0, 0x03,
         // logitem 5 int16_t 3bytes long negative 0xFCCF (-817)
-        (LogItem.Types.accelX << 2) | 1, 0xCF, 0xFC,
+        (ItemBase.Types.accelX << 2) | 1, 0xFC, 0xCF,
         // logitem 6 float 5 bytes long positive 0.25 (0x3E800000)
-        (LogItem.Types.slip0 << 2) | 3, 0x00, 0x00, 0x80, 0x3E,
+        (ItemBase.Types.slip0 << 2) | 3, 0x3E, 0x80, 0x00, 0x00,
         // logitem 6 float 5 bytes long negative -2.0 (0xC0000000)
-        (LogItem.Types.slip1 << 2) | 3, 0x00, 0x00, 0x00, 0xC0,
+        (ItemBase.Types.slip1 << 2) | 3, 0xC0, 0x00, 0x00, 0x00,
         // logitem 6 float 5 bytes long positive pi (0x40430FDB)
-        (LogItem.Types.slip2 << 2) | 3, 0xDB, 0x0F, 0x43, 0x40,
+        (ItemBase.Types.slip2 << 2) | 3, 0x40, 0x43, 0x0F, 0xDB,
         // logitem 6 float 5 bytes long positive smallest number 2^-126 (0x00800000)
-        (LogItem.Types.slip0 << 2) | 3, 0x00, 0x00, 0x80, 0x00,
+        (ItemBase.Types.slip0 << 2) | 3, 0x00, 0x80, 0x00, 0x00,
         // logitem uint8_t 2 bytes long positive 99
-        (LogItem.Types.wantedBrakeForce << 2) | 0, 0x63,
+        (ItemBase.Types.wantedBrakeForce << 2) | 0, 0x63,
         // logitem uint8_t 2 bytes long positive 96
-        (LogItem.Types.brakeForce0_out << 2) | 0, 0x60,
+        (ItemBase.Types.brakeForce0_out << 2) | 0, 0x60,
         // logitem uint8_t 2 bytes long positive 16
-        (LogItem.Types.brakeForce1_out << 2) | 0, 0x10,
+        (ItemBase.Types.brakeForce1_out << 2) | 0, 0x10,
         // logitem uint8_t 2 bytes long positive 20
-        (LogItem.Types.brakeForce2_out << 2) | 0, 0x14,
+        (ItemBase.Types.brakeForce2_out << 2) | 0, 0x14,
     ]);
 
     logRoot.parseLog(bArr, 2);
-    let itm = logRoot.logEntries[0].getChild(LogItem.Types.log_coldStart);
+    let itm = logRoot.logEntries[0].getChild(ItemBase.Types.log_coldStart);
     test(itm.size, 1);
-    test(itm.type, LogItem.Types.log_coldStart);
+    test(itm.type, ItemBase.Types.log_coldStart);
 
     test(logRoot.logEntries[1].itemCnt(), 10);
 
     test(logRoot.logEntries.length, 2)
 
-    itm = logRoot.logEntries[1].getChild(LogItem.Types.speedOnGround);
+    itm = logRoot.logEntries[1].getChild(ItemBase.Types.speedOnGround);
     test(itm.value, 64);
-    test(itm.type, LogItem.Types.speedOnGround);
+    test(itm.type, ItemBase.Types.speedOnGround);
     test(itm.size, 1);
     test(itm.endPos, 6+4)
 
-    itm = logRoot.logEntries[1].getChild(LogItem.Types.wsSteering);
+    itm = logRoot.logEntries[1].getChild(ItemBase.Types.wsSteering);
     test(itm.value, 306);
 
-    itm = logRoot.logEntries[1].getChild(LogItem.Types.accelSteering);
+    itm = logRoot.logEntries[1].getChild(ItemBase.Types.accelSteering);
     test(itm.value, -340);
 
-    itm = logRoot.logEntries[1].getChild(LogItem.Types.test_int32_1);
+    itm = logRoot.logEntries[1].getChild(ItemBase.Types.test_int32_1);
     test(itm.value, 18174981);
 
-    itm = logRoot.logEntries[1].getChild(LogItem.Types.test_int32_2);
+    itm = logRoot.logEntries[1].getChild(ItemBase.Types.test_int32_2);
     test(itm.value, -2143084273);
 
-    itm = logRoot.logEntries[1].getChild(LogItem.Types.accelZ);
+    itm = logRoot.logEntries[1].getChild(ItemBase.Types.accelZ);
     test(itm.value, -8192);
 
-    itm = logRoot.logEntries[1].getChild(LogItem.Types.slip0);
+    itm = logRoot.logEntries[1].getChild(ItemBase.Types.slip0);
     test(itm.value, 0.25);
 
-    itm = logRoot.logEntries[1].getChild(LogItem.Types.slip1);
+    itm = logRoot.logEntries[1].getChild(ItemBase.Types.slip1);
     test(itm.value, -2.0);
 
-    itm = logRoot.logEntries[1].getChild(LogItem.Types.slip2);
+    itm = logRoot.logEntries[1].getChild(ItemBase.Types.slip2);
     test(itm.value.toPrecision(6), Math.PI.toPrecision(6));
 
     itm = logRoot.logEntries[1].children[9];
@@ -816,10 +491,10 @@ if (testing) {
         for(let i = 1; i < Math.min(10, entries.length); ++i) {
             const entry = entries[i];
             times.push(i);
-            speed.push(entry.getChild(LogItem.Types.speedOnGround).realVlu());
-            accelX.push(entry.getChild(LogItem.Types.accelX).realVlu());
-            wheel0.push(entry.getChild(LogItem.Types.brakeForce0_out).realVlu());
-            wheel1.push(entry.getChild(LogItem.Types.brakeForce1_out).realVlu())
+            speed.push(entry.getChild(ItemBase.Types.speedOnGround).realVlu());
+            accelX.push(entry.getChild(ItemBase.Types.accelX).realVlu());
+            wheel0.push(entry.getChild(ItemBase.Types.brakeForce0_out).realVlu());
+            wheel1.push(entry.getChild(ItemBase.Types.brakeForce1_out).realVlu())
         }
 
         console.log("times",JSON.stringify(times))
