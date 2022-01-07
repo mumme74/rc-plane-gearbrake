@@ -15,7 +15,7 @@
 // to not intervene when we have faked a value
 typedef enum {
   diag_Set_Invalid = 0,
-  // these must be in this order, with this value
+  // these must be in this order, with bitmask values
   diag_Set_Output0       = 1 << 0,
   diag_Set_Output1       = 1 << 1,
   diag_Set_Output2       = 1 << 2,
