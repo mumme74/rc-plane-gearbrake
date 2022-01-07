@@ -7,6 +7,9 @@ function routeMainContent() {
   let htmlFunctor;
 
   switch(page) {
+  case 'diag':
+    htmlFunctor = diagpageHtmlObj.html.bind(diagpageHtmlObj);
+    break;
   case 'viewlog':
     htmlFunctor = viewlogHtmlObj.html.bind(viewlogHtmlObj);
     break;

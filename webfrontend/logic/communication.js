@@ -39,18 +39,21 @@ class ProgressSend {
 class CommunicationBase {
     static LatestVersionSubClass = CommunicationBase;
     static Cmds = {
-        Error: 0x00,
-        Ping: 0x01,
-        Pong:0x02,
-        Reset: 0x03,
-        SettingsSetDefault: 0x07,
-        SettingsSaveAll: 0x08,
-        SettingsGetAll: 0x09,
-        LogGetAll: 0x10,
-        LogNextAddr: 0x11,
-        LogClearAll: 0x12,
-        Version: 0x20,
-        OK: 0x7F,
+        Error:               0x00,
+        Ping:                0x01,
+        Pong:                0x02,
+        Reset:               0x03,
+        SettingsSetDefault:  0x07,
+        SettingsSaveAll:     0x08,
+        SettingsGetAll:      0x09,
+        LogGetAll:           0x10,
+        LogNextAddr:         0x11,
+        LogClearAll:         0x12,
+        DiagReadAll:         0x18,
+        DiagSetVlu:          0x19,
+        DiagClearVlu:        0x1A,
+        Version:             0x20,
+        OK:                  0x7F,
     }
     static IDError = 0xFF;
 
@@ -486,6 +489,28 @@ class Communication_v1 extends CommunicationBase {
             logNextAddr: res?.length > 13 ? this.toInt(res.slice(9, 13)) : 0,
             data: res?.length > 13 ? new Uint8Array(res.slice(13, res.length -3)) : []
         }
+    }
+
+    async poolDiagData() {
+        return await this.talkSafe({
+            cmd: CommunicationBase.Cmds.DiagReadAll,
+        });
+    }
+
+    async setDiagVlu(byteArr) {
+        return await this.talkSafe({
+            cmd: CommunicationBase.Cmds.DiagSetVlu,
+            expectedResponseCmd: CommunicationBase.Cmds.OK,
+            byteArr,
+        })
+    }
+
+    async clearDiagVlu(byteArr) {
+        return await this.talkSafe({
+            cmd: CommunicationBase.Cmds.DiagClearVlu,
+            expectedResponseCmd: CommunicationBase.Cmds.OK,
+            byteArr,
+        });
     }
 }
 

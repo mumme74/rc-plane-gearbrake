@@ -23,6 +23,7 @@ document.addEventListener('DOMContentLoaded', () =>{
         {txt: {en: "Home", sv: "Hem"}, cls: classes.home, hash: ""},
         {txt: {en: "Configure", sv: "Konfigurera"}, hash: "conf"},
         {txt: {en: "View log", sv: "Visa log"}, hash: "viewlog"},
+        {txt: {en: "Diagnose", sv: "Diagnos"}, hash: "diag"},
         {txt: {en: "Settings", sv: "Inställningar"}, hash: "settings"},
         {id: "connectBtn", action: async (event)=>{
             let res = await CommunicationBase.instance().toggleDevice();
