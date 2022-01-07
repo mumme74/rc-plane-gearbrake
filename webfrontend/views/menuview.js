@@ -69,14 +69,19 @@ document.addEventListener('DOMContentLoaded', () =>{
     let progress = document.createElement("progress");
     progress.value = 0;
     menuBar.appendChild(progress);
-    CommunicationBase.progress.registerCallback((value)=>{
+
+    CommunicationBase.progress.onUpdate.subscribe(this, (value)=>{
       progress.value = value;
     });
-    CommunicationBase.instance().onConnectCallbacks.push(()=>{
-        document.querySelector(".connectBtn").classList.add("connected");
+
+    const comms = CommunicationBase.instance();
+    comms.onConnect.subscribe(this, ()=>{
+        document.querySelector(".connectBtn")
+          .classList.add("connected");
     });
-    CommunicationBase.instance().onDisconnectCallbacks.push(()=>{
-        document.querySelector(".connectBtn").classList.remove("connected");
+    comms.onDisconnect.subscribe(this, ()=>{
+        document.querySelector(".connectBtn")
+          .classList.remove("connected");
     });
 });
 

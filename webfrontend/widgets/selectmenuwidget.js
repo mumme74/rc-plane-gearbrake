@@ -13,7 +13,6 @@ class SelectMenuWgtCls {
       this.translationObj = translationObj;
       this.rootNode = parentNode;
 
-
       this.typeDrpDwnWgt = new SelectTypesDropDownWgt(
         showLogItems,
         document.getElementById("showLogItm"),
@@ -29,8 +28,8 @@ class SelectMenuWgtCls {
 
       // subscribe to changes and insert
       for (const wgt of [this.tblWgt, this.chartWgt].values()){
-        this.typeDrpDwnWgt.addEventListener("change", wgt.scheduleRedraw, wgt);
-        this.typeDrpDwnWgt.addEventListener("selectall", wgt.scheduleRedraw, wgt);
+        this.typeDrpDwnWgt.onSelectAll.subscribe(wgt, wgt.scheduleRedraw.bind(wgt));
+        this.typeDrpDwnWgt.onChange.subscribe(wgt, wgt.scheduleRedraw.bind(wgt));
       }
 
       // create menu buttons and insert them to DOM

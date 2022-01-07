@@ -44,7 +44,12 @@ class Mutex {
 class ProgressSend {
   endPos = 0;
   curPos = 0;
-  _callbacks = [];
+  onUpdate = null;
+
+  constructor() {
+    this.onUpdate = new EventDispatcher(this);
+  }
+
   updatePos(curPos, endPos = null) {
     if (endPos !== null)
       this.endPos = endPos;
@@ -53,11 +58,7 @@ class ProgressSend {
     let percent = this.curPos / this.endPos;
     percent = Math.min(Math.round(percent*100)/100, 1.0);
     percent = isNaN(percent) ? 0 : percent;
-    for (let cb of this._callbacks)
-      cb(percent);
-  }
-  registerCallback(cb) {
-    this._callbacks.push(cb)
+    this.onUpdate.emit(percent);
   }
 }
 
@@ -91,8 +92,8 @@ class CommunicationBase {
     device = null;
     oep = null;
     iep = null;
-    onConnectCallbacks = [];
-    onDisconnectCallbacks = [];
+    onConnect = null;
+    onDisconnect = null;
     _unlock = null;
     _reqId = 0;
 
@@ -101,6 +102,9 @@ class CommunicationBase {
     okLog = console.log;
 
     constructor () {
+        this.onConnect = new EventDispatcher(this);
+        this.onDisconnect = new EventDispatcher(this);
+
         navigator.usb.addEventListener('connect', (e) => {
             if (e.device.vendorId === this.vendorId &&
                 e.device.productId === this.productId)
@@ -115,7 +119,7 @@ class CommunicationBase {
                 e.device.productId === this.productId)
             {
                 this.closeDevice();
-                this.onDisconnectCallbacks.forEach(cb=>cb());
+                this.onDisconnect.emit();
             }
         });
     }
@@ -150,14 +154,7 @@ class CommunicationBase {
         }
 
         // notify that we are connected (outside of try block)
-        for (let cb of this.onConnectCallbacks) {
-            try {
-                cb();
-            } catch(e) {
-                // error not in this class, special case callback errors
-                console.error(e);
-            }
-        }
+        this.onConnect.emit();
         return true;
     }
 

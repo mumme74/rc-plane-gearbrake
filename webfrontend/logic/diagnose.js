@@ -2,8 +2,8 @@
 
 class DiagnoseItem extends ItemBase {
   forced = false; // if we have set this value in device
-  forcedStateChangeCallbacks = [];
-  onChangeCallbacks = []
+  onForcedChanged = null;
+  onUpdated = null
 
   constructor({
     parent,
@@ -15,6 +15,9 @@ class DiagnoseItem extends ItemBase {
       super({value, size, type, valueBytes})
 
       this.parent = parent;
+
+      this.onForcedChanged = new EventDispatcher(this);
+      this.onUpdated = new EventDispatcher(this)
   }
 
   /**
@@ -35,13 +38,13 @@ class DiagnoseItem extends ItemBase {
 
   _setForced(forced) {
     this.forced = forced;
-    this.forcedStateChangeCallbacks.forEach(cb=>cb());
+    this.onForcedChanged.emit(this)
   }
 
   setValue(newValue) {
     if (newValue !== this.value) {
       this.value = newValue;
-      this.onChangeCallbacks.forEach(cb=>cb(newValue));
+      this.onUpdated.emit(this);
     }
   }
 }
@@ -61,10 +64,11 @@ class DiagnoseBase {
   }
 
   dataItems = [];
+  onRefresh = [];
+
+  freq = 0;
 
   _fetchTmr = null;
-
-  refreshCallbacks = [];
 
   static instance() {
     if (!DiagnoseBase._instance)
@@ -74,38 +78,50 @@ class DiagnoseBase {
     return DiagnoseBase._instance;
   }
 
-  constructor() {}
+  constructor() {
+    this.onRefresh = new EventDispatcher(this);
+  }
 
   /**
    * @breif Sets up a refresh interval to refetch Diagnose data
-   * @param {*} rate timeout in milliseconds
+   * @param {*} freq frequency in Hz
    *            for how often we poll for new data
    *            0 = off
    */
-  setFetchRefreshRate(rate = 0) {
+  setFetchRefreshFreq(freq = 0) {
+    this.freq = freq;
     if (this._fetchTmr)
       clearTimeout(this._fetchTmr);
 
-    if (rate > 0) {
+    if (freq > 0) {
       this._fetchTmr = setInterval(async ()=>{
         const data = await CommunicationBase.instance().poolDiagData();
         if (data?.length > 3) {
             try {
               this._refreshDataArrived(data);
-              for(let cb of this.refreshCallbacks)
-                cb(data);
-                return;
+              this.onRefresh.emit();
+              return; // return here
             } catch(e) {
               console.error(e);
             }
         }
+        // if we get here we have an error
         clearInterval(this._fetchTmr);
-      }, rate);
+      }, 1000 / freq);
     }
   }
 
   getItem(type) {
     return this.dataItems.find(itm=>itm?.type===type);
+  }
+
+  getColumnTypes() {
+    return this.dataItems.map(itm=>{
+      return {
+        entry:itm,
+        tr:itm.translatedType()
+      }
+    });
   }
 
   async _forceValue(itm, forcedVlu) {

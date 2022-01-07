@@ -2,8 +2,10 @@
 
 class SelectTypesDropDownWgt extends WidgetBaseCls {
   trObj = {};
-  _eventSubscribers = {change:[], selectall:[]};
+  onSelectAll = null;
+  onChange = null;
   _selectAllChkbox = null;
+
 
   constructor(shownColumns, parentElement, trObj) {
     super(shownColumns);
@@ -11,6 +13,9 @@ class SelectTypesDropDownWgt extends WidgetBaseCls {
     this.rootNode = document.createElement("div");
     this.rootNode.className = "w3-dropdown-content w3-bar-block w3-card-4";
     parentElement.appendChild(this.rootNode);
+
+    this.onChange = new EventDispatcher(this, this.rootNode);
+    this.onSelectAll = new EventDispatcher(this, this.rootNode);
   }
 
   render() {
@@ -20,11 +25,6 @@ class SelectTypesDropDownWgt extends WidgetBaseCls {
     const checkAll = this._makeSelectAll();
 
     this._makeTypeCheckboxes(checkAll);
-  }
-
-  addEventListener(event, cb, scope = window) {
-    if (event in this._eventSubscribers)
-      this._eventSubscribers[event].push({cb, scope})
   }
 
   _makeSelectAll() {
@@ -48,16 +48,15 @@ class SelectTypesDropDownWgt extends WidgetBaseCls {
   }
 
   _makeTypeCheckboxes(checkAll) {
-    const lang = document.documentElement.lang;
-
     for (const col of this.colData.values()) {
       const chkbox = this._createChkBox({value:col.entry.type, checkAll,
         changeCb:this._checkBoxChanged.bind(this)
       });
+      const tr = col.entry.translatedType();
       const lbl = this._createLabel({
         childNode:chkbox,
-        txt:col.tr.txt[lang],
-        title: col.tr.title[lang]
+        txt: tr.txt,
+        title: tr.title
       })
       this.rootNode.appendChild(lbl);
     }
@@ -96,8 +95,7 @@ class SelectTypesDropDownWgt extends WidgetBaseCls {
     }
 
     // notify event subscribers
-    for(const sub of this._eventSubscribers.selectall.values())
-      sub.cb.call(sub.scope);
+    this.onSelectAll.emit();
   }
 
   _checkBoxChanged(evt) {
@@ -105,9 +103,9 @@ class SelectTypesDropDownWgt extends WidgetBaseCls {
       this._selectAllChkbox.checked = this._isAllChecked();
 
       // notify event subscribers
-      for(const sub of this._eventSubscribers.change.values())
-        sub.cb.call(sub.scope, idx);
+      this.onChange.emit(idx);
     }
+
     let vlu = parseInt(evt.target.value.trim());
     const idx = this.shownColumns.indexOf(vlu);
     if (idx < 0 && evt.target.checked) {
