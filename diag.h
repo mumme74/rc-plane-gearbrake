@@ -28,21 +28,21 @@ typedef uint8_t setVluPkgType_t;
  * @brief this data package is returned to client when requesting realtime data
  */
 typedef struct {
-  float   slip[3]; // index as wheel sensors attached
-          // 12 bytes here
+  int16_t   slip[3]; // index as wheel sensors attached
+          // 6 bytes here
   int16_t accelSteering,
           wsSteering,
           acceleration,
-          // 18 bytes here
+          // 12 bytes here
           accelAxis[3]; // 0=X, 1=Y, 2=Z
-          // 24 bytes here
+          // 18 bytes here
   uint8_t speedOnGround,
           brakeForceIn, // as in from receiver
           brakeForceCalc,
           wheelRPS[3], // index as wheel sensors attached
           brakeForce_Out[3];// index as brake outputs
-          // 33 bytes here
-          // should align to 34 bits
+          // 27 bytes here
+          // should align to 28 bits
 } DiagReadVluPkg_t;
 
 

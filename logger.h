@@ -26,25 +26,26 @@ typedef enum {
   log_wheelRPS_2 = 3,
   // brake force
   log_wantedBrakeForce = 4,
-  log_brakeForce0_out = 5,
-  log_brakeForce1_out = 6,
-  log_brakeForce2_out = 7,
+  log_calcBrakeForce = 5,
+  log_brakeForce0_out = 6,
+  log_brakeForce1_out = 7,
+  log_brakeForce2_out = 8,
   // wheel slip
-  log_slip0 = 8,
-  log_slip1 = 9,
-  log_slip2 = 10,
+  log_slip0 = 9,
+  log_slip1 = 10,
+  log_slip2 = 11,
   // steering brakes
   log_accelSteering = 11,
-  log_wsSteering = 12,
+  log_wsSteering = 13,
   // accelerometer
-  log_accel = 13,
-  log_accelX = 14,
-  log_accelY = 15,
-  log_accelZ = 16,
+  log_accel = 14,
+  log_accelX = 15,
+  log_accelY = 16,
+  log_accelZ = 17,
 
   // must be last, indicates end of log items
   log_end,
-#define LOGITEMS_CNT 17U
+#define LOGITEMS_CNT 18U
   // special type, last possible in 6bits
   log_coldStart = 0x3FU,
 } LogType_e;

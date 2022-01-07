@@ -70,6 +70,7 @@ static void buildLog(void) {
   log.itemCnt = 0;
 
   LOG_ITEM(inputs.brakeForce, log_wantedBrakeForce);
+  LOG_ITEM(values.brakeForce, log_calcBrakeForce);
 
   if (settings.Brake0_active)
     LOG_ITEM(values.brakeForce_out[0], log_brakeForce0_out);
