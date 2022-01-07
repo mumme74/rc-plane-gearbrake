@@ -72,10 +72,10 @@ document.addEventListener('DOMContentLoaded', () =>{
     CommunicationBase.progress.registerCallback((value)=>{
       progress.value = value;
     });
-    CommunicationBase.instance().onConnect(()=>{
+    CommunicationBase.instance().onConnectCallbacks.push(()=>{
         document.querySelector(".connectBtn").classList.add("connected");
     });
-    CommunicationBase.instance().onDisconnect(()=>{
+    CommunicationBase.instance().onDisconnectCallbacks.push(()=>{
         document.querySelector(".connectBtn").classList.remove("connected");
     });
 });

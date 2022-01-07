@@ -1,5 +1,6 @@
 'use strict';
 
+{ // namespace block
 const PwmFreqOptionsTranslated = {
   off: {en: "Off", sv: "Av"},
   freq1Hz: "1hz",
@@ -15,6 +16,8 @@ const WheelDirTranslated = {
   right: {en: "Right", sv: "Höger"}
 }
 
+// FIXME cleanup these render function to be oop
+
 function renderBase(tag, {key, rdonly = false, txt, title}) {
   const readonly = rdonly ? " readonly" : "";
   return {
@@ -26,20 +29,20 @@ function renderBase(tag, {key, rdonly = false, txt, title}) {
 function renderTextbox({key, vlu, txt, title, rdonly = false}) {
   const {lbl, part} = renderBase("input", {key, txt, title, rdonly});
   return `${lbl}\n${part} type="text" value="${vlu}"
-          onchange="DeviceConfigBase.changeVlu('${key}', event.target.value)" />`;
+          onchange="ConfigBase.changeVlu('${key}', event.target.value)" />`;
 }
 
 function renderSpinbox({key, vlu, txt, title, rdonly = false, min = 0, max = 100}) {
   const {lbl, part} = renderBase("input", {key, txt, title, rdonly});
   return `${lbl}\n${part} type="number" value="${vlu}" min="${min}" max="${max}"
-          onchange="DeviceConfigBase.changeVlu('${key}', event.target.value)"/>`;
+          onchange="ConfigBase.changeVlu('${key}', event.target.value)"/>`;
 }
 
 function renderCheckbox({key, vlu, txt, title, rdonly = false}) {
   const checked = vlu ? "checked" : "";
   const {lbl, part} = renderBase("input", {key, txt, title, rdonly});
   return `${lbl}\n${part} type="checkbox" ${checked}
-         onchange="DeviceConfigBase.changeVlu('${key}', event.target.checked)"/>`;
+         onchange="ConfigBase.changeVlu('${key}', event.target.checked)"/>`;
 }
 
 function renderSelect({key, vlu, txt, title, rdonly = false,
@@ -54,34 +57,36 @@ function renderSelect({key, vlu, txt, title, rdonly = false,
             >${str}</option>`;
   });
   return `${lbl}\n${part}
-    onchange="DeviceConfigBase.changeVlu('${key}', event.target.value)"
+    onchange="ConfigBase.changeVlu('${key}', event.target.value)"
     >${options}</select>`;
 }
 
-const configureHtmlObj = {
-  setDefault: async () => {
+class ConfigureHtmlCls {
+  async setDefault() {
     console.log("defaultValues")
     try {
       if (!await CommunicationBase.instance().setSettingsDefault())
         throw "Could not set settings to default";
-      await configureHtmlObj.fetchSettings();
+      await this.fetchSettings();
     } catch (err) {
       console.error(err);
       notifyUser({msg: err?.message || err, type: notifyTypes.Warn});
     }
-  },
-  fetchSettings: async () => {
+  }
+
+  async fetchSettings() {
     try {
       const byteArr = await CommunicationBase.instance().getAllSettings();
       if (!byteArr) throw "Could't get settings from device";
       ConfigBase.deserialize(byteArr);
-      routeMainContent(); // for refresh values
+      router.routeMain(); // for refresh values
     } catch(err) {
       console.error(err);
       notifyUser({msg: err?.message || err, type: notifyTypes.Warn});
     }
-  },
-  pushSettings: async () => {
+  }
+
+  async pushSettings() {
     console.log("save settings")
     try {
       const byteArr = ConfigBase.instance().serialize();
@@ -91,8 +96,9 @@ const configureHtmlObj = {
       console.error(err);
       notifyUser({msg: err?.message || err, type: notifyTypes.Warn});
     }
-  },
-  saveSettingsToFile: async () => {
+  }
+
+  async saveSettingsToFile() {
     const fileHandle = await window.showSaveFilePicker({
       suggestedName: 'myconf.rcconf',
       types: [{
@@ -104,9 +110,9 @@ const configureHtmlObj = {
     await fileStream.write(new Blob([byteArr],
                 {type: "application/octet-stream"}));
     await fileStream.close();
-  },
+  }
 
-  openSettingsFromFile: async () => {
+  async openSettingsFromFile() {
     const [fileHandle] = await window.showOpenFilePicker({types: [{
       description: 'Configure file *.rcconf',
       accept: {'application/octet-stream': ['.rcconf']},
@@ -114,10 +120,10 @@ const configureHtmlObj = {
     const file = await fileHandle.getFile();
     const byteArr = new Uint8Array(await file.arrayBuffer());
     ConfigBase.deserialize(byteArr);
-    routeMainContent(); // for refresh values
-  },
+    router.routeMain(); // for refresh values
+  }
 
-  formItems: {
+  formItems = {
     key: "formRoot",
     txt: {en: "Config settings", sv: "Konfigurering inställningar"},
     children: [
@@ -352,8 +358,9 @@ const configureHtmlObj = {
         ]
       }
     ],
-  },
-  lang: {
+  }
+
+  translationObj = {
       en: {
           header: "Configure your device",
           p1: `HTML frontend must be loaded by chrome version 89 or later or the latest Edge browser.
@@ -376,8 +383,9 @@ const configureHtmlObj = {
           setDefaultConfigureBtn: "Sätt default värden i enheten",
           curSettings: "Inställningar:"
       },
-  },
-  html: (parentNode, lang) => {
+  }
+
+  html(parentNode, lang) {
     function renderFormItem(frmItem) {
       if (frmItem.children) {
         // its a form group
@@ -407,33 +415,34 @@ const configureHtmlObj = {
                 </fieldset>`;
       }
     }
+    const tr = this.translationObj[lang];
 
     parentNode.innerHTML = `
       <div class="w3-row-padding w3-padding-64 w3-container">
       <div class="w3-content">
         <div class="w3-twothird">
-          <h1>${configureHtmlObj.lang[lang].header}</h1>
+          <h1>${tr.header}</h1>
 
-          <button class="w3-button w3-blue w3-padding-large w3-large w3-margin-top" onclick="configureHtmlObj.fetchSettings();">
-            ${configureHtmlObj.lang[lang].fetchConfigureBtn}
+          <button class="w3-button w3-blue w3-padding-large w3-large w3-margin-top" onclick="this.fetchSettings();">
+            ${tr.fetchConfigureBtn}
           </button>
-          <button class="w3-button w3-blue w3-padding-large w3-large w3-margin-top" onclick="configureHtmlObj.pushSettings()">
-            ${configureHtmlObj.lang[lang].pushConfigureBtn}
+          <button class="w3-button w3-blue w3-padding-large w3-large w3-margin-top" onclick="this.pushSettings()">
+            ${tr.pushConfigureBtn}
           </button>
-          <button class="w3-button w3-gray w3-padding-large w3-large w3-margin-top" onclick="configureHtmlObj.openSettingsFromFile()">
-            ${configureHtmlObj.lang[lang].openConfigureFromFileBtn}
+          <button class="w3-button w3-gray w3-padding-large w3-large w3-margin-top" onclick="this.openSettingsFromFile()">
+            ${tr.openConfigureFromFileBtn}
           </button>
-          <button class="w3-button w3-gray w3-padding-large w3-large w3-margin-top" onclick="configureHtmlObj.saveSettingsToFile()">
-            ${configureHtmlObj.lang[lang].saveConfigureToFileBtn}
+          <button class="w3-button w3-gray w3-padding-large w3-large w3-margin-top" onclick="this.saveSettingsToFile()">
+            ${tr.saveConfigureToFileBtn}
           </button>
-          <h5 class="w3-padding-8">${configureHtmlObj.lang[lang].curSettings}</h5>
+          <h5 class="w3-padding-8">${tr.curSettings}</h5>
           <form id="config">
-            ${renderFormItem(configureHtmlObj.formItems)}
+            ${renderFormItem(this.formItems)}
           </form>
-          <button class="w3-button w3-red w3-padding-large w3-large w3-margin-top" onclick="configureHtmlObj.setDefault()">
-            ${configureHtmlObj.lang[lang].setDefaultConfigureBtn}
+          <button class="w3-button w3-red w3-padding-large w3-large w3-margin-top" onclick="this.setDefault()">
+            ${tr.setDefaultConfigureBtn}
           </button>
-          <p class="w3-text-grey">${configureHtmlObj.lang[lang].p1}</p>
+          <p class="w3-text-grey">${tr.p1}</p>
         </div>
 
         <div class="w3-third w3-center">
@@ -443,3 +452,7 @@ const configureHtmlObj = {
     </div>`;
   }
 };
+
+router.registerPage(new ConfigureHtmlCls, "conf");
+
+} // end namespace block

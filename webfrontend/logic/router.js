@@ -1,35 +1,52 @@
 "use strict";
 
-function routeMainContent() {
-  let lang = document.querySelector("html").lang;
-  let parts = location.hash.replace(/^#/, "").split("&");
-  let page = parts[0];
-  let htmlFunctor;
+class Router {
+  _pages = [];
 
-  switch(page) {
-  case 'diag':
-    htmlFunctor = diagpageHtmlObj.html.bind(diagpageHtmlObj);
-    break;
-  case 'viewlog':
-    htmlFunctor = viewlogHtmlObj.html.bind(viewlogHtmlObj);
-    break;
-  case 'conf':
-    htmlFunctor = configureHtmlObj.html;
-    break;
-  case 'settings':
-    htmlFunctor = appSettingsHtmlObj.html;
-    break;
-  case 'start': // fallthrough
-  default:
-    htmlFunctor = welcomeHtmlObj.html;
+  constructor() {
+    document.addEventListener('DOMContentLoaded', this.routeMain.bind(this));
+    window.addEventListener('hashchange', ((evt)=>{
+      evt.stopPropagation();
+      evt.preventDefault();
+      this.routeMain();
+    }).bind(this));
   }
 
-  htmlFunctor(document.getElementById("content"), lang);
+  registerPage(pageCls, name) {
+    this._pages.push({cls:pageCls, name});
+  }
+
+  routeMain() {
+    const name = location.hash.replace(/^#/, "").split("&")[0];
+    let o = this._pages.find(p=>p.name===name);
+    if (!o) o = this._pages.find(p=>p.name==='');
+
+    const cls = o.cls;
+
+    const parentNode = document.getElementById('content');
+    const lang = document.documentElement.lang;
+
+    if (typeof cls.beforeHook === 'function')
+      cls.beforeHook(parentNode, lang);
+
+    // render main content
+    cls.html(parentNode, lang);
+
+    // set up events
+    ["onclick", "onselect", "onchange"].forEach((evtname)=>{
+      const evts = parentNode.querySelectorAll(`* [${evtname}]`);
+      evts.forEach(node=>{
+        if (/\{\s*this/.test(node[evtname].toString())) {
+          const cb = node[evtname];
+          node[evtname] = function(){cb.apply(cls, arguments);}
+        }
+      });
+    })
+
+    // post render event
+    if (typeof cls.afterHook === 'function')
+      cls.afterHook(parentNode, lang);
+  }
 }
 
-document.addEventListener('DOMContentLoaded', routeMainContent);
-window.addEventListener('hashchange', (evt)=>{
-  evt.stopPropagation();
-  evt.preventDefault();
-  routeMainContent();
-});
+const router = new Router();
