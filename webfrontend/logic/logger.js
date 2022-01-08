@@ -191,9 +191,9 @@ class LogRoot {
             continue; // no use to have this as a column
           else if (itm.type < ItemBase.Types.log_end) {
             // +1 due to typeKeys is offset by 1
-            items.push({entry: itm, tr: ItemBase.TypesTranslated[typeKeys[itm.type +1]]});
+            items.push({entry: itm});
           } else
-            items.push({entry: itm, tr: ItemBase.TypesTranslated.invalid});
+            items.push({entry: itm});
         }
       }
     }

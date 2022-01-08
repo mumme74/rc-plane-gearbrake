@@ -300,7 +300,7 @@
     }
 
     /**
-     * @brief makes subclasses able to implement onChane callbacks
+     * @brief makes subclasses able to implement onChange events
      * @param {*} newValue
      */
     setValue(newValue) {
@@ -383,7 +383,8 @@
 
     translatedType(lang = document.documentElement.lang) {
         const keys = Object.keys(ItemBase.TypesTranslated).slice(1);
-        const tr = ItemBase.TypesTranslated[keys[this.type]];
+        const tr = ItemBase.TypesTranslated[keys[this.type]] ||
+                     ItemBase.TypesTranslated.invalid;
         return {txt: tr.txt[lang], title: tr.title[lang]};
     }
 }

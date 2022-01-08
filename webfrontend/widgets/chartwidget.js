@@ -111,7 +111,8 @@ class ChartWidgetCls extends WidgetBaseCls {
     this.contex.moveTo(origoAt.x, origoAt.y - factor * itm.realVlu());
     for(let i = 1; i < this.data.length; ++i) {
       itm = this.data[i].children[axelIdx];
-      this.contex.lineTo(origoAt.x + i * stepFactor, origoAt.y - factor * itm.realVlu());
+      if (itm)
+        this.contex.lineTo(origoAt.x + i * stepFactor, origoAt.y - factor * itm.realVlu());
     }
     this.contex.stroke();
   }
