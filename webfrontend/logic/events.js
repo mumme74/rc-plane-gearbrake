@@ -92,7 +92,7 @@ class EventDispatcher {
    * @brief unregister all subscribers
    */
   close() {
-    this._subscribers.forEach(s=>this.unsubscribe({subcriber:s}));
+    this._subscribers.forEach(s=>this.unsubscribe({subscriber:s}));
     if (this._DOMObserver)
       this._DOMObserver.disconnect();
   }
