@@ -32,4 +32,8 @@ form label {
     transition: 0.5s;
 }
 
+.liveData tr.forced td {
+    background-color: #74d884;
+}
+
 @import url(logtable.css);
