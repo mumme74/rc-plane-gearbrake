@@ -8,13 +8,15 @@ class WidgetBaseCls {
   colData = [];
   shownColumns = [];
   dirty = false;
+  parentNode = null;
 
   constructor(shownColumns) {
     this.shownColumns = shownColumns;
   }
 
-  setParentNode(parent) {
-    parent.appendChild(this.rootNode);
+  setParentNode(parentNode) {
+    parentNode.appendChild(this.rootNode);
+    this.parentNode = parentNode;
   }
 
   /**

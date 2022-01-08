@@ -18,7 +18,7 @@ class TableWidgetCls extends WidgetBaseCls {
     this.rootNode.className = "logTableEntries w3-table w3-bordered w3-border w3-responsive";
 
     this.setVisible(false);
-    parentNode.appendChild(this.rootNode);
+    this.setParentNode(parentNode);
 
     this.redrawTimeout = REDRAWTIMOUT;
   }
@@ -55,13 +55,13 @@ class TableWidgetCls extends WidgetBaseCls {
         // split to 2 strings to be able to ellide
         //<th><span>long text to be clipped</span>not clipped</th>
         let span = document.createElement("span");
-        const txt = itm.tr.txt[lang];
+        const t = itm.entry.translatedType();
         span.appendChild(document.createTextNode(
-                            txt.substr(0, txt.length-2)));
+                            t.txt.substr(0, t.txt.length-2)));
         th.appendChild(span);
         th.appendChild(document.createTextNode(
-                          txt.substr(txt.length-2)));
-        th.title = txt + "\n" +itm.tr.title[lang];
+                          t.txt.substr(t.txt.length-2)));
+        th.title = t.txt + "\n" +t.title;
         tr.appendChild(th);
         this._colTypes.push(itm.entry.type);
       }
