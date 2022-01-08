@@ -308,6 +308,46 @@
     }
 
     /**
+     * @brief set the value from a user shown value
+     * @param {*} newRealVlu value as shown to user
+     */
+    setRealValue(newRealVlu) {
+        // clamp value
+        const info = this.info();
+        newRealVlu = Math.min(info.max, newRealVlu);
+        newRealVlu = Math.max(info.min, newRealVlu);
+
+        switch (this.type) {
+        case ItemBase.Types.slip0:
+        case ItemBase.Types.slip1:
+        case ItemBase.Types.slip2:
+            this.setValue(Math.round(newRealVlu));
+            break;
+        case ItemBase.Types.accel:
+        case ItemBase.Types.accelX:
+        case ItemBase.Types.accelY:
+        case ItemBase.Types.accelZ:
+            this.setValue(Math.round(newRealVlu * 512));
+            break;
+        case ItemBase.Types.speedOnGround:
+        case ItemBase.Types.wheelRPS_0:
+        case ItemBase.Types.wheelRPS_1:
+        case ItemBase.Types.wheelRPS_2:
+        case ItemBase.Types.wantedBrakeForce:
+        case ItemBase.Types.calcBrakeForce:
+        case ItemBase.Types.brakeForce0_out:
+        case ItemBase.Types.brakeForce1_out:
+        case ItemBase.Types.brakeForce2_out:
+        case ItemBase.Types.accelSteering:
+        case ItemBase.Types.wsSteering:
+            this.setValue(Math.round(newRealVlu));
+            break;
+        default:
+            this.setValue(newRealVlu);
+        }
+    }
+
+    /**
      * @brief Gets the unit for this type
      * @returns string with correct postfix
      */
@@ -355,30 +395,30 @@
      */
     realVlu() {
         switch (this.type) {
-            case ItemBase.Types.slip0:
-            case ItemBase.Types.slip1:
-            case ItemBase.Types.slip2:
-                return Math.round(this.value*1000)/1000;
-            case ItemBase.Types.accel:
-            case ItemBase.Types.accelX:
-            case ItemBase.Types.accelY:
-            case ItemBase.Types.accelZ:
-                return Math.round((this.value / 512)*100)/100;
-            case ItemBase.Types.speedOnGround:
-            case ItemBase.Types.wheelRPS_0:
-            case ItemBase.Types.wheelRPS_1:
-            case ItemBase.Types.wheelRPS_2:
-            case ItemBase.Types.wantedBrakeForce:
-            case ItemBase.Types.calcBrakeForce:
-            case ItemBase.Types.brakeForce0_out:
-            case ItemBase.Types.brakeForce1_out:
-            case ItemBase.Types.brakeForce2_out:
-            case ItemBase.Types.accelSteering:
-            case ItemBase.Types.wsSteering:
-                return Math.round(this.value *100) / 100;
-            default:
-                return this.value;
-            }
+        case ItemBase.Types.slip0:
+        case ItemBase.Types.slip1:
+        case ItemBase.Types.slip2:
+            return Math.round(this.value*1000)/1000;
+        case ItemBase.Types.accel:
+        case ItemBase.Types.accelX:
+        case ItemBase.Types.accelY:
+        case ItemBase.Types.accelZ:
+            return Math.round((this.value / 512)*100)/100;
+        case ItemBase.Types.speedOnGround:
+        case ItemBase.Types.wheelRPS_0:
+        case ItemBase.Types.wheelRPS_1:
+        case ItemBase.Types.wheelRPS_2:
+        case ItemBase.Types.wantedBrakeForce:
+        case ItemBase.Types.calcBrakeForce:
+        case ItemBase.Types.brakeForce0_out:
+        case ItemBase.Types.brakeForce1_out:
+        case ItemBase.Types.brakeForce2_out:
+        case ItemBase.Types.accelSteering:
+        case ItemBase.Types.wsSteering:
+            return Math.round(this.value *100) / 100;
+        default:
+            return this.value;
+        }
     }
 
     translatedType(lang = document.documentElement.lang) {
@@ -386,5 +426,9 @@
         const tr = ItemBase.TypesTranslated[keys[this.type]] ||
                      ItemBase.TypesTranslated.invalid;
         return {txt: tr.txt[lang], title: tr.title[lang]};
+    }
+
+    info() {
+        return ItemBase.Types.info(this.type);
     }
 }

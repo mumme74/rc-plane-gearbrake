@@ -201,14 +201,8 @@ class CommunicationBase {
         return res;
     }
 
-    _checkTransfer(res) {
-        if (res.status !== 'ok') {
-            this.rcvCallback("Error in transfer");
-            throw new Error("Error in usb transfer " +
-                        (res instanceof USBInTransferResult ? " from" : "to") +
-                        " device");
-        }
-        return res;
+    isOpen() {
+      return (this?.device?.opened && !!this.oep && !!this.iep);
     }
 
     /**
@@ -219,7 +213,7 @@ class CommunicationBase {
      * @returns the request id associated with this write
      */
     async talk({cmd, byteArr = null, includeHeader = false}) {
-        if (!this.device?.opened || !this.oep || !this.iep)
+        if (!this.isOpen())
             if (!await this.openDevice()) return;
 
         let data = new Uint8Array(byteArr ? byteArr.length + 3 : 3);
@@ -239,6 +233,10 @@ class CommunicationBase {
 
         // Request exclusive control over interface #1.
         const unlock = this._unlock = await CommunicationBase._mutex.lock();
+        if (!this.device)
+          return;
+
+        await this.device.reset();
         await this.device.claimInterface(0);
 
         // communicate
@@ -246,8 +244,10 @@ class CommunicationBase {
         if (await this._send(data)) {
             rcvd = await this._recieve(id);
             if (rcvd?.length) {
-                if (rcvd[1] === CommunicationBase.Cmds.Error)
+                if (rcvd[1] === CommunicationBase.Cmds.Error) {
+                    this._unlock = unlock();
                     throw new Error(`cmd ${cmd} with send id ${id} failed`);
+                }
                 if (!includeHeader)
                     rcvd.splice(0, 3);
             }
@@ -255,7 +255,6 @@ class CommunicationBase {
 
         if (this.device) {
             await this.device.releaseInterface(0);
-            await this.device.reset();
         }
         this._unlock = unlock();
 
@@ -277,6 +276,16 @@ class CommunicationBase {
         } catch(err) {
             console.log(err);
         }
+    }
+
+    _checkTransfer(res) {
+        if (res.status !== 'ok') {
+            this.rcvCallback("Error in transfer");
+            throw new Error("Error in usb transfer " +
+                        (res instanceof USBInTransferResult ? " from" : "to") +
+                        " device");
+        }
+        return res;
     }
 
     async _send(data) {

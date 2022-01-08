@@ -25,7 +25,13 @@ class DiagnoseItem extends ItemBase {
    * @param {*} forcedVlu
    */
   async forceValue(forcedVlu) {
-    await this.parent._forceValue(this, forcedVlu);
+    if (!this.forced) {
+      let res = await this.parent._forceValue(this, forcedVlu);
+      if (res)
+        this._setForced(true);
+      return res;
+    }
+    return true;
   }
 
   /**
@@ -33,10 +39,17 @@ class DiagnoseItem extends ItemBase {
    *        (and potential other in the same group)
    */
   async unForceValue() {
-      await this.parent._unForceVlu(this);
+    if (this.forced) {
+      let res = await this.parent._unForceVlu(this);
+      if (res)
+        this._setForced(false);
+      return res;
+    }
+    return true;
   }
 
   _setForced(forced) {
+    if (forced === this.forced) return;
     this.forced = forced;
     this.onForcedChanged.emit(this)
   }
@@ -88,14 +101,22 @@ class DiagnoseBase {
    *            for how often we poll for new data
    *            0 = off
    */
-  setFetchRefreshFreq(freq = 0) {
+  async setFetchRefreshFreq(freq = 0) {
     this.freq = freq;
-    if (this._fetchTmr)
+    if (this._fetchTmr) {
       clearTimeout(this._fetchTmr);
+      this._fetchTmr = null;
+    }
 
     if (freq > 0) {
+      const comms = CommunicationBase.instance();
+
+      if (!comms.isOpen() && !(await comms.openDevice()))
+        return false;
+
       this._fetchTmr = setInterval(async ()=>{
-        const data = await CommunicationBase.instance().poolDiagData();
+        if (!this._fetchTmr) return; // stopped during timeout
+        const data = await comms.poolDiagData();
         if (data?.length > 3) {
             try {
               this._refreshDataArrived(data);
@@ -109,6 +130,8 @@ class DiagnoseBase {
         clearInterval(this._fetchTmr);
       }, 1000 / freq);
     }
+
+    return this._fetchTmr !== null;
   }
 
   getItem(type) {
@@ -126,9 +149,9 @@ class DiagnoseBase {
 
   async _forceValue(itm, forcedVlu) {
     let {byteArr, together} = this._forceItemBuildArr(itm);
-    if (byteArr.length) {
+    if (byteArr.length > 1) {
       // it is a forceable item
-      itm.forced = true;
+      itm._setForced(true);
       itm.value = forcedVlu;
       together.forEach(itm=>itm._setForced(true));
       let ret = await CommunicationBase.instance().setDiagVlu(byteArr);
@@ -141,9 +164,9 @@ class DiagnoseBase {
 
   async _unForceVlu(itm) {
     let {byteArr, together} = this._forceItemBuildArr(itm);
-    if (byteArr.length) {
+    if (byteArr.length > 1) {
       // it is a forceable item
-      itm.forced = false;
+      itm._setForced(false);
       together.forEach(itm=>itm._setForced(false));
       let ret = await CommunicationBase.instance().setDiagVlu(byteArr);
       if (!ret)
@@ -162,7 +185,7 @@ class DiagnoseBase {
       together.forEach(itm=>itm.save(byteArr, byteArr.length));
 
     } else if (this._forceTogether.accel.indexOf(itm.type) > -1) {
-      byteArr[0] = 5; // bytes
+      byteArr[0] = 8; // bytes
       byteArr[1] = DiagnoseBase.SetVluPkgTypes.InputsAccel;
       together = this._forceTogether.accelItms;
       together.forEach(itm=>itm.save(byteArr, byteArr.length));
@@ -221,7 +244,7 @@ class Diagnose_v1 extends DiagnoseBase {
         ItemBase.Types.wheelRPS_1,       ItemBase.Types.wheelRPS_2,
       ],
       accel: [
-        ItemBase.Types.accelX, ItemBase.Types.accelY, ItemBase.accelZ
+        ItemBase.Types.accelX, ItemBase.Types.accelY, ItemBase.Types.accelZ
       ]
     };
 

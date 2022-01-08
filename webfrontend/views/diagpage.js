@@ -4,7 +4,6 @@
 
 class DiagPageCls {
   showDiagItems = [];
-  started = false;
 
   translationObj = {
     en: {
@@ -34,11 +33,12 @@ class DiagPageCls {
     })
   }
 
-  startStop(evt) {
-    this.started = !this.started;
+  async startStop(evt) {
+    const diagObj = DiagnoseBase.instance();
+    const started = await DiagnoseBase.instance()
+                    .setFetchRefreshFreq(diagObj.freq > 0 ? 0 : 10);
     const t = this.translationObj[document.documentElement.lang];
-    evt.target.innerText = this.started ? t.stop : t.start;
-    DiagnoseBase.instance().setFetchRefreshFreq(this.started ? 10 : 0);
+    evt.target.innerText = started ? t.stop : t.start;
   }
 
   createWidgets() {
@@ -51,16 +51,20 @@ class DiagPageCls {
             selectNode, this.translationObj);
     this.showItemsWgt.setData(colTypes, diagObj.dataItems);
 
-    // create tableData
+    // create liveData
     this.liveDataWgt = new LiveDataWidget({
       shownColumns: this.showDiagItems,
       parentNode: document.getElementById("diagViewContainer")
     });
     this.liveDataWgt.setData(colTypes, diagObj.dataItems);
+
+    // route show/hide event to widgets
     this.showItemsWgt.onChange.subscribe(
       this.liveDataWgt, this.liveDataWgt.render.bind(this.liveDataWgt));
     this.showItemsWgt.onSelectAll.subscribe(
       this.liveDataWgt, this.liveDataWgt.render.bind(this.liveDataWgt));
+
+
   }
 
   html(parentNode, lang) {

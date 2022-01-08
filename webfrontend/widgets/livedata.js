@@ -11,6 +11,7 @@ const trObj = {
     state: "State",
     measured: "Measured",
     setvlu: "Set by you",
+    editorBtn: "OK",
   },
   sv: {
     select: "Välj",
@@ -19,16 +20,110 @@ const trObj = {
     state: "Status",
     measured: "Mätt",
     setvlu: "Satt av dig",
+    editorBtn: "OK",
+  }
+}
+
+class LiveDataEditorWgt {
+  onAccept = null;
+  onAbort = null;
+
+  constructor(rowWgt) {
+    this.row = rowWgt;
+    this.origVlu = this.row.itm.value;
+
+    // replace the 2 last tds in table with a new one with our editor
+    const lastTd = rowWgt.rootNode.lastChild;
+    this.origTds = [lastTd.previousSibling, lastTd];
+
+    this.editorTd = document.createElement("td");
+    this.editorTd.setAttribute("colspan", 2);
+    this.origTds.forEach(td=>this.row.rootNode.removeChild(td));
+    this.row.rootNode.appendChild(this.editorTd);
+
+    // create a slider
+    this.slider = document.createElement("input");
+    this.slider.type = "range";
+    const info = this.row.itm.info();
+    this.slider.min = info.min;
+    this.slider.max = info.max;
+    this.slider.value = this.row.itm.realVlu();
+    this.slider.steps = (info.max - info.min) / 100;
+    this.slider.addEventListener("change", () => {
+        this.row.itm.setRealValue(+this.slider.value)
+    });
+    this.editorTd.appendChild(this.slider);
+
+    // create finished btn
+    const btn = document.createElement("button");
+    btn.innerText = trObj[document.documentElement.lang].editorBtn;
+    btn.className = "w3-button";
+    this.editorTd.appendChild(btn);
+    btn.addEventListener("click", this.accept.bind(this));
+
+    // hide when click outside of editor
+    this.editorTd.addEventListener("click", this._stopClickEvent.bind(this));
+    document.body.addEventListener("click", this._hideClickEvent.bind(this));
+
+    // create a events
+    this.onAccept = new EventDispatcher(this, this.editorTd);
+    this.onAbort = new EventDispatcher(this, this.editorTd);
+  }
+
+  async accept() {
+    const newValue = this.slider.value;
+    this.row.itm.setRealValue(newValue);
+    let res = await this.row.itm.forceValue(this.row.itm.value);
+    if (!res) return await this.abort();
+    this._restoreNodes();
+    this.onAccept.emit(newValue);
+  }
+
+  async abort() {
+    this.row.itm.setValue(this.origVlu);
+    await this.row.itm.unForceValue();
+    this._restoreNodes();
+    this.onAbort.emit();
+  }
+
+  _restoreNodes() {
+    if (this.editorTd?.parentNode)
+      this.editorTd.parentNode.removeChild(this.editorTd);
+    // restore tds
+    this.origTds.forEach(td=>this.row.rootNode.appendChild(td));
+
+    this.editorTd.removeEventListener("click", this._stopClickEvent);
+    document.body.removeEventListener("click", this._hideClickEvent);
+    this.onAbort.close();
+    this.onAccept.close();
+  }
+
+  _stopClickEvent(evt) {
+    // prevent events from propagating down in DOM to document.body
+    // should prevent _hideClickEvent from beeing called
+    evt.preventDefault();
+    evt.stopPropagation();
+  }
+
+  _hideClickEvent(evt) {
+    this.abort();
   }
 }
 
 class LiveDataRowWgt {
+  onDblClicked = null;
+
   constructor(owner, itm, parentNode) {
     this.owner = owner;
     this.itm = itm;
 
+    // create the table row element
     this.rootNode = document.createElement("tr");
     parentNode.appendChild(this.rootNode);
+
+    // notify on dblclick
+    this.onDblClicked = new EventDispatcher(this, this.rootNode);
+    this.rootNode.addEventListener("dblclick", this._DblClicked.bind(this));
 
     // create but hide row if not shown, easier to update values
     this.rootNode.style.display =
@@ -37,13 +132,16 @@ class LiveDataRowWgt {
     this._createTd(itm.translatedType()); // name
     this.vluNode = this._createTd({txt:itm.realVlu() + itm.unit()}); // value
     const td = this._createTd({});  // select
+    const chkTd = this._createTd({}); // last td for our chkbox
+
+    // and finally the checkbox
     const chkbox = document.createElement("input");
     chkbox.type = "checkbox";
     chkbox.checked = owner.selected.indexOf(itm.type) > -1;
     chkbox.addEventListener("change", (evt)=>{
       this.owner._selectClicked(evt, this.itm);
     });
-    this.rootNode.appendChild(chkbox);
+    chkTd.appendChild(chkbox);
 
     // set/remove forced display class
     this._forcedChanged();
@@ -67,7 +165,23 @@ class LiveDataRowWgt {
   }
 
   _updated() {
-    this.vluNode.innerTxt = this.itm.realVlu() + this.itm.unit();
+    this.vluNode.innerText = this.itm.realVlu() + this.itm.unit();
+  }
+
+  async _DblClicked() {
+    this.onDblClicked.emit(this);
+
+    //
+    if (this.owner.editorWgt) {
+      await this.owner.editorWgt.abort();
+      this.owner.editorWgt = null;
+    }
+
+    // create a new editor widget for this row
+    this.owner.editorWgt = new LiveDataEditorWgt(this);
+    const clear = ()=> { this.owner.editorWgt = null;}
+    this.owner.editorWgt.onAbort.subscribe(this, clear.bind(this));
+    this.owner.editorWgt.onAccept.subscribe(this, clear.bind(this));
   }
 }
 
@@ -132,7 +246,7 @@ class LiveDataWidgetCls extends WidgetBaseCls {
       this.selected.push(itm.type);
 
     // notify subscribers
-    this.onSelected.forEach(cb=>cb(itm));
+    this.onSelected.emit(itm);
   }
 }
 
