@@ -57,12 +57,13 @@ void diagReadData(usbpkg_t *sndpkg) {
     diagPkg->slip[i]           = values.slip[i];
   }
 
-  diagPkg->acceleration     = values.acceleration;
-  diagPkg->accelSteering    = values.accelSteering;
+  TO_BIG_ENDIAN_16(&diagPkg->acceleration, values.acceleration);
+  TO_BIG_ENDIAN_16(&diagPkg->accelSteering, values.accelSteering);
+  TO_BIG_ENDIAN_16(&diagPkg->wsSteering, values.wsSteering);
+
   diagPkg->speedOnGround    = values.speedOnGround;
   diagPkg->brakeForceIn     = inputs.brakeForce;
   diagPkg->brakeForceCalc   = values.brakeForce;
-  diagPkg->wsSteering       = values.wsSteering;
 
   sndpkg->onefrm.len += sizeof(*diagPkg);
   commsSendNow(sndpkg);

@@ -64,8 +64,18 @@ static THD_FUNCTION(BrakeLogicThd, arg) {
   while (true) {
     chThdSleep(sleepTime);
 
+    // do accelerometer
+    VALUES->acceleration =
+      (settings.accelerometer_axis_invert ?
+                -(accel.axis[settings.accelerometer_axis]) :
+                accel.axis[settings.accelerometer_axis]);
+
+    // input brakeforce
     VALUES->brakeForce = (settings.reverse_input) ?
               100 - inputs.brakeForce : inputs.brakeForce;
+    if (VALUES->brakeForce > settings.max_brake_force)
+      VALUES->brakeForce = settings.max_brake_force;
+
     if (VALUES->brakeForce < settings.lower_threshold) {
       sleepTime = TIME_MS2I(20); // wait for next pulse from reciver
       timeAtLastSpeedDecrement = 0;
@@ -77,16 +87,7 @@ static THD_FUNCTION(BrakeLogicThd, arg) {
 
     sleepTime = TIME_MS2I(5); // recalculate every 5ms now (200 times a sec)
 
-    if (VALUES->brakeForce > settings.max_brake_force)
-      VALUES->brakeForce = settings.max_brake_force;
 
-    // do accelerometer
-    if (settings.accelerometer_active) {
-      VALUES->acceleration =
-          (int16_t)(settings.accelerometer_axis_invert ?
-                              -accel.axis[settings.accelerometer_axis] :
-                              accel.axis[settings.accelerometer_axis]);
-    }
 
     // calculate vehicle speed
     if (settings.WheelSensor0_pulses_per_rev > 0 ||
