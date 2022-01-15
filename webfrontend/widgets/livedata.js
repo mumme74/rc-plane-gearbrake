@@ -11,7 +11,8 @@ const trObj = {
     state: "State",
     measured: "Measured",
     setvlu: "Set by you",
-    editorBtn: "OK",
+    editorCloseBtn: "Cancel",
+    dblClickEdit: "Double click to edit",
   },
   sv: {
     select: "Välj",
@@ -20,7 +21,8 @@ const trObj = {
     state: "Status",
     measured: "Mätt",
     setvlu: "Satt av dig",
-    editorBtn: "OK",
+    editorCloseBtn: "Avbryt",
+    dblClickEdit: "Dubbelklicka för att ändra",
   }
 }
 
@@ -32,9 +34,9 @@ class LiveDataEditorWgt {
     this.row = rowWgt;
     this.origVlu = this.row.itm.value;
 
-    // replace the 2 last tds in table with a new one with our editor
+    // replace the last td in table with a new one with our editor
     const lastTd = rowWgt.rootNode.lastChild;
-    this.origTds = [lastTd.previousSibling, lastTd];
+    this.origTds = [lastTd];
 
     this.editorTd = document.createElement("td");
     this.editorTd.setAttribute("colspan", 2);
@@ -50,33 +52,31 @@ class LiveDataEditorWgt {
     this.slider.value = this.row.itm.realVlu();
     this.slider.steps = (info.max - info.min) / 100;
     this.slider.addEventListener("change", () => {
-        this.row.itm.setRealValue(+this.slider.value)
+      const newValue = + this.slider.value;
+      this.row.itm.setRealValue(newValue);
+      this.changed(newValue);
     });
     this.editorTd.appendChild(this.slider);
 
-    // create finished btn
+    // create cancel btn
     const btn = document.createElement("button");
-    btn.innerText = trObj[document.documentElement.lang].editorBtn;
+    btn.innerText = trObj[document.documentElement.lang].editorCloseBtn;
     btn.className = "w3-button";
     this.editorTd.appendChild(btn);
-    btn.addEventListener("click", this.accept.bind(this));
-
-    // hide when click outside of editor
-    this.editorTd.addEventListener("click", this._stopClickEvent.bind(this));
-    document.body.addEventListener("click", this._hideClickEvent.bind(this));
+    btn.addEventListener("click", this.abort.bind(this));
 
     // create a events
-    this.onAccept = new EventDispatcher(this, this.editorTd);
+    this.onChanged = new EventDispatcher(this, this.editorTd);
     this.onAbort = new EventDispatcher(this, this.editorTd);
   }
 
-  async accept() {
-    const newValue = this.slider.value;
+  async changed(newValue) {
     this.row.itm.setRealValue(newValue);
     let res = await this.row.itm.forceValue(this.row.itm.value);
-    if (!res) return await this.abort();
-    this._restoreNodes();
-    this.onAccept.emit(newValue);
+    if (res)
+      this.onChanged.emit(newValue);
+    else
+      await this.abort();
   }
 
   async abort() {
@@ -92,21 +92,8 @@ class LiveDataEditorWgt {
     // restore tds
     this.origTds.forEach(td=>this.row.rootNode.appendChild(td));
 
-    this.editorTd.removeEventListener("click", this._stopClickEvent);
-    document.body.removeEventListener("click", this._hideClickEvent);
     this.onAbort.close();
-    this.onAccept.close();
-  }
-
-  _stopClickEvent(evt) {
-    // prevent events from propagating down in DOM to document.body
-    // should prevent _hideClickEvent from beeing called
-    evt.preventDefault();
-    evt.stopPropagation();
-  }
-
-  _hideClickEvent(evt) {
-    this.abort();
+    this.onChanged.close();
   }
 }
 
@@ -126,12 +113,12 @@ class LiveDataRowWgt {
     this.rootNode.addEventListener("dblclick", this._DblClicked.bind(this));
 
     // create but hide row if not shown, easier to update values
-    this.rootNode.style.display =
-      (owner.shownColumns.indexOf(itm.type) < 0) ? "none" : "";
+    if (owner.shownColumns.indexOf(itm.type) < 0)
+      this.rootNode.classList.add("hidden");
 
     this._createTd(itm.translatedType()); // name
-    this.vluNode = this._createTd({txt:itm.realVlu() + itm.unit()}); // value
-    const td = this._createTd({});  // select
+    const title = this.itm.isForceable() ? trObj[document.documentElement.lang].dblClickEdit : "";
+    this.vluNode = this._createTd({txt:itm.realVlu() + itm.unit(), title}); // value
     const chkTd = this._createTd({}); // last td for our chkbox
 
     // and finally the checkbox
@@ -151,6 +138,10 @@ class LiveDataRowWgt {
     this.itm.onUpdated.subscribe(this, this._updated.bind(this));
   }
 
+  setHide(hide) {
+    this.rootNode.classList[hide ? "add" : "remove"]("hidden");
+  }
+
   _createTd({txt = "", title = ""}) {
     let td = document.createElement("td");
     td.innerText = txt;
@@ -161,7 +152,7 @@ class LiveDataRowWgt {
 
   // callback for when we have force a value upon the device
   _forcedChanged() {
-    this.rootNode.className = this.itm.forced ? "forced" : "";
+    this.rootNode.classList[this.itm.forced ? "add" : "remove"]("forced");
   }
 
   _updated() {
@@ -171,23 +162,39 @@ class LiveDataRowWgt {
   async _DblClicked() {
     this.onDblClicked.emit(this);
 
-    //
-    if (this.owner.editorWgt) {
-      await this.owner.editorWgt.abort();
-      this.owner.editorWgt = null;
-    }
+    // check if we have an editor on this item openened already
+    if (this.owner.editorWgts.find(e=>e.itm===this.itm))
+      return;
 
-    // create a new editor widget for this row
-    this.owner.editorWgt = new LiveDataEditorWgt(this);
-    const clear = ()=> { this.owner.editorWgt = null;}
-    this.owner.editorWgt.onAbort.subscribe(this, clear.bind(this));
-    this.owner.editorWgt.onAccept.subscribe(this, clear.bind(this));
+    if (this.itm.isForceable()) {
+      const edit = this.owner.editorWgts.find(e=>e.row===this);
+      if (!this.itm.forced && !edit) {
+        // create a new editor widget for this row
+        const editor = new LiveDataEditorWgt(this);
+        this.owner.editorWgts.push(editor);
+        const clear = ()=> {
+          this.owner.editorWgts.splice(
+            this.owner.editorWgts.indexOf(editor), 1);
+        }
+        editor.onAbort.subscribe(this, clear.bind(this));
+        editor.onChanged.subscribe(this, clear.bind(this));
+      } else {
+        this.itm.unForceValue();
+      }
+
+    } else {
+      this.rootNode.classList.add("error");
+      setTimeout(()=>{
+        this.rootNode.classList.remove("error");
+      }, 1000);
+    }
   }
 }
 
 class LiveDataWidgetCls extends WidgetBaseCls {
   selected = [];
   rows = [];
+  editorWgts = [];
 
   onSelected = null;
 
@@ -209,6 +216,11 @@ class LiveDataWidgetCls extends WidgetBaseCls {
     this._buildBody();
   }
 
+  shownItemsChanged() {
+    for (let row of this.rows)
+      row.setHide(this.shownColumns.indexOf(row.itm.type) < 0);
+  }
+
   _buildHeader() {
     const lang = document.documentElement.lang;
     const t = this.translationObj[lang];
@@ -219,10 +231,10 @@ class LiveDataWidgetCls extends WidgetBaseCls {
     thead.appendChild(tr);
 
     // create columns
-    for (let str of [t.name, t.value, t.state, t.select]) {
+    for (let str of [t.name, t.value, t.select]) {
       let th = document.createElement("th");
       th.innerText = str;
-      thead.appendChild(th);
+      tr.appendChild(th);
     }
   }
 

@@ -32,8 +32,22 @@ form label {
     transition: 0.5s;
 }
 
+.liveData tr.hidden {
+    display: none;
+}
+
 .liveData tr.forced td {
     background-color: #74d884;
+    transition: 0.2s;
+}
+
+.liveData tr.error td {
+    background-color: #d85a5a;
+    transition: 0.2s;
+}
+
+.liveData tr td.hidden {
+    display: none;
 }
 
 @import url(logtable.css);

@@ -36,7 +36,7 @@ class DiagPageCls {
   async startStop(evt) {
     const diagObj = DiagnoseBase.instance();
     const started = await DiagnoseBase.instance()
-                    .setFetchRefreshFreq(diagObj.freq > 0 ? 0 : 10);
+                    .setFetchRefreshFreq(diagObj.freq > 0 ? 0 : 5);
     const t = this.translationObj[document.documentElement.lang];
     evt.target.innerText = started ? t.stop : t.start;
   }
@@ -60,9 +60,9 @@ class DiagPageCls {
 
     // route show/hide event to widgets
     this.showItemsWgt.onChange.subscribe(
-      this.liveDataWgt, this.liveDataWgt.render.bind(this.liveDataWgt));
+      this.liveDataWgt, this.liveDataWgt.shownItemsChanged.bind(this.liveDataWgt));
     this.showItemsWgt.onSelectAll.subscribe(
-      this.liveDataWgt, this.liveDataWgt.render.bind(this.liveDataWgt));
+      this.liveDataWgt, this.liveDataWgt.shownItemsChanged.bind(this.liveDataWgt));
 
 
   }

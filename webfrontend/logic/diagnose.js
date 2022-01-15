@@ -48,6 +48,14 @@ class DiagnoseItem extends ItemBase {
     return true;
   }
 
+  /**
+   * @brief Checks if This item is forcable,
+   *        not every item is able to be set set in device
+   */
+  isForceable() {
+    return this.parent._forceItemBuildArr(this).byteArr.length > 1;
+  }
+
   _setForced(forced) {
     if (forced === this.forced) return;
     this.forced = forced;
@@ -127,7 +135,7 @@ class DiagnoseBase {
             }
         }
         // if we get here we have an error
-        clearInterval(this._fetchTmr);
+        //clearInterval(this._fetchTmr);
       }, 1000 / freq);
     }
 
