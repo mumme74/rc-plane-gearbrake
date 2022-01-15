@@ -12,11 +12,11 @@
 
 typedef struct {
   union {
-    int32_t axis[3];
+    int16_t axis[3];
     struct {
-      int32_t pitch;
-      int32_t roll;
-      int32_t yaw;
+      int16_t pitch;
+      int16_t roll;
+      int16_t yaw;
     };
   };
 } Accel_t;

@@ -158,14 +158,14 @@ static size_t acc_get_axes_number(void *ip) {
  */
 
 #if KXTJ3_1057_EXTENDED_INTERFACE || defined(__DOXYGEN__)
- static msg_t acc_read_raw(void *ip, int32_t axes[]) {
+ static msg_t acc_read_raw(void *ip, int16_t axes[]) {
   KXTJ3_1057Driver* devp;
   osalDbgCheck((ip != NULL) && (axes != NULL));
 
   /* Getting parent instance pointer.*/
   devp = objGetInstance(KXTJ3_1057Driver*, (BaseAccelerometer*)ip);
 #else
- msg_t KXTJ3_1057AccelerometerReadRaw(KXTJ3_1057Driver *devp, int32_t axes[]) {
+ msg_t KXTJ3_1057AccelerometerReadRaw(KXTJ3_1057Driver *devp, int16_t axes[]) {
 #endif
 
   uint8_t buff[KXTJ3_1057_ACC_NUMBER_OF_AXES * 2];
@@ -193,10 +193,10 @@ static size_t acc_get_axes_number(void *ip) {
 #endif /* KXTJ3_1057_SHARED_I2C */
 
   if(msg == MSG_OK) {
-    uint32_t shft = VLU_BIT_SHIFT_CNT(devp);
+    uint16_t shft = VLU_BIT_SHIFT_CNT(devp);
     for(size_t i = 0; i < KXTJ3_1057_ACC_NUMBER_OF_AXES; i++) {
       tmp = (buff[(2 * i) + 1] << 8) | buff[2 * i];
-      axes[i] = (int32_t)(tmp >> shft);
+      axes[i] = (int16_t)(tmp >> shft);
     }
   }
   return msg;

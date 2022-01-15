@@ -51,7 +51,7 @@ THD_FUNCTION(AccelThd, arg) {
     if (settings.accelerometer_active &&
         !(diagSetValues & diag_Set_InputsAccel))
     {
-      KXTJ3_1057AccelerometerReadRaw(&accd, (int32_t*)accel.axis);
+      KXTJ3_1057AccelerometerReadRaw(&accd, (int16_t*)accel.axis);
     }
   }
 }

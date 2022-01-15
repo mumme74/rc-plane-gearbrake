@@ -677,7 +677,7 @@ typedef struct KXTJ3_1057Driver KXTJ3_1057Driver;
 #endif
 
 #else
-  msg_t KXTJ3_1057AccelerometerReadRaw(KXTJ3_1057Driver *devp, int32_t axes[]);
+  msg_t KXTJ3_1057AccelerometerReadRaw(KXTJ3_1057Driver *devp, int16_t axes[]);
 #endif
 
  /*===========================================================================*/
