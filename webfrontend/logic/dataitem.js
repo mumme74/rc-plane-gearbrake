@@ -272,8 +272,8 @@
     restore(byteArray, startPos) {
         let vlu = 0;
         // read in Big Endian
-        for (let i = this.size - 1; i > -1; --i)
-          vlu |= (byteArray[i + startPos] << (8 * i));
+        for (let i = 0, j = this.size -1; i < this.size; ++i, --j)
+          vlu |= (byteArray[i + startPos] << (8 * j));
 
         if (ItemBase.FloatTypes.indexOf(this.type) > -1) {
           // convert to float
@@ -398,7 +398,7 @@
         case ItemBase.Types.slip0:
         case ItemBase.Types.slip1:
         case ItemBase.Types.slip2:
-            return Math.round(this.value*1000)/1000;
+            return Math.round(this.value*1000)/10000;
         case ItemBase.Types.accel:
         case ItemBase.Types.accelX:
         case ItemBase.Types.accelY:
