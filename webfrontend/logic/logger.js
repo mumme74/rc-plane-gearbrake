@@ -23,7 +23,7 @@ class LogItem extends ItemBase {
         const size = (headerByte & 0x03) +1; // 0 is 1 byte, 3 is 4 bytes
         const type = (headerByte & 0xFC) >> 2;
         const byteArray = parent?.parent?.byteArray
-                             .slice(startPos, startPos + size) || null;
+                             .slice(startPos+1, startPos+1 + size) || null;
 
         // call baseclass
         super({size, type, byteArray})
@@ -209,6 +209,7 @@ class LogRoot {
     parseLog(byteArray, startAddr) {
         this.byteArray = byteArray;
         this.startPos = startAddr;
+        const wasEmpty = this.logEntries.length === 0;
 
         const readLogEntries = (pos, endPos) => {
             while (pos < endPos) {
@@ -227,21 +228,21 @@ class LogRoot {
         // read in the entries from startAddrs up to eof
         readLogEntries(startAddr, byteArray.length);
 
-        // read in the entries from 0 upt to startAddr
+        // read in the entries from 0 up to startAddr
         let pos = 0;
-        while (pos < startAddr && byteArray[pos] === 0) ++pos;
+        if (wasEmpty) { // advance if empty
+          while (byteArray[pos] === 0) ++pos;
+          if (pos >= startAddr) return;
+        }
         readLogEntries(pos, this.startPos);
     }
 }
 
-if (testing) {
-    let testCnt = 0;
-    let test = (vlu, expect)=> {
-        if (vlu !== expect)
-            console.warn(`fail ${vlu} !== ${expect}`);
-        testCnt++;
-    }
+// ---- Below code is only for testing -----------------------------
 
+
+if (testing) {
+    const test = new Testing("logger");
     let logRoot = LogRoot.instance();
     let bArr = new Uint8Array([
         0,0,
@@ -250,7 +251,7 @@ if (testing) {
         (ItemBase.Types.log_coldStart << 2) | 0, 0x5A,
 
         // log entry with 10 items
-        43, 10,
+        35, 10,
         // first logitem uin8_t, 2 bytes long, positive 64
         (ItemBase.Types.speedOnGround << 2) | 0, 0x40,
         // logitem 2 int16_t, 3bytes long, positive 0x0132 (306)
@@ -263,14 +264,14 @@ if (testing) {
         (ItemBase.Types.test_int32_2 << 2) | 3, 0x80, 0x43, 0x21, 0x0F,
         // logitem 6 int32_t 3 bytes long negative 0xE000 (-8192) 14bits resolution
         (ItemBase.Types.accelZ << 2) | 1, 0xE0, 0x00,
-        // logitem 6 float 5 bytes long positive 0.25 (0x3E800000)
-        (ItemBase.Types.slip0 << 2) | 3, 0x3E, 0x80, 0x00, 0x00,
-        // logitem 7 float 5 bytes long negative -2.0 (0xC0000000)
-        (ItemBase.Types.slip1 << 2) | 3, 0xC0, 0x00, 0x00, 0x00,
-        // logitem 8 float 5 bytes long positive pi (0x40490FDB)
-        (ItemBase.Types.slip2 << 2) | 3, 0x40, 0x0F, 0x49, 0xDB,
+        // logitem 6 uint16_t 3 bytes long positive 250 (0x00FA)
+        (ItemBase.Types.slip0 << 2) | 1, 0x00, 0xFA,
+        // logitem 7 uint16_t 3 bytes long  2000 (0x07D0)
+        (ItemBase.Types.slip1 << 2) | 1, 0x07, 0xD0,
+        // logitem 8 float 3 bytes long positive pi 314(0x013A)
+        (ItemBase.Types.slip2 << 2) | 1, 0x01, 0x3A,
         // logitem 9 float 5 bytes long positive smallest number 2^-126 (0x00800000)
-        (ItemBase.Types.slip0 << 2) | 3, 0x00, 0x80, 0x00, 0x00,
+        (ItemBase.Types.slip0 << 2) | 1, 0x00, 0x80,
         // trailing stuff at end, should halt the parse
         0,0,
 
@@ -311,7 +312,7 @@ if (testing) {
         (ItemBase.Types.brakeForce2_out << 2) | 0, 0x14,
 
         // log entry with 14 items
-        5, 14,
+        51, 14,
         // first logitem uin8_t, 2 bytes long, positive 64
         (ItemBase.Types.speedOnGround << 2) | 0, 0x40,
         // logitem 2 int16_t, 3bytes long, positive 0x0132 (306)
@@ -377,62 +378,66 @@ if (testing) {
 
     logRoot.parseLog(bArr, 2);
     let itm = logRoot.logEntries[0].getChild(ItemBase.Types.log_coldStart);
-    test(itm.size, 1);
-    test(itm.type, ItemBase.Types.log_coldStart);
+    test.equal(itm.size, 1);
+    test.equal(itm.type, ItemBase.Types.log_coldStart);
 
-    test(logRoot.logEntries[1].itemCnt(), 10);
+    test.equal(logRoot.logEntries[1].itemCnt(), 10);
 
-    test(logRoot.logEntries.length, 2)
+    test.equal(logRoot.logEntries.length, 2)
 
     itm = logRoot.logEntries[1].getChild(ItemBase.Types.speedOnGround);
-    test(itm.value, 64);
-    test(itm.type, ItemBase.Types.speedOnGround);
-    test(itm.size, 1);
-    test(itm.endPos, 6+4)
+    test.equal(itm.value, 64);
+    test.equal(itm.type, ItemBase.Types.speedOnGround);
+    test.equal(itm.size, 1);
+    test.equal(itm.endPos, 6+4)
 
     itm = logRoot.logEntries[1].getChild(ItemBase.Types.wsSteering);
-    test(itm.value, 306);
+    test.equal(itm.value, 306);
 
     itm = logRoot.logEntries[1].getChild(ItemBase.Types.accelSteering);
-    test(itm.value, -340);
+    test.equal(itm.value, -340);
 
     itm = logRoot.logEntries[1].getChild(ItemBase.Types.test_int32_1);
-    test(itm.value, 18174981);
+    test.equal(itm.value, 18174981);
 
     itm = logRoot.logEntries[1].getChild(ItemBase.Types.test_int32_2);
-    test(itm.value, -2143084273);
+    test.equal(itm.value, -2143084273);
 
     itm = logRoot.logEntries[1].getChild(ItemBase.Types.accelZ);
-    test(itm.value, -8192);
+    test.equal(itm.value, -8192);
 
     itm = logRoot.logEntries[1].getChild(ItemBase.Types.slip0);
-    test(itm.value, 0.25);
+    test.equal(itm.value, 250);
 
     itm = logRoot.logEntries[1].getChild(ItemBase.Types.slip1);
-    test(itm.value, -2.0);
+    test.equal(itm.value, 2000);
 
     itm = logRoot.logEntries[1].getChild(ItemBase.Types.slip2);
-    test(itm.value.toPrecision(6), Math.PI.toPrecision(6));
+    test.equal(+itm.value.toPrecision(3), Math.PI.toPrecision(3)*100);
 
     itm = logRoot.logEntries[1].children[9];
-    test(itm.value, Math.pow(2, -126));
+    test.equal(itm.value, 128);
 
-    logRoot.parseLog(bArr, 51);
-    test(logRoot.logEntries.length, 7);
+    logRoot.parseLog(bArr, 43);
+    test.equal(logRoot.logEntries.length, 7);
 
-    test(logRoot.logEntries[2].itemCnt(), 1);
-    test(logRoot.logEntries[3].itemCnt(), 14);
-    test(logRoot.logEntries[4].itemCnt(), 14);
-    test(logRoot.logEntries[5].itemCnt(), 1);
-    test(logRoot.logEntries[6].itemCnt(), 13);
+    test.equal(logRoot.logEntries[2].itemCnt(), 1);
+    logRoot.logEntries[2].scanChildren();
+    test.equal(logRoot.logEntries[2].children[0].type, ItemBase.Types.log_coldStart);
+    test.equal(logRoot.logEntries[3].itemCnt(), 14);
+    test.equal(logRoot.logEntries[4].itemCnt(), 14);
+    test.equal(logRoot.logEntries[5].itemCnt(), 1);
+    logRoot.logEntries[5].scanChildren();
+    test.equal(logRoot.logEntries[5].children[0].type, ItemBase.Types.log_coldStart);
+    test.equal(logRoot.logEntries[6].itemCnt(), 13);
 
     let btArr = new Uint8Array(128*1024);
     btArr.set(logRoot.byteArray);
     logRoot.clear();
-    test(logRoot.logEntries.length, 0);
+    test.equal(logRoot.logEntries.length, 0);
 
     logRoot.parseLog(btArr, 2);
-    logRoot.parseLog(btArr, 51);
+    logRoot.parseLog(btArr, 43);
 
     // expand with more entries
     {
@@ -504,5 +509,5 @@ if (testing) {
         console.log("brake1", JSON.stringify(wheel1))
     }
 
-    console.log(`have runned ${testCnt} tests`);
+    test.finished();
 }

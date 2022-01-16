@@ -41,6 +41,48 @@
     lang = localStorage.getItem("lang");
   }
   document.documentElement.lang = lang;
-
-
 }
+
+class Testing {
+  testCnt = 0;
+  failCnt = 0;
+  name = "";
+  constructor(name) {
+    this.name = name;
+  }
+
+  equal(vlu, expect) {
+    if (vlu !== expect) {
+      try {
+        throw new Error(`fail ${vlu} !== ${expect}`);
+      } catch (e) {
+        this._onFail(e);
+      }
+    }
+    this.testCnt++;
+  }
+
+  notEqual(vlu, notexpect) {
+    if (vlu === notexpect) {
+      try {
+        throw new Error(`fail ${vlu} !== ${notexpect}`);
+      } catch (e) {
+        this._onFail(e);
+      }
+    }
+    this.testCnt++;
+  }
+
+  _onFail(err) {
+    this.failCnt++;
+    const stack = err.stack.split('\n');
+    let hashFolders = location.url.split('/');
+    const fileFolders = stack[2].split('/').slice(hashFolders.length);
+    console.warn(`${fileFolders.join('/')}   ${stack[0]}`);
+  }
+
+  finished() {
+    console.log(`Have runned ${this.testCnt} test with ${this.failCnt} failed tests\n`);
+  }
+}
+
