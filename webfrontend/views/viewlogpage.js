@@ -41,9 +41,9 @@ class ViewLogCls {
     const res = await CommunicationBase.instance().clearLogEntries();
     if (res) {
       LogRoot.instance().clear();
-      if (!await CommunicationBase.instance().sendReset())
+      /*if (!await CommunicationBase.instance().sendReset())
         notifyUser({msg: "Culd not reset device",
-                    type: notifyTypes.Warn});
+                    type: notifyTypes.Warn});*/
     }
     evt.target.disabled = false;
   }
@@ -90,6 +90,7 @@ class ViewLogCls {
   updateLogControls(origin) {
     const sel = document.querySelector("#selectSessionBtn > div");
     sel.innerHTML = this.buildSessions().join("\n");
+    router.fixEvents(this, sel);
     this.selectSession((LogRoot.instance().coldStarts.length || 1) -1);
     this.setLogOrigin(origin);
   }
