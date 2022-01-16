@@ -39,10 +39,10 @@
   itm.size = (sizeof(thing) -1) & 0x03;                 \
   itm.type = typ;                                       \
   *pos++ = (uint8_t)((uint8_t*)(&itm))[0];              \
-  *pos++ = (uint8_t)(&thing)[itm.size--];                        \
-  if (sizeof(thing) > 1) *pos++ = (uint8_t)(&thing)[itm.size--]; \
-  if (sizeof(thing) > 2) *pos++ = (uint8_t)(&thing)[itm.size--]; \
-  if (sizeof(thing) > 3) *pos++ = (uint8_t)(&thing)[itm.size--]; \
+  if (sizeof(thing) > 3) *pos++ = ((thing) & 0xff000000) >> 24; \
+  if (sizeof(thing) > 2) *pos++ = ((thing) & 0xff0000) >> 16; \
+  if (sizeof(thing) > 1) *pos++ = ((thing) & 0xff00) >> 8; \
+  *pos++ = ((thing) & 0xff);                        \
   ++log.itemCnt;                                         \
 }
 
@@ -63,6 +63,20 @@ static sysinterval_t logPeriodicityMS(void) {
     time *= 2;
   time = TIME_MS2I(10 * time);
   return time;
+}
+
+static msg_t logColdStart(ee24_arg_t *eeArg) {
+  log.itemCnt = 1u;
+  log.size = 4u;
+  itm.size = 0; itm.type = log_coldStart;
+  log.buf[0] = ((uint8_t*)&itm)[0];
+  log.buf[1] = 0x5A; // bit twiddle to easily find during debug
+
+  // update in eeprom
+  eeArg->offset = offsetNext = OFFSET_NEXT(offsetNext);
+  eeArg->buf = (uint8_t*)&log;
+  eeArg->len = log.size;
+  return ee24m01r_write(eeArg);
 }
 
 static void buildLog(void) {
@@ -134,17 +148,7 @@ THD_FUNCTION(LoggerThd, arg) {
   }
 
   // log a cold start
-  log.itemCnt = 1u;
-  log.size = 4u;
-  itm.size = 0; itm.type = log_coldStart;
-  log.buf[0] = ((uint8_t*)&itm)[0];
-  log.buf[1] = 0x5A; // bit twiddle to easily find during debug
-
-  // update in eeprom
-  eeArg.offset = offsetNext = OFFSET_NEXT(offsetNext);
-  eeArg.buf = (uint8_t*)&log;
-  eeArg.len = log.size;
-  res = ee24m01r_write(&eeArg);
+  res = logColdStart(&eeArg);
   if (res != MSG_OK) {
     chThdSleep(TIME_INFINITE);
     return;
@@ -250,6 +254,8 @@ void loggerClearAll(usbpkg_t *sndpkg) {
   }
 
   offsetNext = 0;
+  logColdStart(&arg);
+
   blockLog = false;
 
   commsSendNowWithCmd(sndpkg, msg == MSG_OK ? commsCmd_OK : commsCmd_Error);
