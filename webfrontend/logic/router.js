@@ -33,6 +33,14 @@ class Router {
     cls.html(parentNode, lang);
 
     // set up events
+    this.fixEvents(cls, parentNode);
+
+    // post render event
+    if (typeof cls.afterHook === 'function')
+      cls.afterHook(parentNode, lang);
+  }
+
+  fixEvents(cls, parentNode) {
     ["onclick", "onselect", "onchange"].forEach((evtname)=>{
       const evts = parentNode.querySelectorAll(`* [${evtname}]`);
       evts.forEach(node=>{
@@ -41,11 +49,7 @@ class Router {
           node[evtname] = function(){cb.apply(cls, arguments);}
         }
       });
-    })
-
-    // post render event
-    if (typeof cls.afterHook === 'function')
-      cls.afterHook(parentNode, lang);
+    });
   }
 }
 
