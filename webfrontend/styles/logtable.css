@@ -1,7 +1,20 @@
 /* css for the table widget in log view */
 .logTableEntries {
-  overflow:auto;
+  overflow:hidden;
   max-height:calc(80vw * 0.5625);
+}
+.logTableEntries > tbody {
+  max-height:calc(79vw * 0.5625);
+  overflow: auto;
+  display: block;
+}
+.logTableEntries > thead, .logTableEntries > tbody > tr {
+  display: table;
+  width: 100%;
+  table-layout: fixed;
+}
+.logTableEntries > thead {
+  width: calc(100% - 1em );
 }
 .logTableEntries > thead > tr > th,
 .logTableEntries > tbody > tr > td {
@@ -22,7 +35,7 @@
   display: inline-block;
   vertical-align: bottom;
 }
-.logTableEntries th, #logTableEntries td {
+.logTableEntries th, .logTableEntries td {
   border-right: 1px solid #CCCCCC;
   margin:0, inherit;
   padding: 0 inherit;
