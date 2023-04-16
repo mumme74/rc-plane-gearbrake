@@ -54,7 +54,8 @@ class SettingsHtmlCls {
       console.log("dl pushed");
       if (!document.querySelector('input[type="file"]').files.length) {
         const lang = document.documentElement.lang;
-        notifyUser({msg: this.lang[lang].nofileSelected});
+        const tr = this.translationObj[lang];
+        notifyUser({msg: tr.nofileSelected});
         return;
       }
       this._dfuUtil.download();
@@ -63,17 +64,18 @@ class SettingsHtmlCls {
     async connectPushed(event) {
       let btn = event.target;
       let lang = document.querySelector("html").lang;
+      const tr = this.translationObj[lang];
 
       // split to separate functions to be able to use as callbacks for DfuUtil
       let connectFn = () => {
         menuCloseConnection();
-        btn.innerText = this.lang[lang].disconnectButton;
+        btn.innerText = tr.disconnectButton;
         btn.classList.add("connected");
         for(const input of btn.parentNode.querySelectorAll("input"))
           input.disabled = false;
       }
       let disconnectFn = () => {
-        btn.innerText = this.lang[lang].connectButton;
+        btn.innerText = tr.connectButton;
         btn.classList.remove("connected");
         for(const input of btn.parentNode.querySelectorAll("input"))
           input.disabled = true;
@@ -130,7 +132,7 @@ class SettingsHtmlCls {
                 <li>${tr.firmwareHelpStep3}</li>
                 <li>${tr.firmwareHelpStep4}</li>
               </ol>
-              <button class="w3-margin w3-normal w3-button" style="display:block"
+              <button class="w3-margin w3-normal w3-button w3-light-blue" style="display:block"
                 onclick="this.connectPushed(event)">
                 ${tr.connectButton}
               </button>
