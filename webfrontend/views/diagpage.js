@@ -64,6 +64,10 @@ class DiagPageCls {
     this.showItemsWgt.onSelectAll.subscribe(
       this.liveDataWgt, this.liveDataWgt.shownItemsChanged.bind(this.liveDataWgt));
 
+    // create a graph
+    this.liveDataGraph = new ChartWidget([14,15,16,17],
+        document.getElementById("diagViewContainer"));
+    //this.liveDataGraph.setData(colTypes, diagObj.dataItems);
 
   }
 

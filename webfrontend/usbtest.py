@@ -59,6 +59,7 @@ class LandingBrake():
     def send(self, data, cb = lambda r: None):
         # write the data
         self.dev.reset()
+        #self.dev.clear_halt(self.oep)
         self.oep.write(bytes(data))
         res = self.iep.read(self.iep.wMaxPacketSize, 10000)
         self.bytes = 0
