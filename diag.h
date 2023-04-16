@@ -43,7 +43,7 @@ typedef struct {
           brakeForce_Out[3];// index as brake outputs
           // 27 bytes here
           // should align to 28 bits
-} DiagReadVluPkg_t;
+} DiagReadVluPkg_t __attribute__((__packed__));
 
 
 /**

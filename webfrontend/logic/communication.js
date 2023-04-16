@@ -86,7 +86,7 @@ class CommunicationBase {
     static _mutex = new Mutex();
 
     vendorId = 0x0483;
-    productId = 0;
+    productId = 0x5722;
 
 
     device = null;
@@ -162,8 +162,7 @@ class CommunicationBase {
         this.closeDevice();
 
         try {
-          this.device = await navigator.usb.requestDevice({ filters: [{ vendorId: this.vendorId}]});
-          this.productId = this.device.productId;
+          this.device = await navigator.usb.requestDevice({ filters: [{ vendorId: this.vendorId, productId:this.productId}]});
 
           // Connect to `port` or add it to the list of available ports.
           return await this._reopenPort();

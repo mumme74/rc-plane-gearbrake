@@ -54,7 +54,7 @@ void diagReadData(usbpkg_t *sndpkg) {
                      (int16_t)accel.axis[i]);
     diagPkg->brakeForce_Out[i] = values.brakeForce_out[i];
     diagPkg->wheelRPS[i]       = inputs.wheelRPS[i];
-    diagPkg->slip[i]           = values.slip[i];
+    TO_BIG_ENDIAN_16(&diagPkg->slip[i], values.slip[i]);
   }
 
   TO_BIG_ENDIAN_16(&diagPkg->acceleration, values.acceleration);

@@ -25,13 +25,13 @@ class DiagnoseItem extends ItemBase {
    * @param {*} forcedVlu
    */
   async forceValue(forcedVlu) {
-    if (!this.forced) {
+    //if (!this.forced) {
       let res = await this.parent._forceValue(this, forcedVlu);
       if (res)
         this._setForced(true);
       return res;
-    }
-    return true;
+    //}
+    //return true;
   }
 
   /**
@@ -90,6 +90,7 @@ class DiagnoseBase {
   freq = 0;
 
   _fetchTmr = null;
+  _poolInFlight = false;
 
   static instance() {
     if (!DiagnoseBase._instance)
@@ -114,6 +115,7 @@ class DiagnoseBase {
     if (this._fetchTmr) {
       clearTimeout(this._fetchTmr);
       this._fetchTmr = null;
+      this._poolInFlight = false;
     }
 
     if (freq > 0) {
@@ -123,8 +125,12 @@ class DiagnoseBase {
         return false;
 
       this._fetchTmr = setInterval(async ()=>{
+        if (this._poolInFlight)
+          return;
         if (!this._fetchTmr) return; // stopped during timeout
+        this._poolInFlight = true;
         const data = await comms.poolDiagData();
+        this._poolInFlight = false;
         if (data?.length > 3) {
             try {
               this._refreshDataArrived(data);

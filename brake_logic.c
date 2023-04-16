@@ -33,14 +33,17 @@
  * So 130km/h gives 240 revs/sec. 240/3s = 80 / sec.
  * Ie allowed to decrement by 1 every 12,5ms
  */
-#define MIN_TIME_BETWEEN_PULSE_DEC_MS 12
+#define MIN_TIME_BETWEEN_PULSE_DEC_MS TIME_MS2I(12)
 
 // un-const values
 #define VALUES ((Values_t*)&values)
 
 #define SET_OUT(ch, vlu) \
-  if ((diagSetValues & (1 << ch)) == 0) \
-    VALUES->brakeForce_out[(ch)] = (vlu);
+  if ((diagSetValues & (1 << (ch))) == 0) \
+    VALUES->brakeForce_out[(ch)] = (vlu)
+
+#define ADD_OUT(ch, vlu) \
+  SET_OUT(ch, VALUES->brakeForce_out[(ch)] + (vlu))
 
 // -----------------------------------------------------------------
 // public
@@ -51,7 +54,7 @@ volatile const Values_t values;
 static thread_t *brklogicp = 0;
 
 static systime_t sleepTime = TIME_MS2I(20),
-                 timeAtLastSpeedDecrement = 0;
+                 nextSpeedDecrTick = 0;
 static uint8_t lastspeed = 0;
 
 static int8_t leftPosBrake = -1,
@@ -76,19 +79,6 @@ static THD_FUNCTION(BrakeLogicThd, arg) {
     if (VALUES->brakeForce > settings.max_brake_force)
       VALUES->brakeForce = settings.max_brake_force;
 
-    if (VALUES->brakeForce < settings.lower_threshold) {
-      sleepTime = TIME_MS2I(20); // wait for next pulse from reciver
-      timeAtLastSpeedDecrement = 0;
-      VALUES->brakeForce_out[0] = 0;
-      VALUES->brakeForce_out[1] = 0;
-      VALUES->brakeForce_out[2] = 0;
-      continue; // next loop, no brake wanted
-    }
-
-    sleepTime = TIME_MS2I(5); // recalculate every 5ms now (200 times a sec)
-
-
-
     // calculate vehicle speed
     if (settings.WheelSensor0_pulses_per_rev > 0 ||
         settings.WheelSensor1_pulses_per_rev > 0 ||
@@ -100,25 +90,36 @@ static THD_FUNCTION(BrakeLogicThd, arg) {
       if (speed < inputs.wheelRPS[2])
         speed = inputs.wheelRPS[2];
 
-      if (speed > lastspeed) {
+      if (speed > VALUES->speedOnGround) {
         // wheels have spun up ie touch down
         VALUES->speedOnGround = speed;
-        lastspeed = speed;
-        timeAtLastSpeedDecrement = chVTGetSystemTimeX();
-      } else if (speed < lastspeed) {
+        //lastspeed = speed;
+        nextSpeedDecrTick = chVTGetSystemTimeX() + MIN_TIME_BETWEEN_PULSE_DEC_MS;
+      } else if (speed < VALUES->speedOnGround) {
         // we lost some speed
-        if ((timeAtLastSpeedDecrement + MIN_TIME_BETWEEN_PULSE_DEC_MS)
-             < chVTGetSystemTimeX())
+        if (nextSpeedDecrTick < chVTGetSystemTimeX())
         {
           // valid decrement
-          timeAtLastSpeedDecrement = chVTGetSystemTimeX();
-          if (VALUES->speedOnGround > 0)
+          nextSpeedDecrTick = chVTGetSystemTimeX() + MIN_TIME_BETWEEN_PULSE_DEC_MS;
+          //if (VALUES->speedOnGround > speed)
             // we use decrement here as we can't really depend
             // on wheel speed sensor as those might have locked up
-            --VALUES->speedOnGround;
+            VALUES->speedOnGround--;
         }
       }
     }
+
+
+    if (VALUES->brakeForce < settings.lower_threshold) {
+      sleepTime = TIME_MS2I(20); // wait for next pulse from reciver
+      nextSpeedDecrTick = 0;
+      VALUES->brakeForce_out[0] = 0;
+      VALUES->brakeForce_out[1] = 0;
+      VALUES->brakeForce_out[2] = 0;
+      continue; // next loop, no brake wanted
+    }
+
+    sleepTime = TIME_MS2I(5); // recalculate every 5ms now (200 times a sec)
 
     // the ABS logic, requires wheel speed sensors
     if (settings.ABS_active && VALUES->speedOnGround > 0) {
@@ -141,8 +142,10 @@ static THD_FUNCTION(BrakeLogicThd, arg) {
               vlu = ((vlu < 1000001) ? vlu : 0);
           }
           SET_OUT(ch, vlu / 1000);
-        } else
+        } else {
           VALUES->slip[ch] = 0;
+          SET_OUT(ch, VALUES->brakeForce);
+        }
       }
 
     } else {
@@ -161,10 +164,10 @@ static THD_FUNCTION(BrakeLogicThd, arg) {
 
       if (VALUES->accelSteering < 0) {
         if (VALUES->brakeForce_out[leftPosBrake] > (uint8_t)(-VALUES->accelSteering))
-          SET_OUT(leftPosBrake, (uint8_t)(-VALUES->accelSteering));
+          ADD_OUT(leftPosBrake, (uint8_t)(VALUES->accelSteering));
       } else if (VALUES->accelSteering > 0) {
         if (VALUES->brakeForce_out[rightPosBrake] > (uint8_t)VALUES->accelSteering)
-          SET_OUT(rightPosBrake, (uint8_t)VALUES->accelSteering);
+          ADD_OUT(rightPosBrake, (uint8_t)-VALUES->accelSteering);
       }
     }
 
@@ -182,10 +185,10 @@ static THD_FUNCTION(BrakeLogicThd, arg) {
 
       if (VALUES->wsSteering < 0) {
         if (VALUES->brakeForce_out[leftPosBrake] > (uint8_t)(-VALUES->wsSteering))
-          SET_OUT(leftPosBrake, (uint8_t)(-VALUES->wsSteering));
+          ADD_OUT(leftPosBrake, (uint8_t)VALUES->wsSteering);
       } else if (VALUES->wsSteering > 0) {
         if (VALUES->brakeForce_out[rightPosBrake] > (uint8_t)VALUES->wsSteering)
-          SET_OUT(rightPosBrake, (uint8_t)VALUES->wsSteering);
+          ADD_OUT(rightPosBrake, (uint8_t)-VALUES->wsSteering);
       }
     }
 
