@@ -10,7 +10,7 @@ endif
 
 # C specific options here (added to USE_OPT).
 ifeq ($(USE_COPT),)
-  USE_COPT = 
+  USE_COPT =
 endif
 
 # C++ specific options here (added to USE_OPT).
@@ -25,7 +25,7 @@ endif
 
 # Linker extra options here.
 ifeq ($(USE_LDOPT),)
-  USE_LDOPT = 
+  USE_LDOPT =
 endif
 
 # Enable this if you want link time optimizations (LTO).
@@ -89,7 +89,7 @@ PROJECT = gearbrake
 MCU  = cortex-m0
 
 # Imported source files and paths.
-CHIBIOS  :=  ../../chibios_stable-20.3.x
+CHIBIOS  :=  $(HOME)/ChibiStudio/chibios_stable-20.3.x
 CHIBIOS_CONTRIB := $(CHIBIOS)/community
 CONFDIR  := ./cfg
 BUILDDIR := ./build
@@ -122,7 +122,7 @@ include $(DRVDIR)/all.mk
 # Define linker script file here
 #LDSCRIPT= ./STM32F042F4.ld
 LDSCRIPT= $(STARTUPLD)/STM32F051x8.ld
-# # 
+# #
 
 # C sources that can be compiled in ARM or THUMB mode depending on the global
 # setting.
@@ -209,7 +209,7 @@ include $(RULESPATH)/rules.mk
 ##############################################################################
 all: dfu size
 size:
-	python memusage.py
-	
+	python3 memusage.py
+
 dfu:
-	python bin2dfu.py -b 0x08000000:$(BUILDDIR)/$(PROJECT).bin $(BUILDDIR)/$(PROJECT).dfu
+	python3 bin2dfu.py -b 0x08000000:$(BUILDDIR)/$(PROJECT).bin $(BUILDDIR)/$(PROJECT).dfu
