@@ -62,6 +62,8 @@ function renderSelect({key, vlu, txt, title, rdonly = false,
 }
 
 class ConfigureHtmlCls {
+  warnOverWrite = true;
+
   async setDefault() {
     console.log("defaultValues")
     try {
@@ -78,6 +80,7 @@ class ConfigureHtmlCls {
     try {
       const byteArr = await CommunicationBase.instance().getAllSettings();
       if (!byteArr) throw "Could't get settings from device";
+      this.warnOverWrite = false;
       ConfigBase.deserialize(byteArr);
       router.routeMain(); // for refresh values
     } catch(err) {
@@ -88,6 +91,13 @@ class ConfigureHtmlCls {
 
   async pushSettings() {
     console.log("save settings")
+    const t = this.translationObj[document.documentElement.lang];
+    if (this.warnOverWrite) {
+      notifyUser({msg: t.warnOverWrite, type: notifyUser.Warn});
+      this.warnOverWrite = false;
+      return;
+    }
+
     try {
       const byteArr = ConfigBase.instance().serialize();
       const res = CommunicationBase.instance().saveAllSettings(byteArr);
@@ -118,6 +128,7 @@ class ConfigureHtmlCls {
       accept: {'application/octet-stream': ['.rcconf']},
     }]});
     const file = await fileHandle.getFile();
+    this.warnOverWrite = false;
     const byteArr = new Uint8Array(await file.arrayBuffer());
     ConfigBase.deserialize(byteArr);
     router.routeMain(); // for refresh values
@@ -371,6 +382,7 @@ class ConfigureHtmlCls {
           openConfigureFromFileBtn: "Open settings from file",
           setDefaultConfigureBtn: "Set device default values",
           curSettings: "Settings:",
+          warnOverWrite: "Warning! Press again if you want to overwrite changes without fecthing from device"
       },
       sv: {
           header: "Konfigurera din device",
@@ -381,7 +393,8 @@ class ConfigureHtmlCls {
           saveConfigureToFileBtn: "Spara inställningar till fil",
           openConfigureFromFileBtn: "Öppna inställningar från fil",
           setDefaultConfigureBtn: "Sätt default värden i enheten",
-          curSettings: "Inställningar:"
+          curSettings: "Inställningar:",
+          warnOverWrite: "Varning! Tryck igen för att skriva över inställningar utan att ha hämtat från"
       },
   }
 
