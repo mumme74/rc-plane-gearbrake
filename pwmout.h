@@ -46,7 +46,7 @@ void pwmoutSetFrequency(PwmFrequency_e freq);
  */
 typedef struct {
   const uint8_t size;         // the number of frequencies
-  const uint16_t const *frequencies; // the available frequencies
+  const uint16_t *const frequencies; // the available frequencies
 } PwmFrequencies_t;
 
 extern const PwmFrequencies_t pwmoutFrequencies;

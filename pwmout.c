@@ -14,7 +14,7 @@
 // ------------------------------------------------------------
 // private stuff to this module
 
-static const uint16_t const availableFrequencies[] = {1, 10, 100, 1000, 10000};
+static uint16_t const availableFrequencies[] = {1, 10, 100, 1000, 10000};
 
 static PWMConfig pwmcfg = {
   10000,                                  /* 10kHz PWM clock frequency.     */
