@@ -264,7 +264,7 @@ volatile const Inputs_t inputs = {0};
 void inputsInit(void) { }
 
 void inputsStart(void) {
-  startTmr2();
+  //startTmr2(); // rely on settings notify here, when i2c have read e2prom
 }
 
 void inputsSettingsChanged(void) {
