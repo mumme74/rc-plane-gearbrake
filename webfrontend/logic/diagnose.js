@@ -182,7 +182,7 @@ class DiagnoseBase {
       // it is a forceable item
       itm._setForced(false);
       together.forEach(itm=>itm._setForced(false));
-      let ret = await CommunicationBase.instance().setDiagVlu(byteArr);
+      let ret = await CommunicationBase.instance().clearDiagVlu([byteArr[1]]);
       if (!ret)
         together.forEach(itm=>itm._forced(true));
       return ret;

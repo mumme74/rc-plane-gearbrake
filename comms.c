@@ -29,7 +29,7 @@ static usbpkg_t rcvpkg, sndpkg;
 static void routeCmd(void) {
   INIT_PKG(sndpkg, rcvpkg.onefrm.cmd, rcvpkg.onefrm.reqId);
 
-  switch(rcvpkg.onefrm.cmd) {
+  switch((CommsCmdType_e)rcvpkg.onefrm.cmd) {
   case commsCmd_Ping:
     commsSendNowWithCmd(&sndpkg, commsCmd_Pong);
     break;

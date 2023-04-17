@@ -55,10 +55,19 @@ static thread_t *brklogicp = 0;
 
 static systime_t sleepTime = TIME_MS2I(20),
                  nextSpeedDecrTick = 0;
-static uint8_t lastspeed = 0;
 
 static int8_t leftPosBrake = -1,
               rightPosBrake = -1;
+
+void brakeSteer(int16_t steer) {
+  if (steer < 0) {
+    if (VALUES->brakeForce_out[leftPosBrake] > (uint8_t)-steer)
+      ADD_OUT(leftPosBrake, (uint8_t)steer);
+  } else if (steer > 0) {
+    if (VALUES->brakeForce_out[rightPosBrake] > (uint8_t)steer)
+      ADD_OUT(rightPosBrake, (uint8_t)-steer);
+  }
+}
 
 static THD_WORKING_AREA(waBrakeLogicThd, 128);
 static THD_FUNCTION(BrakeLogicThd, arg) {
@@ -113,82 +122,70 @@ static THD_FUNCTION(BrakeLogicThd, arg) {
     if (VALUES->brakeForce < settings.lower_threshold) {
       sleepTime = TIME_MS2I(20); // wait for next pulse from reciver
       nextSpeedDecrTick = 0;
-      VALUES->brakeForce_out[0] = 0;
-      VALUES->brakeForce_out[1] = 0;
-      VALUES->brakeForce_out[2] = 0;
-      continue; // next loop, no brake wanted
-    }
-
-    sleepTime = TIME_MS2I(5); // recalculate every 5ms now (200 times a sec)
-
-    // the ABS logic, requires wheel speed sensors
-    if (settings.ABS_active && VALUES->speedOnGround > 0) {
-      uint32_t force = VALUES->brakeForce * 1000;
-      for (uint8_t ch = 0; ch < 3; ++ch) {
-        if (inputs.wheelRPS[ch] < VALUES->speedOnGround) {
-          // calculate wheel slip
-          // this should work correctly, tested code at https://onlinegdb.com/dr5IeCe46
-          VALUES->slip[ch] =
-              ((VALUES->speedOnGround - inputs.wheelRPS[ch]) * 1000)
-                               / VALUES->speedOnGround;
-          uint32_t vlu = force;
-          if (VALUES->slip[ch] > 200) {
-              // only regulate when above 20% slip, like a car does
-              uint32_t release = VALUES->slip[ch] - 200;
-              release *= release; // power of 2
-              release >>= 2; // divide by 4
-
-              vlu -= release < 1000001 ? release : 1000000;
-              vlu = ((vlu < 1000001) ? vlu : 0);
-          }
-          SET_OUT(ch, vlu / 1000);
-        } else {
-          VALUES->slip[ch] = 0;
-          SET_OUT(ch, VALUES->brakeForce);
-        }
-      }
-
+      SET_OUT(0, 0);
+      SET_OUT(1, 0);
+      SET_OUT(2, 0);
     } else {
-      // no ABS or no wheelspeed
-      SET_OUT(0, VALUES->brakeForce);
-      SET_OUT(1, VALUES->brakeForce);
-      SET_OUT(2, VALUES->brakeForce);
-    }
 
-    // steering brakes accelerometer
-    if (settings.accelerometer_active && VALUES->acceleration != 0 &&
-        leftPosBrake > -1 && rightPosBrake > -1)
-    {
-      int32_t vlu = VALUES->acceleration * settings.acc_steering_brake_authority;
-      VALUES->accelSteering = vlu / (64 * 100); // 14bit -> 8bit and 100%
+      sleepTime = TIME_MS2I(5); // recalculate every 5ms now (200 times a sec)
 
-      if (VALUES->accelSteering < 0) {
-        if (VALUES->brakeForce_out[leftPosBrake] > (uint8_t)(-VALUES->accelSteering))
-          ADD_OUT(leftPosBrake, (uint8_t)(VALUES->accelSteering));
-      } else if (VALUES->accelSteering > 0) {
-        if (VALUES->brakeForce_out[rightPosBrake] > (uint8_t)VALUES->accelSteering)
-          ADD_OUT(rightPosBrake, (uint8_t)-VALUES->accelSteering);
+      // the ABS logic, requires wheel speed sensors
+      if (settings.ABS_active && VALUES->speedOnGround > 0) {
+        uint32_t force = VALUES->brakeForce * 1000;
+        for (uint8_t ch = 0; ch < 3; ++ch) {
+          if (inputs.wheelRPS[ch] < VALUES->speedOnGround) {
+            // calculate wheel slip
+            // this should work correctly, tested code at https://onlinegdb.com/dr5IeCe46
+            VALUES->slip[ch] =
+                ((VALUES->speedOnGround - inputs.wheelRPS[ch]) * 1000)
+                                / VALUES->speedOnGround;
+            uint32_t vlu = force;
+            if (VALUES->slip[ch] > 200) {
+                // only regulate when above 20% slip, like a car does
+                uint32_t release = VALUES->slip[ch] - 200;
+                release *= release; // power of 2
+                release >>= 2; // divide by 4
+
+                vlu -= release < 1000001 ? release : 1000000;
+                vlu = ((vlu < 1000001) ? vlu : 0);
+            }
+            SET_OUT(ch, vlu / 1000);
+          } else {
+            VALUES->slip[ch] = 0;
+            SET_OUT(ch, VALUES->brakeForce);
+          }
+        }
+
+      } else {
+        // no ABS or no wheelspeed
+        SET_OUT(0, VALUES->brakeForce);
+        SET_OUT(1, VALUES->brakeForce);
+        SET_OUT(2, VALUES->brakeForce);
       }
-    }
 
-    // steering brakes speed sensors
-    if (settings.ws_steering_brake_authority > 0 &&
-        VALUES->speedOnGround > 0 &&
-        leftPosBrake > -1 && rightPosBrake > -1)
-    {
-      uint8_t leftSpeed = inputs.wheelRPS[leftPosBrake],
-              rightSpeed = inputs.wheelRPS[rightPosBrake];
+      // steering brakes accelerometer
+      if (settings.accelerometer_active && VALUES->acceleration != 0 &&
+          leftPosBrake > -1 && rightPosBrake > -1)
+      {
+        int32_t vlu = VALUES->acceleration * settings.acc_steering_brake_authority;
+        VALUES->accelSteering = vlu / (64 * 100); // 14bit -> 8bit and 100%
 
-      int32_t vlu = (leftSpeed - rightSpeed) *
-                       settings.ws_steering_brake_authority;
-      VALUES->wsSteering = vlu / 100; // remove 100% from authority
+        brakeSteer(values.accelSteering);
+      }
 
-      if (VALUES->wsSteering < 0) {
-        if (VALUES->brakeForce_out[leftPosBrake] > (uint8_t)(-VALUES->wsSteering))
-          ADD_OUT(leftPosBrake, (uint8_t)VALUES->wsSteering);
-      } else if (VALUES->wsSteering > 0) {
-        if (VALUES->brakeForce_out[rightPosBrake] > (uint8_t)VALUES->wsSteering)
-          ADD_OUT(rightPosBrake, (uint8_t)-VALUES->wsSteering);
+      // steering brakes speed sensors
+      if (settings.ws_steering_brake_authority > 0 &&
+          VALUES->speedOnGround > 0 &&
+          leftPosBrake > -1 && rightPosBrake > -1)
+      {
+        uint8_t leftSpeed = inputs.wheelRPS[leftPosBrake],
+                rightSpeed = inputs.wheelRPS[rightPosBrake];
+
+        int32_t vlu = (leftSpeed - rightSpeed) *
+                        settings.ws_steering_brake_authority;
+        VALUES->wsSteering = vlu / 100; // remove 100% from authority
+
+        brakeSteer(values.wsSteering);
       }
     }
 

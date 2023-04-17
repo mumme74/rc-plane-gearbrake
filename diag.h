@@ -27,7 +27,7 @@ typedef uint8_t setVluPkgType_t;
 /**
  * @brief this data package is returned to client when requesting realtime data
  */
-typedef struct {
+typedef struct __attribute__((__packed__)) {
   int16_t   slip[3]; // index as wheel sensors attached
           // 6 bytes here
   int16_t accelSteering,
@@ -43,13 +43,13 @@ typedef struct {
           brakeForce_Out[3];// index as brake outputs
           // 27 bytes here
           // should align to 28 bits
-} DiagReadVluPkg_t __attribute__((__packed__));
+} DiagReadVluPkg_t ;
 
 
 /**
  * @brief client sends this package when activating a value
  */
-typedef struct {
+typedef struct __attribute__((__packed__)){
   uint8_t size; // in bytes, sizeof this package
   setVluPkgType_t type;
   union {
@@ -71,7 +71,7 @@ typedef struct {
 } DiagSetVluPkg_t;
 
 
-typedef struct {
+typedef struct __attribute__((__packed__)) {
   setVluPkgType_t type;
 } DiagClrVluPkg_t;
 
