@@ -168,7 +168,7 @@ class LiveDataRowWgt {
 
     if (this.itm.isForceable()) {
       const edit = this.owner.editorWgts.find(e=>e.row===this);
-      if (!this.itm.forced && !edit) {
+      if (!edit) {
         // create a new editor widget for this row
         const editor = new LiveDataEditorWgt(this);
         this.owner.editorWgts.push(editor);
@@ -178,8 +178,6 @@ class LiveDataRowWgt {
         }
         editor.onAbort.subscribe(this, clear.bind(this));
         editor.onChanged.subscribe(this, clear.bind(this));
-      } else {
-        this.itm.unForceValue();
       }
 
     } else {
