@@ -49,8 +49,9 @@ class ViewLogCls {
   }
 
   async saveLog(){
+    const date = new Date().toISOString();
     const fileHandle = await window.showSaveFilePicker({
-      suggestedName: 'mylog.rclog',
+      suggestedName: `mylog-${date}.rclog`,
       types: [{
       description: 'Log file *.rclog',
       accept: {'application/octet-stream': ['.rclog']},

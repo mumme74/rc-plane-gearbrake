@@ -109,8 +109,9 @@ class ConfigureHtmlCls {
   }
 
   async saveSettingsToFile() {
+    const date = new Date().toISOString();
     const fileHandle = await window.showSaveFilePicker({
-      suggestedName: 'myconf.rcconf',
+      suggestedName: `myconf-${date}.rcconf`,
       types: [{
       description: 'Configure file *.rcconf',
       accept: {'application/octet-stream': ['.rcconf']},
