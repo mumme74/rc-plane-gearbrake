@@ -26,7 +26,7 @@ class ChartWidgetCls extends WidgetBaseCls {
   contex = null;
   showPnt = null;
 
-  constructor(shownColumns, parentNode) {
+  constructor(shownColumns, parentNode, renderXlabels = true) {
     super(shownColumns);
 
     // the header of the chart
@@ -49,6 +49,8 @@ class ChartWidgetCls extends WidgetBaseCls {
     // attach mousemove/down
     this.rootNode.addEventListener("mousemove", this._touchmove.bind(this));
     this.rootNode.addEventListener("mousedown", this._touchstart.bind(this));
+
+    this.renderXlabels = renderXlabels;
   }
 
   /**
@@ -57,9 +59,17 @@ class ChartWidgetCls extends WidgetBaseCls {
    * @param logEntries array with each row of log entries
    */
   setData(colData, data) {
-    this.rootNode.width =
-      Math.max(canvasMinWidth, data.length * stepFactor + vertBarWidth);
+    this.setWidth(data.length * stepFactor + vertBarWidth);
     super.setData(colData, data);
+  }
+
+  /**
+   * Set the width of canvas element
+   * @param {number} width the new width
+   */
+  setWidth(width) {
+    this.rootNode.width =
+      Math.max(canvasMinWidth, width);
   }
 
   render() {
@@ -69,6 +79,7 @@ class ChartWidgetCls extends WidgetBaseCls {
     this._renderHorizontalBar();
     this._renderVerticalBar();
     if (!this.data.length) return;
+    const pnt = this.showPnt;
 
     // render each axis
     for(const col of this.colData) {
@@ -77,6 +88,11 @@ class ChartWidgetCls extends WidgetBaseCls {
         if (!child) continue;
         this._renderAxel(this.data[0].children.indexOf(child), col);
       }
+    }
+
+    if (pnt) {
+      this.showPnt = null;
+      this._showPoint(pnt.pnt, pnt.logItm);
     }
 
     //console.timeEnd("render")
@@ -140,7 +156,7 @@ class ChartWidgetCls extends WidgetBaseCls {
       const x = vertBarWidth + i * stepFactor;
       this.contex.moveTo(x, origoAt.y-2);
       this.contex.lineTo(x, origoAt.y+4);
-      if (i && (i % 10 == 0)) {
+      if (this.renderXlabels && (i && (i % 10 == 0))) {
         this.contex.fillText(i, x, origoAt.y + 6);
       }
     }
@@ -179,8 +195,9 @@ class ChartWidgetCls extends WidgetBaseCls {
         this.contex.beginPath();
         this.contex.moveTo(vertBarWidth -6, y);
         this.contex.lineTo(vertBarWidth, y);
-		const vlu = Math.round(i);
-		const txt = vlu != 0 ? vlu : vlu + " " + LogItem.unitFor(this.selectedType);
+		    const vlu = Math.round(i);
+		    const txt = vlu != 0 ?
+          vlu : vlu + " " + LogItem.unitFor(this.selectedType);
         this.contex.fillText(txt, 0, y);
         this.contex.stroke();
 
@@ -192,7 +209,7 @@ class ChartWidgetCls extends WidgetBaseCls {
       }
   }
 
-  _selectAType(selectType) {
+  selectAType(selectType) {
     const reRender = this.selectedType !== selectType;
     this.selectedType = selectType;
 
@@ -265,7 +282,7 @@ class ChartWidgetCls extends WidgetBaseCls {
 
   _touchstart(evt) {
     const logItm = this._mapPointToLogItem({evtX: evt.clientX, evtY: evt.clientY});
-    this._selectAType(logItm ? logItm.type : -1);
+    this.selectAType(logItm ? logItm.type : -1);
   }
 
   _mapPointToLogItem(pnt) {

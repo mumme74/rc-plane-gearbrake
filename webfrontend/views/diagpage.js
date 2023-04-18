@@ -4,6 +4,7 @@
 
 class DiagPageCls {
   showDiagItems = [];
+  chartWgt = null;
 
   translationObj = {
     en: {
@@ -14,6 +15,7 @@ class DiagPageCls {
       chooseAll: "Select all",
       start: "Start",
       stop: "Stop",
+      setVluExplain: "Double click on row to set a value",
     },
     sv: {
       header: "Diagnos sida",
@@ -23,6 +25,7 @@ class DiagPageCls {
       chooseAll: "Välj alla",
       start: "Start",
       stop: "Stop",
+      setVluExplain: "Dubbelklicka på raden för att sätta ett värde"
     }
   }
 
@@ -30,7 +33,7 @@ class DiagPageCls {
     this.showDiagItems = JSON.parse(localStorage.getItem("showDiagItems") || "[]");
     window.addEventListener("beforeunload", (evt)=>{
       localStorage.setItem("showDiagItems", JSON.stringify(this.showDiagItems));
-    })
+    });
   }
 
   async startStop(evt) {
@@ -64,11 +67,23 @@ class DiagPageCls {
     this.showItemsWgt.onSelectAll.subscribe(
       this.liveDataWgt, this.liveDataWgt.shownItemsChanged.bind(this.liveDataWgt));
 
-    // create a graph
-    this.liveDataGraph = new ChartWidget([14,15,16,17],
-        document.getElementById("diagViewContainer"));
-    //this.liveDataGraph.setData(colTypes, diagObj.dataItems);
-
+    // create a graph and have it updated each diagrefresh
+    this.liveDataGraph = new ChartWidget(
+      this.showDiagItems,
+      document.getElementById("chartContainer"),
+      false);
+    this.liveDataGraph.setData(colTypes, diagObj.logPoints);
+    this.liveDataGraph.setWidth(500);
+    // show type in graph when click on row
+    this.liveDataWgt.onSelectType.subscribe(
+      this.liveDataGraph,
+      this.liveDataGraph.selectAType.bind(this.liveDataGraph)
+    );
+    // re-render graph when new data arrives
+    diagObj.onRefresh.subscribe(
+      this.liveDataGraph,
+      this.liveDataGraph.render.bind(this.liveDataGraph)
+    );
   }
 
   html(parentNode, lang) {
@@ -88,8 +103,13 @@ class DiagPageCls {
               <div class="w3-dropdown-hover" id="showDiagItm">
                 <button class="w3-button">${tr.showDiagItem}</button>
               </div>
+              <span class="w3-small">${tr.setVluExplain}</span>
             </div>
-            <div class="w3-row" id="diagViewContainer"></div>
+            <div class="w3-border" id="diagViewContainer"
+                 style="display:flex; flex-direction:row-reverse;">
+              <div id="chartContainer"
+                 style="min-width:53%"></div>
+            </div>
             <p class="w3-text-grey">${tr.p1}</p>
           </div>
          </div>

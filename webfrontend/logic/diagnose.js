@@ -70,6 +70,16 @@ class DiagnoseItem extends ItemBase {
   }
 }
 
+// used to store diagdata in a log, to be used by chart wgt
+class DiagDataAtTime {
+  constructor(data) {
+    this.children = data;
+  }
+  getChild(type) {
+    return this.children.find(c=>c.type===type);
+  }
+}
+
 // handles diagnose stuff
 class DiagnoseBase {
   static DiagnoseBaseVersions = [];
@@ -85,7 +95,7 @@ class DiagnoseBase {
   }
 
   dataItems = [];
-  onRefresh = [];
+  onRefresh = null;
 
   freq = 0;
 
@@ -100,8 +110,10 @@ class DiagnoseBase {
     return DiagnoseBase._instance;
   }
 
-  constructor() {
+  constructor(logsize = 30) {
     this.onRefresh = new EventDispatcher(this);
+    this.logsize = logsize;
+    this.logPoints = [];
   }
 
   /**
@@ -223,6 +235,14 @@ class DiagnoseBase {
     // when reached here we have a itm that is and should be enforcable
     return {byteArr, together};
   }
+
+  _refreshDataArrived(data) {
+    if (this.logPoints.length > this.logsize)
+      this.logPoints.splice(0, this.logPoints.length - this.logsize);
+    const itms = this.dataItems.map(itm=>new ItemBase({
+      type:itm.type, value: itm.value, size: itm.size}));
+    this.logPoints.push(new DiagDataAtTime(itms));
+  }
 }
 
 // communication protocol v1 implemented here
@@ -271,6 +291,7 @@ class Diagnose_v1 extends DiagnoseBase {
   _refreshDataArrived(data) {
     let pos = 0;
     this.dataItems.forEach(itm=>pos+=itm.restore(data, pos));
+    super._refreshDataArrived(data);
   }
 }
 DiagnoseBase.DiagnoseBaseVersions.push(Diagnose_v1);

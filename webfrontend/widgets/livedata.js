@@ -110,11 +110,13 @@ class LiveDataRowWgt {
 
     // notify on dblclick
     this.onDblClicked = new EventDispatcher(this, this.rootNode);
+
     this.rootNode.addEventListener("dblclick", this._DblClicked.bind(this));
+    this.rootNode.addEventListener("click", this._clicked.bind(this));
 
     // create but hide row if not shown, easier to update values
-    if (owner.shownColumns.indexOf(itm.type) < 0)
-      this.rootNode.classList.add("hidden");
+    //if (owner.shownColumns.indexOf(itm.type) < 0)
+    //  this.rootNode.classList.add("hidden");
 
     this._createTd(itm.translatedType()); // name
     const title = this.itm.isForceable() ? trObj[document.documentElement.lang].dblClickEdit : "";
@@ -124,7 +126,7 @@ class LiveDataRowWgt {
     // and finally the checkbox
     const chkbox = document.createElement("input");
     chkbox.type = "checkbox";
-    chkbox.checked = owner.selected.indexOf(itm.type) > -1;
+    chkbox.checked = owner.shownColumns.indexOf(itm.type) > -1;
     chkbox.addEventListener("change", (evt)=>{
       this.owner._selectClicked(evt, this.itm);
     });
@@ -187,24 +189,35 @@ class LiveDataRowWgt {
       }, 1000);
     }
   }
+
+  _clicked(evt) {
+    if (evt.target.tagName !== 'INPUT' &&
+        this.owner.shownColumns.indexOf(this.itm.type) > -1)
+    {
+      this.owner.onSelectType.emit(this.itm.type);
+    }
+  }
 }
 
 class LiveDataWidgetCls extends WidgetBaseCls {
-  selected = [];
   rows = [];
   editorWgts = [];
 
   onSelected = null;
+  onSelectType = null;
 
-  constructor({shownColumns, parentNode, translationObj = trObj})
+  constructor({
+    shownColumns, parentNode,
+    translationObj = trObj,})
   {
     super(shownColumns);
     this.rootNode = document.createElement("table");
-    this.rootNode.className = "liveData w3-table w3-bordered w3-border w3-responsive";
+    this.rootNode.className = "liveData w3-table w3-bordered w3-responsive";
     parentNode.appendChild(this.rootNode);
     this.translationObj = translationObj;
     this.setParentNode(parentNode);
     this.onSelected = new EventDispatcher(this, this.rootNode);
+    this.onSelectType = new EventDispatcher(this, this.rootNode);
   }
 
   render() {
@@ -249,11 +262,11 @@ class LiveDataWidgetCls extends WidgetBaseCls {
   }
 
   _selectClicked(event, itm) {
-    const idx = this.selected.indexOf(itm.type);
+    const idx = this.shownColumns.indexOf(itm.type);
     if (idx > -1 && !event.target.checked)
-      this.selected.splice(idx, 1);
+      this.shownColumns.splice(idx, 1);
     else if (idx < 0 && event.target.checked)
-      this.selected.push(itm.type);
+      this.shownColumns.push(itm.type);
 
     // notify subscribers
     this.onSelected.emit(itm);
