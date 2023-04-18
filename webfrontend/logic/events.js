@@ -34,7 +34,7 @@ class EventDispatcher {
    * @brief all classes that want to use events should create 1
    *        instance of this class for each event they use
    * @param {*} owner the owner class
-   * @param {*} monitorNode monitors DOM node, colses event when node is deleted
+   * @param {*} monitorNode monitors DOM node, closes event when node is deleted
    */
   constructor(owner, monitorNode = null) {
     this.owner = owner;

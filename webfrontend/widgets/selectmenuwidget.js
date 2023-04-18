@@ -23,8 +23,8 @@ class SelectMenuWgtCls {
                       document.getElementById("logViewContainer"));
 
       this.activeDisplayWgt = this.chartWgt =
-                    new ChartWidget(showLogItems,
-                                    document.getElementById("chartContainer"));
+                      new ChartWidget(showLogItems,
+                        document.getElementById("chartContainer"));
 
       // subscribe to changes and insert
       for (const wgt of [this.tblWgt, this.chartWgt].values()){
