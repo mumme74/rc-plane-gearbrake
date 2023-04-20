@@ -22,7 +22,7 @@
  * v-u / t -> initial value - final value divided by time taken
  *
  * so 130km/h - 0km/h / 5sec = 26km/h per sec.
- *    36m/s - 0m/s / 3s = 12m/s per sec.
+ *    36m/s - 0m/s / 5s = 7m/s per sec.
  *
  * lets assume a wheel with 0.05m diameter (5cm)
  * it travels about 15cm per revolution.
@@ -30,10 +30,10 @@
  * At 200km/h it should have a freq. of 36m/0.15m *20pulses = 4,8kHz
  * input driver takes care of 20 pulses so this logic only sees
  * complete revolutions (based of the last 5 pulses)
- * So 130km/h gives 240 revs/sec. 240/3s = 80 / sec.
- * Ie allowed to decrement by 1 every 12,5ms
+ * So 130km/h gives 240 revs/sec. 240/5s = 48 / sec.
+ * Ie allowed to decrement by 1 every 20.8ms
  */
-#define MIN_TIME_BETWEEN_PULSE_DEC_MS TIME_MS2I(12)
+#define MIN_TIME_BETWEEN_PULSE_DEC_MS TIME_MS2I(21)
 
 // un-const values
 #define VALUES ((Values_t*)&values)
@@ -53,8 +53,8 @@ volatile const Values_t values;
 // private stuff to this module
 static thread_t *brklogicp = 0;
 
-static systime_t sleepTime = TIME_MS2I(20),
-                 nextSpeedDecrTick = 0;
+static systime_t sleepTime = 20;
+static uint8_t nextSpeedDecrTick = 0;
 
 static int8_t leftPosBrake = -1,
               rightPosBrake = -1;
@@ -74,7 +74,7 @@ static THD_FUNCTION(BrakeLogicThd, arg) {
   (void)arg;
 
   while (true) {
-    chThdSleep(sleepTime);
+    chThdSleep(TIME_MS2I(sleepTime));
 
     // do accelerometer
     VALUES->acceleration =
@@ -102,32 +102,31 @@ static THD_FUNCTION(BrakeLogicThd, arg) {
       if (speed > VALUES->speedOnGround) {
         // wheels have spun up ie touch down
         VALUES->speedOnGround = speed;
-        //lastspeed = speed;
-        nextSpeedDecrTick = chVTGetSystemTimeX() + MIN_TIME_BETWEEN_PULSE_DEC_MS;
+        nextSpeedDecrTick = 4;
       } else if (speed < VALUES->speedOnGround) {
         // we lost some speed
-        if (nextSpeedDecrTick < chVTGetSystemTimeX())
+        //if (nextSpeedDecrTick < (uint16_t)chVTGetSystemTimeX())
+        if ((--nextSpeedDecrTick) == 0)
         {
-          // valid decrement
-          nextSpeedDecrTick = chVTGetSystemTimeX() + MIN_TIME_BETWEEN_PULSE_DEC_MS;
-          //if (VALUES->speedOnGround > speed)
-            // we use decrement here as we can't really depend
-            // on wheel speed sensor as those might have locked up
-            VALUES->speedOnGround--;
+          // wait for 4 loops (4 * 5ms), each loop is 5 ms long when brakes activated
+          nextSpeedDecrTick = 4;
+          // we use decrement here as we can't really depend
+          // on wheel speed sensor as those might have locked up
+          VALUES->speedOnGround--;
         }
       }
     }
 
 
     if (VALUES->brakeForce < settings.lower_threshold) {
-      sleepTime = TIME_MS2I(20); // wait for next pulse from reciver
+      sleepTime = 20; // wait for next pulse from reciver
       nextSpeedDecrTick = 0;
       SET_OUT(0, 0);
       SET_OUT(1, 0);
       SET_OUT(2, 0);
     } else {
 
-      sleepTime = TIME_MS2I(5); // recalculate every 5ms now (200 times a sec)
+      sleepTime = 5; // recalculate every 5ms now (200 times a sec)
 
       // the ABS logic, requires wheel speed sensors
       if (settings.ABS_active && VALUES->speedOnGround > 0) {
