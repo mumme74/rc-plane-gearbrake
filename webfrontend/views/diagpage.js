@@ -31,8 +31,11 @@ class DiagPageCls {
 
   constructor() {
     this.showDiagItems = JSON.parse(localStorage.getItem("showDiagItems") || "[]");
+    this.graphDiagItems = JSON.parse(localStorage.getItem("graphDiagItems") || "[]");
+
     window.addEventListener("beforeunload", (evt)=>{
       localStorage.setItem("showDiagItems", JSON.stringify(this.showDiagItems));
+      localStorage.setItem("graphDiagItems", JSON.stringify(this.graphDiagItems));
     });
   }
 
@@ -57,6 +60,7 @@ class DiagPageCls {
     // create liveData
     this.liveDataWgt = new LiveDataWidget({
       shownColumns: this.showDiagItems,
+      graphColumns: this.graphDiagItems,
       parentNode: document.getElementById("diagViewContainer")
     });
     this.liveDataWgt.setData(colTypes, diagObj.dataItems);
@@ -69,7 +73,7 @@ class DiagPageCls {
 
     // create a graph and have it updated each diagrefresh
     this.liveDataGraph = new ChartWidget(
-      this.showDiagItems,
+      this.graphDiagItems,
       document.getElementById("chartContainer"),
       false);
     this.liveDataGraph.setData(colTypes, diagObj.logPoints);

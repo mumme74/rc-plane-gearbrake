@@ -115,8 +115,8 @@ class LiveDataRowWgt {
     this.rootNode.addEventListener("click", this._clicked.bind(this));
 
     // create but hide row if not shown, easier to update values
-    //if (owner.shownColumns.indexOf(itm.type) < 0)
-    //  this.rootNode.classList.add("hidden");
+    if (owner.shownColumns.indexOf(itm.type) < 0)
+      this.rootNode.classList.add("hidden");
 
     this._createTd(itm.translatedType()); // name
     const title = this.itm.isForceable() ? trObj[document.documentElement.lang].dblClickEdit : "";
@@ -126,7 +126,7 @@ class LiveDataRowWgt {
     // and finally the checkbox
     const chkbox = document.createElement("input");
     chkbox.type = "checkbox";
-    chkbox.checked = owner.shownColumns.indexOf(itm.type) > -1;
+    chkbox.checked = owner.graphColumns.indexOf(itm.type) > -1;
     chkbox.addEventListener("change", (evt)=>{
       this.owner._selectClicked(evt, this.itm);
     });
@@ -202,15 +202,17 @@ class LiveDataRowWgt {
 class LiveDataWidgetCls extends WidgetBaseCls {
   rows = [];
   editorWgts = [];
+  graphColumns = [];
 
   onSelected = null;
   onSelectType = null;
 
   constructor({
-    shownColumns, parentNode,
+    shownColumns, graphColumns, parentNode,
     translationObj = trObj,})
   {
     super(shownColumns);
+    this.graphColumns = graphColumns;
     this.rootNode = document.createElement("table");
     this.rootNode.className = "liveData w3-table w3-bordered w3-responsive";
     parentNode.appendChild(this.rootNode);
@@ -262,11 +264,11 @@ class LiveDataWidgetCls extends WidgetBaseCls {
   }
 
   _selectClicked(event, itm) {
-    const idx = this.shownColumns.indexOf(itm.type);
+    const idx = this.graphColumns.indexOf(itm.type);
     if (idx > -1 && !event.target.checked)
-      this.shownColumns.splice(idx, 1);
+      this.graphColumns.splice(idx, 1);
     else if (idx < 0 && event.target.checked)
-      this.shownColumns.push(itm.type);
+      this.graphColumns.push(itm.type);
 
     // notify subscribers
     this.onSelected.emit(itm);
