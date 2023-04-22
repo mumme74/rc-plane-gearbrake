@@ -14,7 +14,7 @@ function notifyUser({msg, type = notifyTypes.Info, time = 3000}) {
     case notifyTypes.Warn:
         classes += "w3-amber"; break;
     case notifyTypes.Error:
-        classes += "errorw3-deep-orange"; break;
+        classes += "w3-deep-orange"; break;
     case notifyTypes.Info: // fallthrough
     default:
         classes += "w3-light-blue"; break;
