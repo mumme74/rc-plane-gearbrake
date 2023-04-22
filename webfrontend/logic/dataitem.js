@@ -252,9 +252,9 @@
 
     /**
      * @brief saves value to bytearray
-     * @param byteArray = save to this buffer
-     * @param startPos = at this pos
-     * @returns number of bytes saved
+     * @param {Array.<number>} byteArray Save into this buffer
+     * @param {number} startPos Start at this pos in buffer
+     * @returns {number} number of bytes saved
      */
     save(byteArray, startPos) {
         // serialize Big Endian
