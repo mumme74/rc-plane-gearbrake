@@ -17,6 +17,7 @@
 #include <hal.h>
 #include <hal_usb.h>
 #include "usbcfg.h"
+#include "diag.h"
 
 /*
  * Endpoints to be used for USBD1.
@@ -371,6 +372,12 @@ static void usb_event(USBDriver *usbp, usbevent_t event) {
     chSysUnlockFromISR();
     return;
   case USB_EVENT_STALLED:
+    chSysLockFromISR();
+
+    /* Disconnection event on suspend.*/
+    diagClearAllForced();
+
+    chSysUnlockFromISR();
     return;
   }
   return;

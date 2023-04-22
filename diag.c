@@ -157,3 +157,7 @@ void diagClearVlu(usbpkg_t *sndpkg, usbpkg_t *rcvpkg) {
 
   commsSendNowWithCmd(sndpkg, cmd);
 }
+
+void diagClearAllForced(void) {
+  DIAG_SET_VALUES = 0;
+}

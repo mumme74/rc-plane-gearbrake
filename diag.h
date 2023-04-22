@@ -96,4 +96,6 @@ void diagSetVlu(usbpkg_t *sndpkg, usbpkg_t *rcvpkg);
 
 void diagClearVlu(usbpkg_t *sndpkg, usbpkg_t *rcvpkg);
 
+void diagClearAllForced(void);
+
 #endif /* DIAG_H_ */
