@@ -17,27 +17,24 @@
 
 // this file contains logic to see real time data and steer output data
 
-volatile const uint8_t diagSetValues = 0;
+volatile const uint16_t diagSetValues = 0;
+
 
 #define VALUES ((Values_t*)&values)
 #define INPUTS ((Inputs_t*)&inputs)
 #define ACCEL ((Accel_t*)&accel)
 
+#define DIAG_SET_VALUES (*(uint16_t*)&diagSetValues)
+
 
 // --------------------------------------------------------------
 // private stuff to this module
 
-
-
-
 // ---------------------------------------------------------------
 // public stuff to this module
 
-
-
-
 void diagInit(void) {
-  *(uint8_t*)&diagSetValues = 0;
+  DIAG_SET_VALUES = 0;
 }
 
 void diagStart(void) { }
@@ -75,44 +72,48 @@ void diagReadData(usbpkg_t *sndpkg) {
 void diagSetVlu(usbpkg_t *sndpkg, usbpkg_t *rcvpkg) {
   CommsCmdType_e cmd = commsCmd_Error;
 
-  if (rcvpkg->onefrm.len >= 6) {
+  if (rcvpkg->onefrm.len >= 7) {
     DiagSetVluPkg_t *setPkg = (DiagSetVluPkg_t*)rcvpkg->onefrm.data;
 
-    switch((_setVluPkgType_e)setPkg->type) {
-    case diag_Set_Output0:
-    case diag_Set_Output1:
-    case diag_Set_Output2: // fallthrough
-      if (setPkg->size == 3) {
-        (*(uint8_t*)&diagSetValues) |= setPkg->type;
-        // setPkg->type is 1 << 0, 1 << 1 or 1 << 2
-        // 0100 >> 1 = 0010, 0010 = 0001 and 0001 = 000
-        VALUES->brakeForce_out[setPkg->type >> 1] = setPkg->outputs.outVlu;
-        cmd = commsCmd_OK;
+    if (setPkg->size >= 4 || setPkg->size <= 5) {
+      cmd = commsCmd_OK;
+      // we must set this before forcing a value, we might get preempted
+      DIAG_SET_VALUES |= setPkg->type;
+
+      switch((_setVluPkgType_e)setPkg->type) {
+      case diag_Set_Output0:
+        VALUES->brakeForce_out[0] = setPkg->outputs.outVlu; break;
+      case diag_Set_Output1:
+        VALUES->brakeForce_out[1] = setPkg->outputs.outVlu; break;
+      case diag_Set_Output2:
+        VALUES->brakeForce_out[2] = setPkg->outputs.outVlu; break;
+      case diag_Set_InputRcv:
+        INPUTS->brakeForce = setPkg->inputs.brakeForce; break;
+      case diag_Set_InputWhl0:
+        INPUTS->wheelRPS[0] = setPkg->inputs.wheelRPSVlu; break;
+      case diag_Set_InputWhl1:
+        INPUTS->wheelRPS[1] = setPkg->inputs.wheelRPSVlu; break;
+      case diag_Set_InputWhl2:
+        INPUTS->wheelRPS[2] = setPkg->inputs.wheelRPSVlu; break;
+      case diag_Set_InputAcc0:
+        if (setPkg->size != 5) cmd = commsCmd_Error;
+        else ACCEL->axis[0] = setPkg->accel.accelVlu;
+        break;
+      case diag_Set_InputAcc1:
+        if (setPkg->size != 5) cmd = commsCmd_Error;
+        else ACCEL->axis[1] = setPkg->accel.accelVlu;
+        break;
+      case diag_Set_InputAcc2:
+        if (setPkg->size != 5) cmd = commsCmd_Error;
+        else ACCEL->axis[2] = setPkg->accel.accelVlu;
+        break;
+      default:
+        cmd = commsCmd_Error;
       }
-      break;
-    case diag_Set_InputsWsRcv:
-      if (setPkg->size == 6) {
-        inputsStop();
-        (*(uint8_t*)&diagSetValues) |= setPkg->type;
-        INPUTS->brakeForce = setPkg->inputs.brakeForce;
-        INPUTS->wheelRPS[0] = setPkg->inputs.wheelRPS[0];
-        INPUTS->wheelRPS[1] = setPkg->inputs.wheelRPS[1];
-        INPUTS->wheelRPS[2] = setPkg->inputs.wheelRPS[2];
-        cmd = commsCmd_OK;
-      }
-      break;
-    case diag_Set_InputsAccel:
-      if (setPkg->size == 8) {
-        (*(uint8_t*)&diagSetValues) |= setPkg->type;
-        ACCEL->axis[0] = setPkg->accel.accel[0];
-        ACCEL->axis[1] = setPkg->accel.accel[1];
-        ACCEL->axis[2] = setPkg->accel.accel[2];
-        cmd = commsCmd_OK;
-      }
-      break;
-    default:
-      cmd = commsCmd_Error;
     }
+
+    if (cmd != commsCmd_OK) // failed, reset blocking state
+      DIAG_SET_VALUES &= ~setPkg->type;
   }
 
   commsSendNowWithCmd(sndpkg, cmd);
@@ -122,32 +123,36 @@ void diagClearVlu(usbpkg_t *sndpkg, usbpkg_t *rcvpkg) {
   CommsCmdType_e cmd = commsCmd_Error;
   DiagClrVluPkg_t *clrpkg = (DiagClrVluPkg_t*)rcvpkg->onefrm.data;
 
-  if (rcvpkg->onefrm.len == 4) {
+  if (rcvpkg->onefrm.len == 5) {
+    cmd = commsCmd_OK;
+
     switch ((_setVluPkgType_e)clrpkg->type) {
     case diag_Set_Output0:
+      VALUES->brakeForce_out[0] = 0; break;
     case diag_Set_Output1:
-    case diag_Set_Output2: // fallthrough
-      cmd = commsCmd_OK;
-      (*(uint8_t*)&diagSetValues) &= ~clrpkg->type;
-        // setPkg->type is 1 << 0, 1 << 1 or 1 << 2
-        // 0100 >> 1 = 0010, 0010 = 0001 and 0001 = 000
-      VALUES->brakeForce_out[clrpkg->type >> 1] = 0;
-      break;
-    case diag_Set_InputsWsRcv:
-      cmd = commsCmd_OK;
-      (*(uint8_t*)&diagSetValues) &= ~clrpkg->type;
-      INPUTS->brakeForce = INPUTS->wheelRPS[0] =
-          INPUTS->wheelRPS[1] = INPUTS->wheelRPS[2] = 0;
-      inputsStart();
-      break;
-    case diag_Set_InputsAccel:
-      cmd = commsCmd_OK;
-      (*(uint8_t*)&diagSetValues) &= ~clrpkg->type;
-      ACCEL->axis[0] = ACCEL->axis[1] = ACCEL->axis[2] = 0;
-      break;
+      VALUES->brakeForce_out[1] = 0; break;
+    case diag_Set_Output2:
+      VALUES->brakeForce_out[2] = 0; break;
+    case diag_Set_InputRcv:
+      INPUTS->brakeForce = 0; break;
+    case diag_Set_InputWhl0:
+      INPUTS->wheelRPS[0] = 0; break;
+    case diag_Set_InputWhl1:
+      INPUTS->wheelRPS[1] = 0; break;
+    case diag_Set_InputWhl2:
+      INPUTS->wheelRPS[2] = 0; break;
+    case diag_Set_InputAcc0:
+      ACCEL->axis[0] = 0; break;
+    case diag_Set_InputAcc1:
+      ACCEL->axis[1] = 0; break;
+    case diag_Set_InputAcc2:
+      ACCEL->axis[2] = 0; break;
     default:
       cmd = commsCmd_Error;
     }
+
+    if (cmd == commsCmd_OK)
+      DIAG_SET_VALUES &= ~clrpkg->type;
   }
 
   commsSendNowWithCmd(sndpkg, cmd);

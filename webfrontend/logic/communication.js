@@ -263,7 +263,7 @@ class CommunicationBase {
     /**
      * @brief talkSafe wraps talk() with a try catch
      * @param {*} param0
-     * @returns
+     * @returns {boolean} True on success
      */
     async talkSafe({cmd, expectedResponseCmd = null, byteArr = null, includeHeader}) {
         includeHeader = includeHeader || expectedResponseCmd !== null;
@@ -274,6 +274,7 @@ class CommunicationBase {
             return res;
         } catch(err) {
             console.log(err);
+            return false;
         }
     }
 

@@ -37,6 +37,10 @@ class DiagPageCls {
       localStorage.setItem("showDiagItems", JSON.stringify(this.showDiagItems));
       localStorage.setItem("graphDiagItems", JSON.stringify(this.graphDiagItems));
     });
+
+    CommunicationBase.instance().onDisconnect.subscribe(this, async ()=>{
+      DiagnoseBase.instance().setFetchRefreshFreq(0);
+    });
   }
 
   async startStop(evt) {
@@ -112,7 +116,7 @@ class DiagPageCls {
             <div class="w3-border" id="diagViewContainer"
                  style="display:flex; flex-direction:row-reverse;">
               <div id="chartContainer"
-                 style="min-width:53%"></div>
+                 style="min-width:55%"></div>
             </div>
             <p class="w3-text-grey">${tr.p1}</p>
           </div>

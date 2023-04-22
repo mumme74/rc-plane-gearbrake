@@ -22,21 +22,20 @@ class DiagnoseItem extends ItemBase {
 
   /**
    * @brief force a value onto this device
-   * @param {*} forcedVlu
+   * @param {number} forcedVlu
+   * @returns {boolean} True on success
    */
   async forceValue(forcedVlu) {
-    //if (!this.forced) {
-      let res = await this.parent._forceValue(this, forcedVlu);
-      if (res)
-        this._setForced(true);
-      return res;
-    //}
-    //return true;
+    let res = await this.parent._forceValue(this, forcedVlu);
+    if (res)
+      this._setForced(true);
+    return res;
   }
 
   /**
    * @brief release this forced value
    *        (and potential other in the same group)
+   * @returns {boolean} True on success
    */
   async unForceValue() {
     if (this.forced) {
@@ -51,9 +50,11 @@ class DiagnoseItem extends ItemBase {
   /**
    * @brief Checks if This item is forcable,
    *        not every item is able to be set set in device
+   * @returns {boolean} True if it is forceable
    */
   isForceable() {
-    return this.parent._forceItemBuildArr(this).byteArr.length > 1;
+    return this.parent._forceableTypes
+            .find(itm=>itm.itmType === this.type) !== undefined;
   }
 
   _setForced(forced) {
@@ -62,11 +63,25 @@ class DiagnoseItem extends ItemBase {
     this.onForcedChanged.emit(this)
   }
 
+  /**
+   * Set value of this item
+   * @param {number} newValue
+   */
   setValue(newValue) {
     if (newValue !== this.value) {
       this.value = newValue;
       this.onUpdated.emit(this);
     }
+  }
+
+  /**
+   * Returns the diagvalue type for this item, or 0
+   * @returns {number} the SetVluDiagType for this item
+   */
+  getSetDiagValueType() {
+    let o = this.parent._forceableTypes
+              .find(itm=>itm.itmType===this.type);
+    return o ? o.diagType : 0;
   }
 }
 
@@ -90,8 +105,13 @@ class DiagnoseBase {
     Output0:     1 << 0,
     Output1:     1 << 1,
     Output2:     1 << 2,
-    InputsWsRcv: 1 << 3,
-    InputsAccel: 1 << 4
+    InputRcv:    1 << 3,
+    InputWhl0:   1 << 4,
+    InputWhl1:   1 << 5,
+    InputWhl2:   1 << 6,
+    InputAcc0:   1 << 7,
+    InputAcc1:   1 << 8,
+    InputAcc2:   1 << 9,
   }
 
   dataItems = [];
@@ -173,67 +193,41 @@ class DiagnoseBase {
     });
   }
 
-  async _forceValue(itm, forcedVlu) {
-    let {byteArr, together} = this._forceItemBuildArr(itm);
-    if (byteArr.length > 1) {
-      // it is a forceable item
-      itm._setForced(true);
-      itm.value = forcedVlu;
-      together.forEach(itm=>itm._setForced(true));
-      let ret = await CommunicationBase.instance().setDiagVlu(byteArr);
-      if (!ret)
-        together.forEach(itm=>itm._setForced(false));
-      return ret;
+  _buildSetDiagPkg(itm) {
+    const byteArr = [3 + itm.size]; // bytes in this pkg
+    const diagType = itm.getSetDiagValueType();
+    if (diagType < 1) return [];
+
+    byteArr[1] = (diagType & 0x00FF) >> 0;
+    byteArr[2] = (diagType & 0xFF00) >> 8;
+    for (let i = 0; i < itm.size; ++i) {
+      byteArr.push(
+        (itm.value & (0xff << (i * 8))) >> (i * 8)
+      );
     }
-    return false;
+    itm.save(byteArr, byteArr.length);
+    return byteArr;
+  }
+
+  async _forceValue(itm, forcedVlu) {
+    if (!itm.isForceable()) return false;
+    itm.value = forcedVlu;
+
+    const byteArr = this._buildSetDiagPkg(itm);
+    if (byteArr.length < 4) return false;
+
+    // is a forceable item
+    itm._setForced(true);
+    return await CommunicationBase.instance().setDiagVlu(byteArr);
   }
 
   async _unForceVlu(itm) {
-    let {byteArr, together} = this._forceItemBuildArr(itm);
-    if (byteArr.length > 1) {
-      // it is a forceable item
-      itm._setForced(false);
-      together.forEach(itm=>itm._setForced(false));
-      let ret = await CommunicationBase.instance().clearDiagVlu([byteArr[1]]);
-      if (!ret)
-        together.forEach(itm=>itm._forced(true));
-      return ret;
-    }
-    return false;
-  }
-
-  _forceItemBuildArr(itm) {
-    let byteArr = [], together = [];
-    if (this._forceTogether.inputs.indexOf(itm.type) > -1) {
-      byteArr[0] = 6; // bytes
-      byteArr[1] = DiagnoseBase.SetVluPkgTypes.InputsWsRcv;
-      together = this._forceTogether.inputItms;
-      together.forEach(itm=>itm.save(byteArr, byteArr.length));
-
-    } else if (this._forceTogether.accel.indexOf(itm.type) > -1) {
-      byteArr[0] = 8; // bytes
-      byteArr[1] = DiagnoseBase.SetVluPkgTypes.InputsAccel;
-      together = this._forceTogether.accelItms;
-      together.forEach(itm=>itm.save(byteArr, byteArr.length));
-
-    } else {
-      byteArr[0] = 3; // bytes
-      switch (itm.type) {
-      case ItemBase.Types.brakeForce0_out:
-        byteArr[1] = DiagnoseBase.SetVluPkgTypes.Output0; break;
-      case ItemBase.Types.brakeForce1_out:
-        byteArr[1] = DiagnoseBase.SetVluPkgTypes.Output1; break;
-      case ItemBase.Types.brakeForce2_out:
-        byteArr[1] = DiagnoseBase.SetVluPkgTypes.Output2; break;
-      default:
-        return {byteArr, together}; // itm is not forceable
-      }
-
-      itm.save(byteArr, byteArr.length);
-    }
-
-    // when reached here we have a itm that is and should be enforcable
-    return {byteArr, together};
+    if (!itm.isForceable()) return false;
+    const byteArr = this._buildSetDiagPkg(itm);
+    if (byteArr.length < 4) return false;
+    itm._setForced(false);
+    const sndPkg = byteArr.slice(1, 3);
+    return await CommunicationBase.instance().clearDiagVlu(sndPkg);
   }
 
   _refreshDataArrived(data) {
@@ -272,20 +266,28 @@ class Diagnose_v1 extends DiagnoseBase {
       new DiagnoseItem({parent:this, type:t.brakeForce2_out}),
     ];
 
-    this._forceTogether = {
-      inputs: [
-        ItemBase.Types.wantedBrakeForce, ItemBase.Types.wheelRPS_0,
-        ItemBase.Types.wheelRPS_1,       ItemBase.Types.wheelRPS_2,
-      ],
-      accel: [
-        ItemBase.Types.accelX, ItemBase.Types.accelY, ItemBase.Types.accelZ
-      ]
-    };
-
-    this._forceTogether.inputItms =
-      this._forceTogether.inputs.map(tp=>this.getItem(tp));
-    this._forceTogether.accelItms =
-      this._forceTogether.accel.map(tp=>this.getItem(tp));
+    this._forceableTypes = [
+      { itmType: ItemBase.Types.brakeForce0_out,
+        diagType: DiagnoseBase.SetVluPkgTypes.Output0 },
+      { itmType: ItemBase.Types.brakeForce1_out,
+        diagType: DiagnoseBase.SetVluPkgTypes.Output1 },
+      { itmType: ItemBase.Types.brakeForce2_out,
+        diagType: DiagnoseBase.SetVluPkgTypes.Output2 },
+      { itmType: ItemBase.Types.wantedBrakeForce,
+        diagType: DiagnoseBase.SetVluPkgTypes.InputRcv },
+      { itmType: ItemBase.Types.wheelRPS_0,
+        diagType: DiagnoseBase.SetVluPkgTypes.InputWhl0 },
+      { itmType: ItemBase.Types.wheelRPS_1,
+        diagType: DiagnoseBase.SetVluPkgTypes.InputWhl1 },
+      { itmType: ItemBase.Types.wheelRPS_2,
+        diagType: DiagnoseBase.SetVluPkgTypes.InputWhl2 },
+      { itmType: ItemBase.Types.accelX,
+        diagType: DiagnoseBase.SetVluPkgTypes.InputAcc0 },
+      { itmType: ItemBase.Types.accelY,
+        diagType: DiagnoseBase.SetVluPkgTypes.InputAcc1 },
+      { itmType: ItemBase.Types.accelZ,
+        diagType: DiagnoseBase.SetVluPkgTypes.InputAcc2 }
+    ];
   }
 
   _refreshDataArrived(data) {

@@ -75,15 +75,21 @@ class LiveDataEditorWgt {
     let res = await this.row.itm.forceValue(this.row.itm.value);
     if (res)
       this.onChanged.emit(newValue);
-    else
-      await this.abort();
+    else {
+      this._restoreNodes();
+      notifyUser({msg:"Failed to force diag value", type: notifyTypes.Error})
+    }
   }
 
   async abort() {
     this.row.itm.setValue(this.origVlu);
-    await this.row.itm.unForceValue();
-    this._restoreNodes();
-    this.onAbort.emit();
+    const res = await this.row.itm.unForceValue();
+    if (res) {
+      this._restoreNodes();
+      this.onAbort.emit();
+    } else {
+      notifyUser({msg:"Failed to abort diag forced value", type: notifyTypes.Error})
+    }
   }
 
   _restoreNodes() {
@@ -244,9 +250,11 @@ class LiveDataWidgetCls extends WidgetBaseCls {
     thead.appendChild(tr);
 
     // create columns
+    const minWidth = ["13rem", "4.5rem", "6rem", "4rem"];
     for (let str of [t.name, t.value, t.select]) {
       let th = document.createElement("th");
       th.innerText = str;
+      th.style.minWidth = minWidth.shift();
       tr.appendChild(th);
     }
   }

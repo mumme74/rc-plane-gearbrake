@@ -8,6 +8,7 @@
 
 #include "inputs.h"
 #include "settings.h"
+#include "diag.h"
 #include <hal.h>
 #include <ch.h>
 #include <stm32f042x6.h>
@@ -19,8 +20,12 @@
 
 #define TIM2_SPEED  100000U
 
+volatile const Inputs_t inputs = {0};
+
 // ---------------------------------------------------------------
 // private stuff for this module
+
+volatile Inputs_t* INPUTS = (Inputs_t*)&inputs;
 
 // we can't use chibios ICU here as that only supports capture from a
 // single channel at a time, we role our own driver here
@@ -48,13 +53,14 @@ OSAL_IRQ_HANDLER(STM32_TIM2_HANDLER) {
     // negative flank
     uint32_t diff = STM32_TIM2->CCR[0] - _receiverPulseStart;
     if (diff < 100)
-      *(uint8_t*)(&inputs.brakeForce) = 0;
+      INPUTS->brakeForce = 0;
     else if (diff > 200)
-      *(uint8_t*)(&inputs.brakeForce) = 100;
+      INPUTS->brakeForce = 100;
     else
       // 100 = 1ms pulse = 0,
       // 200 = 2ms pulse = vlu 100
-      *(uint8_t*)(&inputs.brakeForce) = (uint8_t)(diff - 100);
+      if ((diagSetValues & diag_Set_InputRcv) == 0)
+        INPUTS->brakeForce = (uint8_t)(diff - 100);
 
     // trigger on positive flank next time
     STM32_TIM2->CCER &= ~STM32_TIM_CCER_CC1P;
@@ -80,14 +86,14 @@ static void dma_complete_callback(uint32_t *arr, uint32_t flags) {
     if (vlu > 0)
       vlu = TIM2_SPEED / vlu;
 
-    if (arr == _ch2data)
-      *(uint8_t*)(&inputs.wheelRPS[0]) =
+    if (arr == _ch2data && (diagSetValues & diag_Set_InputWhl0) == 0)
+      INPUTS->wheelRPS[0] =
           (uint8_t)(vlu / settings.WheelSensor0_pulses_per_rev);
-    else if (arr == _ch3data)
-      *(uint8_t*)(&inputs.wheelRPS[1]) =
+    else if (arr == _ch3data && (diagSetValues & diag_Set_InputWhl1) == 0)
+      INPUTS->wheelRPS[1] =
           (uint8_t)(vlu / settings.WheelSensor1_pulses_per_rev);
-    else if (arr == _ch4data)
-      *(uint8_t*)(&inputs.wheelRPS[2]) =
+    else if (arr == _ch4data && (diagSetValues & diag_Set_InputWhl2) == 0)
+      INPUTS->wheelRPS[2] =
           (uint8_t)(vlu / settings.WheelSensor2_pulses_per_rev);
   }
 }
@@ -259,7 +265,6 @@ static void startTmr2(void) {
 
 // public stuff
 
-volatile const Inputs_t inputs = {0};
 
 void inputsInit(void) { }
 
