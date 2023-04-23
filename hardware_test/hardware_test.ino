@@ -1,7 +1,39 @@
+/**
+ * @file hardware_test.ino
+ * @author Fredrik Johansson (mumme74@github.com)
+ * @brief Code to Run in a Ardino Mega 2560
+ * @version 0.1
+ * @date 2023-04-23
+ *
+ * Uses a patched Servo and Tone lib, changed to not
+ * Interfere with each others hardware timers
+ */
+
+/**
+ * Wire as such:
+ * Arduino                        RC-gearbrake
+ * +----------+                   +-----------+
+ * |         9|-------------------|out2-      |
+ * |         8|-------------------|out1-      |
+ * |         7|-------------------|out0-      |
+ * |         6|--R1k-------*------|wh_sp2_in  |
+ * |         5|--R1k----*--|------|wh_sp1_in  |
+ * |         4|--R1k-*--|--|------|wh_sp0_in  |
+ * |         3|------|--|--|------|rcv_sig    |
+ * |        5V|------|--|--|------|+bat       |
+ * |       GND|--*---|--|--|------|-bat       |
+ * +----------+  |   |  |  |      +-----------+
+ *               *-R2k  |  |
+ *               *-----R2k |
+ *               *--------R2k
+ *
+ * R1k = 1000 ohm resistor
+ * R2k = 2000 ohm resistor
+ * Both complete a 5V->3.3V voltage divider
+ */
+
 #include "MyTone.h"
 #include "MyServo.h"
-
-// build for a arduino mega 2560
 
 const char help[] = "begin\n"
 " Send electrical pulses to rc-gearbrake\n"
@@ -20,9 +52,9 @@ const char help[] = "begin\n"
 "          vlu can be: 1-30\n";
 
 
-const int PWM_OUT0_PIN = 0,
-          PWM_OUT1_PIN = 1,
-          PWM_OUT2_PIN = 2,
+const int PWM_OUT0_PIN = 9,
+          PWM_OUT1_PIN = 8,
+          PWM_OUT2_PIN = 7,
           RCV_PIN = 3,
           WHEEL0_PIN = 4,
           WHEEL1_PIN = 5,
