@@ -16,7 +16,7 @@
 #include "diag.h"
 
 
-volatile const Accel_t accel;
+volatile const Accel_t accel = {0};
 
 //----------------------------------------------------------------
 // private stuff for this module
