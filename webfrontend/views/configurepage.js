@@ -437,16 +437,20 @@ class ConfigureHtmlCls {
         <div class="w3-twothird">
           <h1>${tr.header}</h1>
 
-          <button class="w3-button w3-blue w3-padding-large w3-large w3-margin-top" onclick="this.fetchSettings();">
+          <button class="w3-button w3-blue w3-padding-large w3-large w3-margin-top"
+                  onclick="this.fetchSettings();">
             ${tr.fetchConfigureBtn}
           </button>
-          <button class="w3-button w3-blue w3-padding-large w3-large w3-margin-top" onclick="this.pushSettings()">
+          <button class="w3-button w3-blue w3-padding-large w3-large w3-margin-top"
+                  onclick="this.pushSettings()">
             ${tr.pushConfigureBtn}
           </button>
-          <button class="w3-button w3-gray w3-padding-large w3-large w3-margin-top" onclick="this.openSettingsFromFile()">
+          <button class="w3-button w3-gray w3-padding-large w3-large w3-margin-top"
+                  onclick="this.openSettingsFromFile()">
             ${tr.openConfigureFromFileBtn}
           </button>
-          <button class="w3-button w3-gray w3-padding-large w3-large w3-margin-top" onclick="this.saveSettingsToFile()">
+          <button class="w3-button w3-gray w3-padding-large w3-large w3-margin-top"
+                  onclick="this.saveSettingsToFile()">
             ${tr.saveConfigureToFileBtn}
           </button>
           <h5 class="w3-padding-8">${tr.curSettings}</h5>
@@ -464,6 +468,11 @@ class ConfigureHtmlCls {
         </div>
       </div>
     </div>`;
+  }
+
+  afterHook(parentNode, lang) {
+    if (CommunicationBase.instance().isOpen())
+      this.fetchSettings();
   }
 };
 
