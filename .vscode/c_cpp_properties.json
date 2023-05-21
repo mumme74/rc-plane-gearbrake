@@ -1,0 +1,38 @@
+{
+    "configurations": [
+        {
+            "name": "Linux",
+            "includePath": [
+                "${workspaceFolder}/**"
+            ],
+            "defines": [],
+            "compilerPath": "/usr/bin/gcc",
+            "cStandard": "c17",
+            "cppStandard": "gnu++17",
+            "intelliSenseMode": "linux-gcc-x64"
+        },
+        {
+            "name": "stm32f042",
+            "includePath": [
+                "${workspaceFolder}/**",
+                "/usr/lib/gcc/arm-none-eabi/10.3.1/include/**",
+                "../../ChibiStudio/chibios_stable-20.3.x/os/nil/**",
+                "../../ChibiStudio/chibios_stable-20.3.x/os/hal/**",
+                "../../ChibiStudio/chibios_stable-20.3.x/os/common/**",
+                "../../ChibiStudio/chibios_stable-20.3.x/os/license/**",
+                "../../ChibiStudio/chibios_stable-20.3.x/os/oslib/**"
+            ],
+            "defines": [
+                "HAL_USB_SERIAL=1"
+            ],
+            "compilerPath": "/usr/bin/arm-none-eabi-gcc",
+            "cStandard": "c17",
+            "cppStandard": "gnu++17",
+            "intelliSenseMode": "${default}",
+            "compilerArgs": [
+                "-mcpu=cortex-m0 -mthumb -O2 -ggdb -fomit-frame-pointer -falign-functions=16 -ffunction-sections -fdata-sections -fno-common -flto  -Wall -Wextra -Wundef -Wstrict-prototypes -Wa,-alms=build/lst/chsem.lst -DCORTEX_USE_FPU=FALSE  -MD -MP -MF "
+            ]
+        }
+    ],
+    "version": 4
+}

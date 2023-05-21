@@ -1,0 +1,7 @@
+{
+  "C_Cpp.intelliSenseEngine": "Tag Parser",
+  "files.associations": {
+    "hal_usb_cdc.h": "c",
+    "hal_serial_usb.h": "c"
+  }
+}

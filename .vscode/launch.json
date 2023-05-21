@@ -1,0 +1,54 @@
+{
+  // Use IntelliSense to learn about possible attributes.
+  // Hover to view descriptions of existing attributes.
+  // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "GDB remote",
+      "type": "cppdbg",
+      "request": "launch",
+      "program": "${workspaceRoot}/build/gearbrake.elf",
+      "args": [],
+      "environment": [],
+      "cwd": "${workspaceRoot}",
+
+      "debugServerArgs": "-f ${workspaceRoot}/openocd-jlink-swd.cfg -c init -c \"reset init\"",
+      "serverLaunchTimeout": 5000,
+      "targetArchitecture": "",
+      "filterStderr": true,
+      "filterStdout": false,
+      "serverStarted": "target halted due to debug-request, current mode: Thread",
+      "stopAtEntry": true,
+      "launchCompleteCommand": "None",
+      //"valuesFormatting": "parseText",
+
+      "setupCommands": [
+        { "text": "-environment-cd ${workspaceRoot}/" },
+        { "text": "-target-select remote localhost:3333", "description": "connect to target", "ignoreFailures": false },
+        { "text": "-file-exec-and-symbols build/gearbrake.elf", "description": "load file", "ignoreFailures": false},
+        { "text": "-interpreter-exec console \"monitor endian little\"", "ignoreFailures": false },
+        { "text": "-interpreter-exec console \"monitor reset\"", "ignoreFailures": false },
+        { "text": "-interpreter-exec console \"monitor halt\"", "ignoreFailures": false },
+        { "text": "-interpreter-exec console \"monitor arm semihosting enable\"", "ignoreFailures": false },
+        { "text": "-target-download", "description": "flash target", "ignoreFailures": false }
+      ],
+      "debugServerPath": "openocd",
+      "MIMode": "gdb",
+      "miDebuggerPath": "/usr/bin/gdb-multiarch",
+      "miDebuggerArgs": "--symbols=${workspaceRoot}/build/gearbrake.elf",
+      /*"postRemoteConnectCommands": [{
+        "description": "load new firmware",
+        "text":"mon flash write_image usbdevice_test.bin 0x08000000",
+        "ignoreFailures": false
+    }],*/
+      "logging": {
+        "moduleLoad": true,
+        "trace": true,
+        "engineLogging": true,
+        "programOutput": true,
+        "exceptions": true
+    },
+    }
+  ]
+}
