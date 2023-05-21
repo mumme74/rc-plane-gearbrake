@@ -1,0 +1,5 @@
+{
+  "setupFilesAfterEnv": ["./jest_extensions.js"],
+  "verbose": true,
+  "rootDir": "./tests"
+}
