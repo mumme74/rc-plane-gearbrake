@@ -30,7 +30,7 @@
 #define SETTINGS_LOG_1280MS         6U
 #define SETTINGS_LOG_2560MS         7U
 
-typedef struct {
+typedef struct __attribute__((__packed__)) {
     // which version of memory storage in EEPROM
     // version should be bumped on each ABI breaking change
     uint16_t storageVersion;
@@ -38,7 +38,7 @@ typedef struct {
     uint16_t size;
   } Settings_header_t;
 
-typedef struct {
+typedef struct __attribute__((__packed__)) {
   // which version of memory storage in EEPROM
   Settings_header_t header;
 

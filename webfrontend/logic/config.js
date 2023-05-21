@@ -111,7 +111,7 @@ class ConfigBase {
 class Config_v1 extends ConfigBase {
   header = {
     storageVersion: 0x01,
-    size: 16 - 4
+    size: 15 - 4
   }
 
   // common

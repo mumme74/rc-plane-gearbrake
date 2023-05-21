@@ -104,15 +104,15 @@ typedef enum {
 } CommsCmdType_e;
 
 // out as in USB host out, ie in to this device
-typedef union {
+typedef union __attribute__((__packed__)) {
   uint8_t u8buf[wMaxPacketSize];
-  struct {
+  struct __attribute__((__packed__)) {
     uint8_t len; // length of data in this specific package
     uint8_t cmd;
     uint8_t reqId;
     uint8_t data[wMaxPacketSize -3];
   } onefrm;
-  struct {
+  struct __attribute__((__packed__)) {
     // all types must be uint8_t to align properly without struct padding
     uint8_t len; // length of data in this specific package
     uint8_t cmd; // if cmd & 0x80 then its a part of many frames
@@ -121,7 +121,7 @@ typedef union {
     uint8_t totalSize[4]; // size in bytes data which this multiframe sends
     uint8_t logNextAddress[4]; // the next address to store a log in EEPROM
   } headerfrm;
-  struct {
+  struct __attribute__((__packed__)) {
     uint8_t len; // length of data in this specific package
     uint8_t cmd; // if cmd & 0x80 then its a part of many frames
     uint8_t reqId;
