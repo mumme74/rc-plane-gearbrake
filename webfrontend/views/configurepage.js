@@ -471,7 +471,7 @@ class ConfigureHtmlCls {
   }
 
   afterHook(parentNode, lang) {
-    if (CommunicationBase.instance().isOpen())
+    if (this.warnOverWrite && CommunicationBase.instance().isOpen())
       this.fetchSettings();
   }
 };
