@@ -1,9 +1,8 @@
 const SerialPort = require("serialport").SerialPort;
 
 let port = null;
-const rcvBuf = [];
 
-function parse() {
+function parse(data) {
   console.log("Recieved from Stimulator");
 }
 
@@ -22,8 +21,7 @@ module.exports = {
     console.log(`Connecting stimulator to: ${path}`);
     port = new SerialPort({path, baudRate:115200});
     port.on('data', (data)=>{
-      rcvBuf.push(...data);
-      parse();
+      parse(data);
     });
     port.on('error', (err)=>{
       console.error('Stimulator error', err);
@@ -31,6 +29,12 @@ module.exports = {
         port.close();
     });
     return true;
+  },
+
+  close: async ()=>{
+    if (port?.isOpen)
+      await port.close();
+    port = null;
   },
 
   isConnected: ()=>{

@@ -1,16 +1,18 @@
 const SerialPort = require("serialport").SerialPort;
 
 let port, recieveCb;
-const rcvBuf = [];
 
-function parse() {
-  console.log("Recieved from RC-gearbrake", rcvBuf);
+function parse(data) {
+  //console.log("Recieved from RC-gearbrake", data);
   if (recieveCb)
-    recieveCb(rcvBuf);
+    recieveCb(data);
 }
 
 module.exports = {
   connect: async (talkLayer, path) =>{
+    if (port)
+      return;
+
     if (!path) {
       path = ((await SerialPort.list())
         .find(p=>p.manufacturer?.toLowerCase()
@@ -22,18 +24,33 @@ module.exports = {
     }
 
     console.log(`Connecting RC-gearbrake to: ${path}`);
-    port = new SerialPort({path, baudRate:115200});
+    let resolve, reject;
+    const res = new Promise((res, rej)=>{
+      resolve = res;
+      reject = rej;
+    });
+    port = new SerialPort({path, baudRate:115200}, (err)=>{
+      if (!err)
+        recieveCb = talkLayer.initComms(port);
+      else
+        console.error(`Error opening port ${path}`, err);
+      resolve(!err);
+    });
     port.on('data', (data)=>{
-      rcvBuf.push(...data);
-      parse();
+      parse(data);
     });
     port.on('error', (err)=>{
       console.error('RC-Gearbrake error', err);
       if (port.isOpen)
         port.close();
     });
-    recieveCb = talkLayer.initComms(port)
-    return true;
+    return res;
+  },
+
+  close: async ()=>{
+    if (port?.isOpen)
+      await port.close();
+    port = null;
   },
 
   isOpen: ()=>{

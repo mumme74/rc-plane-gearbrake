@@ -1,11 +1,13 @@
 // diag packages for RC-gearbrake
 
 function asInt8(vlu) {
-  return ((~vlu & 0xFF) + 1) * -1;
+  if (vlu & 0x08) vlu = ((~vlu & 0xFF) + 1) * -1;
+  return vlu;
 }
 
 function asInt16(vlu) {
-  return ((~vlu & 0xFFFF) + 1) * -1;
+  if (vlu & 0x8000) vlu = ((~vlu & 0xFFFF) + 1) * -1;
+  return vlu
 }
 
 function fromBigEnd16(buf) {
@@ -119,16 +121,18 @@ function onRecieve(data) {
   const pkg = usbpkg_t.parse(data);
   if (pkg === false) return;
 
+  const idx = promises.findIndex(p=>p.reqId===pkg.reqId);
+  const prom = promises.splice(idx, 1)[0];
+  if (!prom)
+    return;
 
-  const done = (data, isOk)=>{
-    const o = promises.find(p=>p.reqId===pkg.reqId);
-    if (o) {
-      clearTimeout(o.tmr);
-      o[isOk ? 'resolve': 'reject'](data);
-    }
-  }
-  const resolve = (data) =>done(data, true),
-        reject = (data) =>done(data, false);
+  clearTimeout(prom.tmr);
+
+  const resolve = (data) =>prom.resolve(data),
+        reject = (data) =>prom.reject(data);
+
+  if (prom.returnRaw)
+    return resolve(pkg);
 
   switch (pkg.cmd) {
   case CommsCmdType_e.commsCmd_OK:
@@ -147,7 +151,7 @@ function onRecieve(data) {
     console.error('Should not get command DiagClearVlu as response');
     return reject(pkg);
   case CommsCmdType_e.commsCmd_DiagReadAll:
-    return resolve(new DiagReadVluPkg_t(pkg.onefrm().data));
+    return resolve(DiagReadVluPkg_t.parse(pkg.onefrm().data));
   case CommsCmdType_e.commsCmd_DiagSetVlu:
     console.error('Should not get command DiagSetVlu as response');
     return reject(pkg);
@@ -176,16 +180,16 @@ module.exports.onRecieve = onRecieve;
 
 let reqId = 0;
 const promises = [];
-function sendBuf(buf, cmd) {
+function sendBuf(buf, cmd, returnRaw = false) {
   const tmr = setTimeout(()=>{
     const cmds = Object.keys(CommsCmdType_e);
     console.log("Timeout, no response from gearbrake, CMD:", cmd,
       cmds[Object.values(CommsCmdType_e).indexOf(cmd)]);
-    process.exit(1);
+    //process.exit(1);
   }, 2000);
   return new Promise((resolve, reject)=>{
     const pkg = usbpkg_t.parse([3+buf.length, cmd, reqId, ...buf]);
-    promises.push({reqId, resolve, reject, tmr});
+    promises.push({reqId, resolve, reject, tmr, returnRaw});
     if (++reqId > 255)
       reqId = 0;
     if (port && port.isOpen)
@@ -277,32 +281,46 @@ typedef union {
 
 
 class DiagReadVluPkg_t {
-  constructor(cmsPkg) {
-    const data = this.data = cmdPkg.onefrm().data;
-    this.slip = [
+  slip = [0, 0, 0];
+  accelSteering = 0;
+  wsSteering = 0;
+  acceleration = 0;
+  accelAxis = [0, 0, 1];
+  speedOnGround = 0;
+  brakeForceIn = 0;
+  brakeForceCalc = 0;
+  wheelRPS = [0, 0, 0];
+  brakeForce_Out = 0;
+
+  static parse(data) {
+    const pkg = new DiagReadVluPkg_t();
+    pkg.slip = [
       asInt16(fromBigEnd16(data.slice(0,1))),
       asInt16(fromBigEnd16(data.slice(2,3))),
       asInt16(fromBigEnd16(data.slice(4,5))),
     ];
-    this.accelSteering = asInt16(fromBigEnd16(data.slice(6,7)));
-    this.wsSteering = asInt16(fromBigEnd16(data.slice(8,9)));
-    this.acceleration = asInt16(fromBigEnd16(data.slice(10,11)));
-    this.accelAxis = [
+    pkg.accelSteering = asInt16(fromBigEnd16(data.slice(6,7)));
+    pkg.wsSteering = asInt16(fromBigEnd16(data.slice(8,9)));
+    pkg.acceleration = asInt16(fromBigEnd16(data.slice(10,11)));
+    pkg.accelAxis = [
       asInt16(fromBigEnd16(data.slice(12,13))),
       asInt16(fromBigEnd16(data.slice(14,15))),
       asInt16(fromBigEnd16(data.slice(16,17))),
     ];
-    this.speedOnGround = data[18];
-    this.brakeForceIn = data[19];
-    this.brakeForceCalc = data[20];
-    this.wheelRPS = [
+    pkg.speedOnGround = data[18];
+    pkg.brakeForceIn = data[19];
+    pkg.brakeForceCalc = data[20];
+    pkg.wheelRPS = [
       data[21], data[22], data[23]
     ];
-    this.brakeForce_Out = [
+    pkg.brakeForce_Out = [
       data[24], data[25], data[26]
     ];
+
+    return pkg;
   }
-};
+}
+module.exports.DiagReadVluPkg_t = DiagReadVluPkg_t;
 
 /**
  * @brief this data package is returned to client when requesting realtime data
@@ -350,12 +368,17 @@ class DiagSetVluPkg_t {
   size = -1;
   type = setVluPkgType_e.diag_Set_Invalid;
   data = [];
-  setBrakeForce(wheel, vlu) {
+  setBrakeForceIn(vlu) {
     this.data[0] = vlu;
-    this.type = setVluPkgType_e.diag_Set_InputWhl0 + wheel;
+    this.type = setVluPkgType_e.diag_Set_InputRcv;
     this.size = 4;
   }
-  setWheelRPSVLu(wheel, vlu) {
+  setWheelBrakeForce(wheel, vlu) {
+    this.data[0] = vlu;
+    this.type = setVluPkgType_e.diag_Set_Output0 + wheel;
+    this.size = 4;
+  }
+  setWheelRPSVlu(wheel, vlu) {
     this.data[0] = vlu;
     this.type = setVluPkgType_e.diag_Set_InputWhl0 + wheel;
     this.size = 4;
@@ -374,7 +397,7 @@ class DiagSetVluPkg_t {
     return [
       this.size,
       this.type,
-      ...this.value
+      ...this.data
     ]
   }
 }
@@ -457,8 +480,20 @@ const settingDefines = {
 module.exports.settingDefines = settingDefines;
 
 class Settings_header_t {
-  storageVersion = 0x01;
-  size = -1;
+  storageVersion = 0x0001;
+  size = 0x000B;
+  serialize() {
+    return [
+      ...toBigEnd16(this.storageVersion),
+      ...toBigEnd16(this.size)
+    ];
+  }
+  static parse(data) {
+    const header = new Settings_header_t();
+    header.storageVersion = fromBigEnd16(data.slice(0,2));
+    header.size = fromBigEnd16(data.slice(2,4));
+    return header;
+  }
 }
 
 /*
@@ -476,20 +511,20 @@ class Settings_t {
   lower_threshold = 0;
   upper_threshold = 100;
   max_brake_force = 100;
-  ws_steering_brake_authority = 20;
-  acc_steering_brake_authority = 25;
+  ws_steering_brake_authority = 25;
+  acc_steering_brake_authority = 20;
   // begin first bit field
   reverse_input = 0;
   ABS_active = 0;
-  PwmFreq = PwmFrequency_e.freq1kHz;
+  PwmFreq = PwmFrequency_e.off;
   Brake0_active = 1;
   Brake1_active = 1;
   Brake2_active = 0;
 
   // begin second bitfield
-  Brake0_dir = 1; // left
-  Brake1_dir = 0; // center
-  Brake2_dir = 2; // right
+  Brake0_dir = 0;
+  Brake1_dir = 0;
+  Brake2_dir = 0;
   accelerometer_axis = 0; // x ha steering authorities
 
   // begin third bitfield
@@ -505,8 +540,7 @@ class Settings_t {
 
   static parse(data) {
     const pkg = new Settings_t();
-    pkg.header.storageVersion = fromBigEnd16(data.slice(0,2));
-    pkg.header.size = fromBigEnd16(data.slice(2,4));
+    pkg.header = Settings_header_t.parse(data.slice(0,4));
     pkg.lower_threshold = data[4];
     pkg.upper_threshold = data[5];
     pkg.max_brake_force = data[6];
@@ -538,8 +572,10 @@ class Settings_t {
 
   serialize() {
     const buf = [
-      this.lower_threshold, this.upper_threshold,
-      this.max_brake_force, this.ws_steering_brake_authority,
+      this.lower_threshold,
+      this.upper_threshold,
+      this.max_brake_force,
+      this.ws_steering_brake_authority,
       this.acc_steering_brake_authority,
       // first bitfield
       this._firstBitfield(),
@@ -553,28 +589,31 @@ class Settings_t {
     buf.unshift(...this.header.serialize());
     return buf;
   }
-  _firstBitfield(){
-    return
-      (this.reverse_input & 0x01) |
-      (this.ABS_active & 0x01) << 1 |
-      (this.PwmFreq & 0x07) << 2 |
-      (this.Brake0_active & 0x01) << 5 |
-      (this.Brake1_active & 0x01) << 6 |
-      (this.Brake2_active & 0x01) << 7;
+  _firstBitfield() {
+    return (
+       (this.reverse_input & 0x01) |
+      ((this.ABS_active & 0x01) << 1) |
+      ((this.PwmFreq & 0x07) << 2) |
+      ((this.Brake0_active & 0x01) << 5) |
+      ((this.Brake1_active & 0x01) << 6) |
+      ((this.Brake2_active & 0x01) << 7)
+    );
   }
   _secondBitfield() {
-    return
+    return (
       (this.Brake0_dir & 0x03) |
-      (this.Brake1_dir & 0x03) << 2 |
-      (this.Brake2_dir & 0x03) << 2 |
-      (this.accelerometer_axis & 0x03) << 2;
+      ((this.Brake1_dir & 0x03) << 2) |
+      ((this.Brake2_dir & 0x03) << 4) |
+      ((this.accelerometer_axis & 0x03) << 6)
+    );
   }
   _thirdBitfield() {
-    return
+    return (
       (this.accelerometer_active & 0x01) |
-      (this.accelerometer_axis_invert & 0x01) << 1 |
-      (this.dontLogWhenStill & 0x01) << 2 |
-      (this.logPeriodicity & 0x07) << 3;
+      ((this.accelerometer_axis_invert & 0x01) << 1) |
+      ((this.dontLogWhenStill & 0x01) << 2) |
+      ((this.logPeriodicity & 0x07) << 3)
+    );
   }
 }
 module.exports.Settings_t = Settings_t;
