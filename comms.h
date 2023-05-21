@@ -70,12 +70,12 @@
   TO_BIG_ENDIAN_32(&(pkg).u8buf[(pkg).onefrm.len], u32vlu); \
   (pkg).onefrm.len += 4
 
-#define commsSendNow(pkg) \
-   usbStartTransmitI(&USBD1, 1, (pkg)->u8buf, (pkg)->onefrm.len)
+/* #define commsSendNow(pkg) \
+  usbStartTransmitI(&USBD1, 1, (pkg)->u8buf, (pkg)->onefrm.len)*/
 
 #define commsSendNowWithCmd(pkg, Cmd) \
   (pkg)->onefrm.cmd = Cmd; \
-  commsSendNow(pkg)
+  usbWaitTransmit(pkg) //commsSendNow(pkg)
 
 typedef enum {
   commsCmd_Error                 = 0x00u,

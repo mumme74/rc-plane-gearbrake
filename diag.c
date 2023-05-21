@@ -63,7 +63,7 @@ void diagReadData(usbpkg_t *sndpkg) {
   diagPkg->brakeForceCalc   = values.brakeForce;
 
   sndpkg->onefrm.len += sizeof(*diagPkg);
-  commsSendNow(sndpkg);
+  usbWaitTransmit(sndpkg); //commsSendNow(sndpkg);
 }
 
 /**

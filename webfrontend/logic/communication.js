@@ -8,10 +8,10 @@ if (!window.isSecureContext) {
         Försök med att serva sidan som Top sida från en https: webbserver`
   }
   alert(tr[document.querySelector("html").lang]);
-} else if (!("usb" in navigator)) {
+} else if (!("usb" in navigator) || ! ('serial' in navigator)) {
   let tr = {
-    en: `This browser does not have webusb interface activated, try with Google chrome/Microsoft Edge version 89 or later.`,
-    sv: `Denna webbläsare har inte websusb interfaceet aktiverat, försk med Google Chrome/Microsoft Edge version 89 eller senare.`
+    en: `This browser does not have webusb/serial interface activated, try with Google chrome/Microsoft Edge version 89 or later.`,
+    sv: `Denna webbläsare har inte websusb/serial interfaceet aktiverat, försök med Google Chrome/Microsoft Edge version 89 eller senare.`
   }
   alert(tr[document.querySelector("html").lang]);
 }
@@ -86,16 +86,19 @@ class CommunicationBase {
     static _mutex = new Mutex();
 
     vendorId = 0x0483;
-    productId = 0x5722;
+    productId = 0x5740;//0x5722;
+    baudRate = 115200;
+    packetSize = 64;
 
 
     device = null;
-    oep = null;
-    iep = null;
+    //oep = null;
+    //iep = null;
     onConnect = null;
     onDisconnect = null;
     _unlock = null;
     _reqId = 0;
+    _opened = false;
 
     errorLog = console.error;
     infoLog = console.info;
@@ -105,22 +108,24 @@ class CommunicationBase {
         this.onConnect = new EventDispatcher(this);
         this.onDisconnect = new EventDispatcher(this);
 
-        navigator.usb.addEventListener('connect', (e) => {
-            if (e.device.vendorId === this.vendorId &&
-                e.device.productId === this.productId)
-            {
-                this.device = e.device;
-                this._reopenPort();
-            }
+        navigator.serial.addEventListener('connect', (e) => {
+          const nfo = e.target.getInfo();
+          if (nfo.usbVendorId === this.vendorId &&
+              nfo.usbProductId === this.productId)
+          {
+            this.device = e.target;
+            this._reopenPort();
+          }
         });
 
-        navigator.usb.addEventListener('disconnect', (e) => {
-            if (e.device.vendorId === this.vendorId &&
-                e.device.productId === this.productId)
-            {
-                this.closeDevice();
-                this.onDisconnect.emit();
-            }
+        navigator.serial.addEventListener('disconnect', (e) => {
+          const nfo = e.target.getInfo();
+          if (nfo.usbVendorId === this.vendorId &&
+              nfo.usbProductId === this.productId)
+          {
+            this.closeDevice();
+            this.onDisconnect.emit();
+          }
         });
     }
 
@@ -131,19 +136,27 @@ class CommunicationBase {
     }
 
     async _reopenPort() {
+        if (this._opened)
+          await this.device.close();
         try {
-            await this.device.open();
+          this._opened = true;
+            await this.device.open({
+              baudRate: this.baudRate,
+              flowControl: 'none'
+            });
+            /*
             if (this.device.configuration === null)
-                await this.device.selectConfiguration(1);
+                await this.device.selectConfiguration(1);*/
 
         } catch(e) {
             this.errorLog("There was an error opening port: ", e);
             return false;
         };
-
+/*
         for(let intf of this.device.configuration.interfaces) {
             for (let ep of intf.alternates[0].endpoints) {
                 if (ep.type === 'bulk') {
+                    this.interfaceNumber = intf.interfaceNumber;
                     switch (ep.direction) {
                     case 'out': this.oep = ep; break;
                     case 'in': this.iep = ep; break;
@@ -152,6 +165,12 @@ class CommunicationBase {
                 }
             }
         }
+
+        if (!this.oep || !this.iep) return false;
+
+        await this.device.claimInterface(this.interfaceNumber);
+        await this.device.selectAlternateInterface(this.interfaceNumber, 0);
+*/
 
         // notify that we are connected (outside of try block)
         this.onConnect.emit();
@@ -162,21 +181,29 @@ class CommunicationBase {
         this.closeDevice();
 
         try {
-          this.device = await navigator.usb.requestDevice({ filters: [{ vendorId: this.vendorId, productId:this.productId}]});
+          //this.device = await navigator.usb.requestDevice({ filters: [{ vendorId: this.vendorId, productId:this.productId}]});
+          this.device = await navigator.serial.requestPort({
+            filters:[{
+              usbVendorId: this.vendorId,
+              usbProductId: this.productId
+            }]
+          });
 
           // Connect to `port` or add it to the list of available ports.
           return await this._reopenPort();
 
         } catch(e) {
           // The user didn't select a device.
-          this.infoLog("User did not select a device");
+          this.infoLog("User did not select a device", e);
         };
         return false;
     }
 
     async closeDevice() {
-        if (this.device?.opened)
+        if (this._opened) try {
           this.device.close();
+        } catch (e) { /* squeslh */ }
+        this._opened = false;
 
         this.device = null;
 
@@ -201,7 +228,7 @@ class CommunicationBase {
     }
 
     isOpen() {
-      return (this?.device?.opened && !!this.oep && !!this.iep);
+      return this._opened;
     }
 
     /**
@@ -216,8 +243,8 @@ class CommunicationBase {
             if (!await this.openDevice()) return;
 
         let data = new Uint8Array(byteArr ? byteArr.length + 3 : 3);
-        if (data.length > this.oep.packetSize) {
-            this.errorLog(`data sent to device to long must be max ${this.oep.packetSize}` +
+        if (data.length > this.packetSize) {
+            this.errorLog(`data sent to device to long must be max ${this.packetSize}` +
                           `Is ${byteArr.length} long`);
             return;
         }
@@ -235,9 +262,6 @@ class CommunicationBase {
         if (!this.device)
           return;
 
-        await this.device.reset();
-        await this.device.claimInterface(0);
-
         // communicate
         let rcvd = false;
         if (await this._send(data)) {
@@ -252,9 +276,6 @@ class CommunicationBase {
             }
         }
 
-        if (this.device) {
-            await this.device.releaseInterface(0);
-        }
         this._unlock = unlock();
 
         return rcvd;
@@ -278,7 +299,7 @@ class CommunicationBase {
         }
     }
 
-    _checkTransfer(res) {
+    /*_checkTransfer(res) {
         if (res.status !== 'ok') {
             this.rcvCallback("Error in transfer");
             throw new Error("Error in usb transfer " +
@@ -286,32 +307,68 @@ class CommunicationBase {
                         " device");
         }
         return res;
-    }
+    }*/
 
     async _send(data) {
         // send to device
         CommunicationBase.progress.updatePos(1, 100);
+        let res = false;
+        const writer = this.device.writable.getWriter();
         try {
-            let res = await this.device.transferOut(
-                this.oep.endpointNumber, new Uint8Array(data))
-            this._checkTransfer(res);
-            return true;
+            //let res = await this.device.transferOut(
+            //    this.oep.endpointNumber, new Uint8Array(data))
+            // this._checkTransfer(res);
+            await writer.write(data);
+            res = true;
         } catch(e) {
             this.errorLog("Error during send to device", e);
-            return false;
+        } finally {
+          writer.releaseLock();
         }
+
+        return res;
     }
 
     async _recieve(id) {
         // recieve from device
-        let buf, rcvd = [], res, multibyte = false;
+        let rcvd = [], multibyte = false, buf,
+            reader = this.device.readable.getReader(),
+            unusedBytes = new Uint8Array(0);
+
+        // chops up recive into pages based on len prop in recived
+        const readPage = async ()=> {
+          let pageLen = 0, tail = 0
+              buf = new Uint8Array();
+
+          // previously fetched more than that page needed, reuse now
+          if (unusedBytes.length) {
+            pageLen = unusedBytes[0];
+            buf = unusedBytes.slice(0, pageLen);
+            unusedBytes = unusedBytes.slice(pageLen);
+          }
+
+          if (pageLen < 1 || buf.byteLength < pageLen) {
+            do {
+              const {value, done} = await reader.read();
+              if (done)
+                throw new Error("Port error");
+              else if (pageLen === 0)
+                pageLen = value[0];
+
+              const end = pageLen - buf.byteLength;
+              buf = new Uint8Array([
+                ...buf,
+                ...value.slice(0, end)]);
+              unusedBytes = value.slice(end);
+            } while(buf.byteLength < pageLen); // might get a fraction, not a whole frame
+          }
+          return buf;
+        }
 
         try {
             do {
-                // handle single and multiframe
-                res = this._checkTransfer(await this.device.transferIn(
-                            this.iep.endpointNumber, this.iep.packetSize));
-                buf = new Uint8Array(res.data.buffer);
+                // handle single and multiframe in this loop
+                buf = await readPage();
                 this._validateResponse(buf, id);
 
                 // multi frame response
@@ -332,6 +389,8 @@ class CommunicationBase {
 
         } catch(e) {
             this.errorLog("Error during recieve from device", e);
+        } finally {
+          reader.releaseLock();
         }
 
         // finalize progress indicator
@@ -350,8 +409,12 @@ class CommunicationBase {
     }
 
     _validateResponse(buf, id) {
-        if (buf.length < 3) throw new Error("Recieved to short response: " + JSON.stringify(buf));
-        if (buf[2] !== id) throw new Error("Recieved wrong ID in response from device");
+        if (buf.byteLength < 3)
+          throw new Error("Recieved to short response: " + JSON.stringify(buf));
+        if (buf.byteLength != buf[0])
+          throw new Error(`Recieved wrong page length in recieve frame expected ${buf[0]} got ${buf.byteLength}`);
+        if (buf[2] !== id)
+          throw new Error(`Recieved wrong ID in response from device, expected:${id} got:${buf[2]}`);
         // multiframe update progress
         if (buf[1] & 0x80) {
             let idx = 3;
@@ -360,9 +423,8 @@ class CommunicationBase {
             if (pkgNr === 0) {
                 let totalSize = buf[idx++] << 24 | buf[idx++] << 16 |
                                 buf[idx++] << 8  | buf[idx++];
-                CommunicationBase.progress.endPos =  totalSize / this.iep.packetSize;
+                CommunicationBase.progress.endPos =  totalSize / this.packetSize;
             }
-
             CommunicationBase.progress.updatePos(pkgNr);
         }
     }
