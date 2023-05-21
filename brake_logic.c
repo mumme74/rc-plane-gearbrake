@@ -40,7 +40,7 @@
 
 // -----------------------------------------------------------------
 // public
-volatile const Values_t values;
+volatile const Values_t values = {0};
 
 // ------------------------------------------------------------------
 // private stuff to this module
@@ -102,6 +102,8 @@ static void calcVehicleSpeed(void) {
         VALUES->speedOnGround--;
       }
     }
+  } else {
+    VALUES->speedOnGround = 0;
   }
 }
 

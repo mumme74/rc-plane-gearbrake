@@ -290,7 +290,7 @@ class DiagReadVluPkg_t {
   brakeForceIn = 0;
   brakeForceCalc = 0;
   wheelRPS = [0, 0, 0];
-  brakeForce_Out = 0;
+  brakeForce_Out = [0,0,0];
 
   static parse(data) {
     const pkg = new DiagReadVluPkg_t();
@@ -375,28 +375,28 @@ class DiagSetVluPkg_t {
   }
   setWheelBrakeForce(wheel, vlu) {
     this.data[0] = vlu;
-    this.type = setVluPkgType_e.diag_Set_Output0 + wheel;
+    this.type = setVluPkgType_e.diag_Set_Output0 << wheel;
     this.size = 4;
   }
   setWheelRPSVlu(wheel, vlu) {
     this.data[0] = vlu;
-    this.type = setVluPkgType_e.diag_Set_InputWhl0 + wheel;
+    this.type = setVluPkgType_e.diag_Set_InputWhl0 << wheel;
     this.size = 4;
   }
   setAccelVlu(axis, vlu) {
     this.data.push(...toBigEnd16(vlu));
-    this.type = setVluPkgType_e.diag_Set_InputAcc0 + axis;
+    this.type = setVluPkgType_e.diag_Set_InputAcc0 << axis;
     this.size = 5;
   }
   setOutValue(wheel, vlu) {
     this.data[0] = vlu;
-    this.type = setVluPkgType_e.diag_Set_Output0 + wheel;
+    this.type = setVluPkgType_e.diag_Set_Output0 << wheel;
     this.size = 4;
   }
   serialize() {
     return [
       this.size,
-      this.type,
+      ...toBigEnd16(this.type),
       ...this.data
     ]
   }
@@ -432,7 +432,7 @@ class DiagClrVluPkg_t {
     this.type = type;
   }
   serialize() {
-    return [this.type];
+    return [...toBigEnd16(this.type)];
   }
 }
 
