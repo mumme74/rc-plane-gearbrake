@@ -77,10 +77,14 @@ void diagSetVlu(usbpkg_t *sndpkg, usbpkg_t *rcvpkg) {
 
     if (setPkg->size >= 4 || setPkg->size <= 5) {
       cmd = commsCmd_OK;
-      // we must set this before forcing a value, we might get preempted
-      DIAG_SET_VALUES |= setPkg->type;
 
-      switch((_setVluPkgType_e)setPkg->type) {
+      _setVluPkgType_e type =
+          (_setVluPkgType_e)FROM_BIG_ENDIAN_16((uint8_t*)&setPkg->type);
+
+      // we must set this before forcing a value, we might get preempted
+      DIAG_SET_VALUES |= type;
+
+      switch(type) {
       case diag_Set_Output0:
         VALUES->brakeForce_out[0] = setPkg->outputs.outVlu; break;
       case diag_Set_Output1:
@@ -88,24 +92,24 @@ void diagSetVlu(usbpkg_t *sndpkg, usbpkg_t *rcvpkg) {
       case diag_Set_Output2:
         VALUES->brakeForce_out[2] = setPkg->outputs.outVlu; break;
       case diag_Set_InputRcv:
-        INPUTS->brakeForce = setPkg->inputs.brakeForce; break;
+        INPUTS->brakeForce = setPkg->inputs.u8value; break;
       case diag_Set_InputWhl0:
-        INPUTS->wheelRPS[0] = setPkg->inputs.wheelRPSVlu; break;
+        INPUTS->wheelRPS[0] = setPkg->inputs.u8value; break;
       case diag_Set_InputWhl1:
-        INPUTS->wheelRPS[1] = setPkg->inputs.wheelRPSVlu; break;
+        INPUTS->wheelRPS[1] = setPkg->inputs.u8value; break;
       case diag_Set_InputWhl2:
-        INPUTS->wheelRPS[2] = setPkg->inputs.wheelRPSVlu; break;
+        INPUTS->wheelRPS[2] = setPkg->inputs.u8value; break;
       case diag_Set_InputAcc0:
         if (setPkg->size != 5) cmd = commsCmd_Error;
-        else ACCEL->axis[0] = setPkg->accel.accelVlu;
+        else ACCEL->axis[0] = FROM_BIG_ENDIAN_16((uint8_t*)&setPkg->accel.accelVlu);
         break;
       case diag_Set_InputAcc1:
         if (setPkg->size != 5) cmd = commsCmd_Error;
-        else ACCEL->axis[1] = setPkg->accel.accelVlu;
+        else ACCEL->axis[1] = FROM_BIG_ENDIAN_16((uint8_t*)&setPkg->accel.accelVlu);
         break;
       case diag_Set_InputAcc2:
         if (setPkg->size != 5) cmd = commsCmd_Error;
-        else ACCEL->axis[2] = setPkg->accel.accelVlu;
+        else ACCEL->axis[2] = FROM_BIG_ENDIAN_16((uint8_t*)&setPkg->accel.accelVlu);
         break;
       default:
         cmd = commsCmd_Error;
@@ -125,8 +129,10 @@ void diagClearVlu(usbpkg_t *sndpkg, usbpkg_t *rcvpkg) {
 
   if (rcvpkg->onefrm.len == 5) {
     cmd = commsCmd_OK;
+    _setVluPkgType_e type =
+        (_setVluPkgType_e)FROM_BIG_ENDIAN_16((uint8_t*)&clrpkg->type);
 
-    switch ((_setVluPkgType_e)clrpkg->type) {
+    switch (type) {
     case diag_Set_Output0:
       VALUES->brakeForce_out[0] = 0; break;
     case diag_Set_Output1:
@@ -152,7 +158,7 @@ void diagClearVlu(usbpkg_t *sndpkg, usbpkg_t *rcvpkg) {
     }
 
     if (cmd == commsCmd_OK)
-      DIAG_SET_VALUES &= ~clrpkg->type;
+      DIAG_SET_VALUES &= ~type;
   }
 
   commsSendNowWithCmd(sndpkg, cmd);

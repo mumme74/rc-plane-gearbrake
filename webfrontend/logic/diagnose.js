@@ -198,13 +198,8 @@ class DiagnoseBase {
     const diagType = itm.getSetDiagValueType();
     if (diagType < 1) return [];
 
-    byteArr[1] = (diagType & 0x00FF) >> 0;
-    byteArr[2] = (diagType & 0xFF00) >> 8;
-    for (let i = 0; i < itm.size; ++i) {
-      byteArr.push(
-        (itm.value & (0xff << (i * 8))) >> (i * 8)
-      );
-    }
+    byteArr[1] = (diagType & 0xFF00) >> 8;
+    byteArr[2] = (diagType & 0x00FF) >> 0;
     itm.save(byteArr, byteArr.length);
     return byteArr;
   }

@@ -56,20 +56,20 @@ typedef struct __attribute__((__packed__)) {
  */
 typedef struct __attribute__((__packed__)){
   uint8_t size; // in bytes, sizeof this package
-  setVluPkgType_t type;
+  setVluPkgType_t type; // uint16_t size
   union {
     union {
-      uint8_t brakeForce; // input from receiver
-      uint8_t wheelRPSVlu; // revs per second per wheel
-    } inputs; // 4 bytes, 7 bytes total with 3 usb bytes
+      uint8_t u8value; // input from receiver or
+                       // revs per second per wheel
+    } inputs; // 1 byte, 4 bytes total with 3 usb bytes
 
     struct {
-      int16_t accelVlu; // valu to ste axis with
-    } accel; // 5 bytes, 8 total with header bytes in usb
+      int16_t accelVlu; // value to steer axis with
+    } accel; // 2 bytes, 5 total with header bytes in usb
 
     struct {
       uint8_t outVlu; // 0-100 PWM value
-    } outputs; // 4 bytes, 7 bytes total with usb 3 bytes
+    } outputs; // 1 byte, 5 bytes total with usb 3 bytes
 
   };
   // should be 3 - 8 bytes depending on package
