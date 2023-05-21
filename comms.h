@@ -12,6 +12,9 @@
 #include <stdint.h>
 #include <stddef.h>
 
+#define _QUOTE(arg) #arg
+#define QUOTE(arg) _QUOTE(arg)
+
 #define wMaxPacketSize 0x40 // usb package size, must be aligned to 4 bytes
 
 #define TO_BIG_ENDIAN_16(u8buf, vlu16) \
@@ -96,6 +99,7 @@ typedef enum {
   commsCmd_DiagClearVlu          = 0x1Au,
 
   commsCmd_version               = 0x20u,
+  commsCmd_fwHash                = 0x21u,
   commsCmd_OK                    = 0x7F,
 } CommsCmdType_e;
 

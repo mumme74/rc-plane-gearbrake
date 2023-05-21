@@ -79,6 +79,7 @@ class CommunicationBase {
         DiagSetVlu:          0x19,
         DiagClearVlu:        0x1A,
         Version:             0x20,
+        FwHash:              0x21,
         OK:                  0x7F,
     }
     static IDError = 0xFF;
@@ -562,6 +563,14 @@ class Communication_v1 extends CommunicationBase {
             expectedResponseCmd: CommunicationBase.Cmds.OK,
             byteArr,
         });
+    }
+
+    async fetchFirmwareHash() {
+      const byteArr =  await this.talkSafe({
+        cmd: CommunicationBase.Cmds.FwHash,
+      });
+
+      return byteArr.map(n=>String.fromCharCode(n)).join('');
     }
 }
 

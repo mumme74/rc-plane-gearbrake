@@ -55,6 +55,7 @@ const CommsCmdType_e = {
   commsCmd_DiagClearVlu          : 0x1A,
 
   commsCmd_version               : 0x20,
+  commsCmd_fwHash                : 0x21,
   commsCmd_OK                    : 0x7F,
 };
 module.exports.CommsCmdType_e = CommsCmdType_e;
@@ -140,6 +141,8 @@ function onRecieve(data) {
     return resolve('PING');
   case CommsCmdType_e.commsCmd_version:
     return resolve(pkg.onefrm().data[0]);
+  case CommsCmdType_e.commsCmd_fwHash:
+    return resolve(pkg.onefrm().data)
   case CommsCmdType_e.commsCmd_DiagClearVlu:
     console.error('Should not get command DiagClearVlu as response');
     return reject(pkg);

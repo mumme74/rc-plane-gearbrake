@@ -74,6 +74,11 @@ ifeq ($(USE_FPU_OPT),)
   USE_FPU_OPT = -mfloat-abi=$(USE_FPU) -mfpu=fpv4-sp-d16
 endif
 
+# firmware version
+ifeq ($(FW_VERSION),)
+  FW_VERSION = "$(shell git rev-parse --short HEAD)"
+endif
+
 #
 # Architecture or project specific options
 ##############################################################################
@@ -170,7 +175,7 @@ CPPWARN = -Wall -Wextra -Wundef
 #
 
 # List all user C define here, like -D_DEBUG=1
-UDEFS = -DPORT_IGNORE_GCC_VERSION_CHECK
+UDEFS = -DPORT_IGNORE_GCC_VERSION_CHECK -DFW_VERSION=$(FW_VERSION)
 
 # Define ASM defines here
 UADEFS =

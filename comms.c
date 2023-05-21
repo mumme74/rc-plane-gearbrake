@@ -14,6 +14,7 @@
 #include <hal.h>
 #include <halconf.h>
 #include <stm32f042x6.h>
+#include <string.h>
 
 // this file handle all serial IO
 
@@ -24,6 +25,15 @@
 static thread_t *commsThdp = 0;
 //static CommsReq_t cmd;
 static usbpkg_t rcvpkg, sndpkg;
+
+static const char FwHash[] = QUOTE(FW_VERSION);
+
+static void commsFwHash(usbpkg_t *sndpkg) {
+  const size_t sz = sizeof(FwHash)/sizeof(FwHash[0]) -1;
+  memcpy(sndpkg->onefrm.data, FwHash, sz); // don't copy \0
+  sndpkg->onefrm.len += sz;
+  usbWaitTransmit(sndpkg);
+}
 
 
 static void routeCmd(void) {
@@ -68,6 +78,9 @@ static void routeCmd(void) {
   case commsCmd_version:
     PKG_PUSH(sndpkg, COMMS_VERSION);
     usbWaitTransmit(&sndpkg);
+    break;
+  case commsCmd_fwHash:
+    commsFwHash(&sndpkg);
     break;
   default:
     commsSendNowWithCmd(&sndpkg, commsCmd_Error);

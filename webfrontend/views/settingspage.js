@@ -22,7 +22,10 @@ class SettingsHtmlCls {
         downloadFirmware: "Download new firmware",
         connectButton: "Connect",
         disconnectButton: "Disconnect",
-        resetButton: "Reset device"
+        resetButton: "Reset device",
+        firmwareHdr: "Firmware hash ID",
+        fetchFwBtn: "Fetch",
+        firmwareLbl: "Firmware ID"
     },
     sv: {
         header: "App inställningar",
@@ -41,8 +44,16 @@ class SettingsHtmlCls {
         downloadFirmware: "Ladda ned ny firmware",
         connectButton: "Koppla ihop",
         disconnectButton: "Koppa isär",
-        resetButton: "Reset enhet"
+        resetButton: "Reset enhet",
+        firmwareHdr: "Firmware ID hash",
+        fetchFwBtn: "Hämta",
+        firmwareLbl: "Firmware ID"
       },
+    }
+
+    async fetchFwHash() {
+      const hash = await CommunicationBase.instance().fetchFirmwareHash();
+      document.getElementById("fwHash").value = hash;
     }
 
     backupPushed() {
@@ -122,6 +133,21 @@ class SettingsHtmlCls {
             <select onchange="this.selectLang(event)">${lngOptions.join()}</select>
 
             <p class="w3-text-grey">${tr.p1}</p>
+            <div class="w3-border w3-row">
+              <h3 class="w3-margin">${tr.firmwareHdr}</h3>
+                <div class="w3-col m3 l3">
+                <button class="w3-margin w3-normal w3-button w3-light-blue"
+                        onclick="this.fetchFwHash()">
+                  ${tr.fetchFwBtn}
+                </button>
+              </div>
+              <div class="w3-col m4 l4">
+                <label for="fwHash">${tr.firmwareLbl}</label>
+                <input name="fwHash" id="fwHash"
+                      placeholder="${tr.firmwareLbl}"
+                      type="text" readonly class="w3-border">
+                </div>
+            </div>
 
             <div class="w3-border">
               <h3 class="w3-margin">${tr.updateFirmware}</h3>
@@ -160,7 +186,12 @@ class SettingsHtmlCls {
             <i class="fa fa-anchor w3-padding-64 w3-text-red"></i>
           </div>
         </div>
-      </div>`
+      </div>`;
+    }
+
+    afterHook(parentNode, lang) {
+      if (CommunicationBase.instance().isOpen())
+        this.fetchFwHash();
     }
 };
 router.registerPage(new SettingsHtmlCls, "settings");
