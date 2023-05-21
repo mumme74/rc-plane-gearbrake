@@ -41,6 +41,7 @@ const char help[] = "begin\n"
 "\n"
 " Commands: (all in ascii)\n"
 " out0, out1, out2 = return the duty cycle our board gives\n"
+" out-freq0, out-freq1, out-freq2 = Return the frequency of our board"
 "\n"
 " rcv=vlu  Set brake force as given from a RC reciever.\n"
 "          vlu can be: 0-100\n"
@@ -52,9 +53,9 @@ const char help[] = "begin\n"
 "          vlu can be: 1-30\n";
 
 
-const int PWM_OUT0_PIN = 9,
+const int PWM_OUT0_PIN = 7,
           PWM_OUT1_PIN = 8,
-          PWM_OUT2_PIN = 7,
+          PWM_OUT2_PIN = 9,
           RCV_PIN = 3,
           WHEEL0_PIN = 4,
           WHEEL1_PIN = 5,
@@ -134,7 +135,7 @@ public:
 
     auto sCh = line.substring(pos, pos+1);
     if (!isDigit(sCh.charAt(0))) {
-      sprintf(buf, "Expected number 0-2 as channel selector, got:%s", sCh);
+      sprintf(buf, "Expected number 0-2 as channel selector, got:%s", sCh.c_str());
       Serial.println(buf);
       return pos;
     }
@@ -149,11 +150,27 @@ public:
   }
 };
 
+// measure the high and low length of 3 pulses and averages them
+void getHighLow(unsigned long &high, unsigned long &low, int ch) {
+  for (int i = 0; i < 3; i++) {
+    high += pulseIn(outs[ch], HIGH, 1000000L),
+    low += pulseIn(outs[ch], LOW, 1000000L);
+  }
+  high /= 3;
+  low /= 3;
+}
 
 void getOut(Cmds* cmd) {
-  unsigned long high = pulseIn(outs[cmd->ch], HIGH, 300000L),
-                low = pulseIn(outs[cmd->ch], LOW, 300000L);
+  unsigned long high = 0, low = 0;
+  getHighLow(high, low, cmd->ch);
   cmd->vlu = high > 0 && low > 0 ? (low * 100) / (low + high) : 0;
+}
+
+void getFreq(Cmds *cmd) {
+  unsigned long high = 0, low = 0;
+  getHighLow(high, low, cmd->ch);
+  unsigned long denom = high + low;
+  cmd->vlu = denom < 1000000L && denom ? 1000000L / denom : 0;
 }
 
 void setRcv(Cmds *cmd) {
@@ -188,7 +205,8 @@ void helpCb(Cmds *prop) {
 const Cmds cmds[] = {
   Cmds(String("help"), 0,0, helpCb, nullptr, false),
   Cmds(String("rcv"),0,100,getRcv,setRcv,false),
-  Cmds(String("out"),0,100,getOut,nullptr, true),
+  Cmds(String("out-freq"),0,0,getFreq,nullptr, true),
+  Cmds(String("out"),0,0,getOut,nullptr, true),
   Cmds(String("wh-speed"),0,255,getWheelSpeed,setWheelSpeed, true),
   Cmds(String("wh-pulses"),0,30,getWheelPulses,setWheelPulses, true)
 };
@@ -222,7 +240,10 @@ void loop()
     line.trim();
 
     for (size_t i = 0; i < sizeof(cmds)/sizeof(cmds[0]); ++i) {
-      if (cmds[i].parse(line)) break;
+      if (cmds[i].parse(line)) return;
     }
+
+    sprintf(buf, "Unknown command %s", line.c_str());
+    Serial.println(buf);
   }
 }
