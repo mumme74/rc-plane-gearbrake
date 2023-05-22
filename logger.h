@@ -76,8 +76,6 @@ void loggerClearAll(usbpkg_t *sndpkg);
 
 void loggerReadAll(usbpkg_t *sndpkg);
 
-void loggerNextAddr(usbpkg_t *sndpkg);
-
 
 extern thread_t *logthdp;
 // used to block logging

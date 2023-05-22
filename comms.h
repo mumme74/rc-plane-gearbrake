@@ -91,8 +91,7 @@ typedef enum {
   commsCmd_SettingsGetAll        = 0x09u,
 
   commsCmd_LogGetAll             = 0x10u,
-  commsCmd_LogNextAddr           = 0x11u,
-  commsCmd_LogClearAll           = 0x12u,
+  commsCmd_LogClearAll           = 0x11u,
 
   commsCmd_DiagReadAll           = 0x18u,
   commsCmd_DiagSetVlu            = 0x19u,

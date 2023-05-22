@@ -49,8 +49,7 @@ const CommsCmdType_e = {
   commsCmd_SettingsGetAll        : 0x09,
 
   commsCmd_LogGetAll             : 0x10,
-  commsCmd_LogNextAddr           : 0x11,
-  commsCmd_LogClearAll           : 0x12,
+  commsCmd_LogClearAll           : 0x11,
 
   commsCmd_DiagReadAll           : 0x18,
   commsCmd_DiagSetVlu            : 0x19,
@@ -156,8 +155,7 @@ function onRecieve(data) {
     console.error('Should not get command DiagSetVlu as response');
     return reject(pkg);
   case CommsCmdType_e.commsCmd_LogClearAll:
-  case CommsCmdType_e.commsCmd_LogGetAll:
-  case CommsCmdType_e.commsCmd_LogNextAddr: // fallthrough
+  case CommsCmdType_e.commsCmd_LogGetAll: // fallthrough
     console.info('Log not implemented');
     return reject(pkg);
   case CommsCmdType_e.commsCmd_Reset:

@@ -302,9 +302,3 @@ void loggerReadAll(usbpkg_t *sndpkg)
 
   blockLog = false;
 }
-
-void loggerNextAddr(usbpkg_t *sndpkg)
-{
-  PKG_PUSH_32(*sndpkg, offsetNext);
-  usbWaitTransmit(sndpkg);
-}

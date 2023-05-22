@@ -60,9 +60,6 @@ static void routeCmd(void) {
   case commsCmd_LogGetAll:
     loggerReadAll(&sndpkg);
     break;
-  case commsCmd_LogNextAddr:
-    loggerNextAddr(&sndpkg);
-    break;
   case commsCmd_LogClearAll:
     loggerClearAll(&sndpkg);
     break;

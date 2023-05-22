@@ -73,8 +73,7 @@ class CommunicationBase {
         SettingsSaveAll:     0x08,
         SettingsGetAll:      0x09,
         LogGetAll:           0x10,
-        LogNextAddr:         0x11,
-        LogClearAll:         0x12,
+        LogClearAll:         0x11,
         DiagReadAll:         0x18,
         DiagSetVlu:          0x19,
         DiagClearVlu:        0x1A,
@@ -500,18 +499,6 @@ class Communication_v1 extends CommunicationBase {
             expectedResponseCmd: CommunicationBase.Cmds.OK,
             byteArr
         });
-    }
-
-    /**
-     * @brief gets the next storage address for the next log input in device
-     * @returns the address in the EEPROM where next log is stored
-     */
-    async getLogNextAddr() {
-        const res = await this.talkSafe({
-            cmd: CommunicationBase.Cmds.LogNextAddr
-        });
-
-        return this.toInt(res);
     }
 
     /**
