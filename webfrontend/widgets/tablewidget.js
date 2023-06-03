@@ -121,12 +121,14 @@ class TableWidgetCls extends WidgetBaseCls {
   }
 
   downloadData() {
-    const html = this.rootNode.innerHTML;
-    const blob = new Blob([html], {type:'data:application/vnd.ms-excel;base64'});
+    const html = this.rootNode.outerHTML;
+    const blob = new Blob(['\ufeff', html], {
+      type:'data:application/vnd.ms-excel;base64'
+    });
     const a = document.createElement("a");
     a.href = window.URL.createObjectURL(blob);
     a.innerText = "download";
-    a.download = `logtable_${new Date().toISOString()}.xlxs`;
+    a.download = `logtable_${new Date().toISOString()}.xls`;
     this.rootNode.parentElement.appendChild(a);
     a.click();
     a.remove();
