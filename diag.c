@@ -123,6 +123,13 @@ void diagSetVlu(usbpkg_t *sndpkg, usbpkg_t *rcvpkg) {
   commsSendNowWithCmd(sndpkg, cmd);
 }
 
+void resetBrakeLogic(uint8_t wh) {
+  INPUTS->wheelRPS[wh] = 0;
+  VALUES->speedOnGround = 0;
+  VALUES->slip[wh] = 0;
+  VALUES->wsSteering = 0;
+}
+
 void diagClearVlu(usbpkg_t *sndpkg, usbpkg_t *rcvpkg) {
   CommsCmdType_e cmd = commsCmd_Error;
   DiagClrVluPkg_t *clrpkg = (DiagClrVluPkg_t*)rcvpkg->onefrm.data;
@@ -142,11 +149,11 @@ void diagClearVlu(usbpkg_t *sndpkg, usbpkg_t *rcvpkg) {
     case diag_Set_InputRcv:
       INPUTS->brakeForce = 0; break;
     case diag_Set_InputWhl0:
-      INPUTS->wheelRPS[0] = 0; break;
+      resetBrakeLogic(0); break;
     case diag_Set_InputWhl1:
-      INPUTS->wheelRPS[1] = 0; break;
+      resetBrakeLogic(1); break;
     case diag_Set_InputWhl2:
-      INPUTS->wheelRPS[2] = 0; break;
+      resetBrakeLogic(2); break;
     case diag_Set_InputAcc0:
       ACCEL->axis[0] = 0; break;
     case diag_Set_InputAcc1:

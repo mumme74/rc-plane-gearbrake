@@ -86,13 +86,12 @@ static void calcVehicleSpeed(void) {
     if (speed < inputs.wheelRPS[2])
       speed = inputs.wheelRPS[2];
 
-    if (speed > VALUES->speedOnGround) {
+    if (speed > values.speedOnGround) {
       // wheels have spun up ie touch down
       VALUES->speedOnGround = speed;
       nextSpeedDecrTick = 4;
     } else if (speed < values.speedOnGround) {
       // we lost some speed
-      //if (nextSpeedDecrTick < (uint16_t)chVTGetSystemTimeX())
       if ((--nextSpeedDecrTick) == 0)
       {
         // wait for 4 loops (4 * 5ms), each loop is 5 ms long when brakes activated
@@ -168,7 +167,6 @@ static THD_FUNCTION(BrakeLogicThd, arg) {
 
     if (values.brakeForce < settings.lower_threshold) {
       sleepTime = 20; // wait for next pulse from reciver
-      nextSpeedDecrTick = 0;
       setOut(0, 0);
       setOut(1, 0);
       setOut(2, 0);
