@@ -11,6 +11,7 @@
 #include <stdint.h>
 
 typedef struct {
+  /* How much slip each wheel has */
   uint16_t slip[3];
 
   /* as sway acceleration from normal line
